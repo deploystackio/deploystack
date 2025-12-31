@@ -65,7 +65,16 @@ export default async function deleteInstallationRoute(server: FastifyInstance) {
     try {
       const db = getDb();
       const installationService = new McpInstallationService(db, request.log);
-      
+
+      // Log CASCADE deletion of instances
+      // All user instances are automatically deleted via foreign key constraint
+      request.log.info({
+        operation: 'delete_mcp_installation',
+        installationId,
+        teamId,
+        cascadeNote: 'All instances automatically deleted via foreign key CASCADE'
+      }, 'Deleting installation and cascading to instances');
+
       const deleted = await installationService.deleteInstallation(installationId, teamId);
 
       if (!deleted) {

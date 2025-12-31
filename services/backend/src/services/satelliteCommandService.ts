@@ -275,7 +275,8 @@ export class SatelliteCommandService {
       payload: {
         event: 'mcp_installation_created',
         installation_id: installationId,
-        team_id: teamId
+        team_id: teamId,
+        user_id: userId
       },
       targetTeamId: teamId,
       expiresInMinutes: 5,
@@ -303,7 +304,7 @@ export class SatelliteCommandService {
   }
 
   /**
-   * Phase 13: Notify satellites that an MCP server has recovered and needs tool rediscovery
+   * Notify satellites that an MCP server has recovered and needs tool rediscovery
    * Creates high priority configure commands for all global satellites
    */
   async notifyMcpRecovery(installationId: string, teamId: string): Promise<SatelliteCommand[]> {

@@ -87,7 +87,6 @@ export default async function getTeamMcpInstallationsAdminRoute(server: FastifyI
           installation_name: schema.mcpServerInstallations.installation_name,
           server_name: schema.mcpServers.name,
           server_slug: schema.mcpServers.slug,
-          status: schema.mcpServerInstallations.status,
           created_at: schema.mcpServerInstallations.created_at,
           last_used_at: schema.mcpServerInstallations.last_used_at
         })
@@ -106,7 +105,6 @@ export default async function getTeamMcpInstallationsAdminRoute(server: FastifyI
         installation_name: inst.installation_name,
         server_name: inst.server_name ?? 'Unknown Server',
         server_slug: inst.server_slug ?? 'unknown',
-        status: inst.status,
         created_at: inst.created_at.toISOString(),
         last_used_at: inst.last_used_at ? inst.last_used_at.toISOString() : null
       }));

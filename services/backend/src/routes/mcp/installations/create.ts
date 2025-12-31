@@ -21,6 +21,8 @@ import {
 } from './schemas';
 import { EVENT_NAMES } from '../../../events';
 import type { EventContext } from '../../../events/types';
+import { hasRequiredUserConfiguration, getRequiredUserFields } from '../../../utils/mcpConfigDetection';
+import { eq, and } from 'drizzle-orm';
 
 export default async function createInstallationRoute(server: FastifyInstance) {
   server.post('/teams/:teamId/mcp/installations', {
@@ -137,6 +139,152 @@ export default async function createInstallationRoute(server: FastifyInstance) {
             error: userConfigError instanceof Error ? userConfigError.message : 'Unknown error'
           }, 'Failed to create user configuration during installation');
         }
+      }
+
+      // Create first instance for installing admin
+      // Each user gets their own instance with independent status tracking
+      try {
+        const { McpInstanceService } = await import('../../../services/mcpInstanceService');
+        const instanceService = new McpInstanceService(db, request.log);
+
+        // Determine initial status based on whether server requires user config
+        let adminStatus = 'provisioning';
+        let adminStatusMessage: string | undefined;
+
+        // Get server to check if it requires user config
+        const serverWithConfig = await installationService.getInstallationById(installation.id, teamId);
+
+        if (serverWithConfig?.server) {
+          const requiresUserConfig = hasRequiredUserConfiguration(serverWithConfig.server);
+
+          // If server requires user config and admin didn't provide it, set awaiting_user_config
+          if (requiresUserConfig && !hasUserConfig) {
+            adminStatus = 'awaiting_user_config';
+            const requiredFields = getRequiredUserFields(serverWithConfig.server);
+            adminStatusMessage = `User configuration required. Missing fields: ${requiredFields.join(', ')}`;
+          }
+        }
+
+        await instanceService.createInstance(
+          installation.id,
+          userId, // Installing admin
+          adminStatus,
+          adminStatusMessage
+        );
+
+        request.log.info({
+          operation: 'create_mcp_installation',
+          installationId: installation.id,
+          userId,
+          instanceCreated: true,
+          initialStatus: adminStatus
+        }, `Created first instance for installing admin with status: ${adminStatus}`);
+      } catch (error) {
+        request.log.error({
+          operation: 'create_mcp_installation',
+          installationId: installation.id,
+          error: error instanceof Error ? error.message : 'Unknown'
+        }, 'Failed to create instance - installation may be orphaned');
+        // Continue - instance can be created manually if needed
+      }
+
+      // Create instances for all other team members
+      try {
+        const { TeamService } = await import('../../../services/teamService');
+        const { McpInstanceService } = await import('../../../services/mcpInstanceService');
+        const { SatelliteCommandService } = await import('../../../services/satelliteCommandService');
+
+        const instanceService = new McpInstanceService(db, request.log);
+        const satelliteCommandService = new SatelliteCommandService(db, request.log);
+
+        // Get all team members (excluding installing admin who already has instance)
+        const allMembers = await TeamService.getTeamMembers(teamId);
+        const otherMembers = allMembers.filter(member => member.user_id !== userId);
+
+        request.log.info({
+          operation: 'create_mcp_installation_provision_instances',
+          installationId: installation.id,
+          teamId,
+          otherMemberCount: otherMembers.length,
+          totalMembers: allMembers.length
+        }, `Provisioning instances for ${otherMembers.length} other team members`);
+
+        // Get server to check if it requires user config (do this once, outside loop)
+        const serverWithConfig = await installationService.getInstallationById(installation.id, teamId);
+        const requiresUserConfig = serverWithConfig?.server ? hasRequiredUserConfiguration(serverWithConfig.server) : false;
+
+        // Create instance for each other team member
+        for (const member of otherMembers) {
+          try {
+            // Determine initial status based on whether server requires user config
+            let memberStatus = 'provisioning';
+            let memberStatusMessage: string | undefined;
+
+            if (requiresUserConfig && serverWithConfig?.server) {
+              // Check if member already has user configuration (unlikely for new installation, but possible)
+              const { mcpUserConfigurations } = await import('../../../db/schema');
+              const hasConfig = await db
+                .select()
+                .from(mcpUserConfigurations)
+                .where(
+                  and(
+                    eq(mcpUserConfigurations.installation_id, installation.id),
+                    eq(mcpUserConfigurations.user_id, member.user_id)
+                  )
+                )
+                .limit(1)
+                .then(rows => rows.length > 0);
+
+              if (!hasConfig) {
+                memberStatus = 'awaiting_user_config';
+                const requiredFields = getRequiredUserFields(serverWithConfig.server);
+                memberStatusMessage = `User configuration required. Missing fields: ${requiredFields.join(', ')}`;
+              }
+            }
+
+            await instanceService.createInstance(
+              installation.id,
+              member.user_id,
+              memberStatus,
+              memberStatusMessage
+            );
+
+            // Only notify satellite if status is NOT awaiting_user_config
+            // (Backend config endpoint will filter these out anyway, but avoid unnecessary commands)
+            if (memberStatus !== 'awaiting_user_config') {
+              await satelliteCommandService.notifyMcpInstallation(
+                installation.id,
+                teamId,
+                member.user_id
+              );
+            }
+
+            request.log.debug({
+              operation: 'create_mcp_installation_provision_instance',
+              installationId: installation.id,
+              userId: member.user_id,
+              initialStatus: memberStatus
+            }, `Instance provisioned for team member with status: ${memberStatus}`);
+
+          } catch (error) {
+            request.log.error({
+              operation: 'create_mcp_installation_provision_instance',
+              installationId: installation.id,
+              userId: member.user_id,
+              error: error instanceof Error ? error.message : 'Unknown'
+            }, 'Failed to provision instance for team member');
+            // Continue with other members
+          }
+        }
+
+      } catch (error) {
+        request.log.error({
+          operation: 'create_mcp_installation_provision_instances',
+          installationId: installation.id,
+          teamId,
+          error: error instanceof Error ? error.message : 'Unknown'
+        }, 'Failed to provision instances for other team members');
+        // Don't fail installation creation
       }
 
       // Create satellite commands for immediate notification (3-second response goal)

@@ -1,14 +1,12 @@
 /**
  * MCP Server Status Changed Event Handler
  *
- * Updates mcpServerInstallations table when satellite reports status changes
+ * Updates mcpServerInstances table when satellite reports status changes
  * during MCP server installation, discovery, or health check processes.
  */
 
 import type { AnyDatabase } from '../../db';
 import type { FastifyBaseLogger } from 'fastify';
-import { mcpServerInstallations } from '../../db/schema';
-import { eq, and } from 'drizzle-orm';
 
 // Event type identifier
 export const EVENT_TYPE = 'mcp.server.status_changed';
@@ -42,6 +40,11 @@ export const SCHEMA = {
       minLength: 1,
       description: 'Team identifier for security validation'
     },
+    user_id: {
+      type: 'string',
+      minLength: 1,
+      description: 'User identifier for per-instance tracking'
+    },
     status: {
       type: 'string',
       enum: VALID_STATUSES,
@@ -57,7 +60,7 @@ export const SCHEMA = {
       description: 'ISO 8601 timestamp of when status changed'
     }
   },
-  required: ['installation_id', 'team_id', 'status', 'timestamp'],
+  required: ['installation_id', 'team_id', 'user_id', 'status', 'timestamp'],
   additionalProperties: true
 } as const;
 
@@ -65,6 +68,7 @@ export const SCHEMA = {
 interface StatusChangedData {
   installation_id: string;
   team_id: string;
+  user_id: string; // Required for per-user instance tracking
   status: typeof VALID_STATUSES[number];
   status_message?: string;
   timestamp: string;
@@ -73,8 +77,10 @@ interface StatusChangedData {
 /**
  * Handle mcp.server.status_changed event
  *
- * Updates the mcpServerInstallations table with new status from satellite.
- * This event is emitted during installation lifecycle:
+ * Updates the mcpServerInstances table with new status from satellite.
+ * Each team member has their own instance with independent status tracking.
+ *
+ * Event lifecycle:
  * - provisioning -> connecting -> discovering_tools -> syncing_tools -> online
  * - Or error states: offline, error, requires_reauth, permanently_failed
  */
@@ -92,40 +98,38 @@ export async function handle(
     satelliteId,
     installationId: data.installation_id,
     teamId: data.team_id,
+    userId: data.user_id,
     newStatus: data.status,
     statusMessage: data.status_message
-  }, 'Processing MCP server status change');
+  }, 'Processing MCP server status change for INSTANCE');
 
-  // Update installation status with team_id verification for security
-  const result = await db
-    .update(mcpServerInstallations)
-    .set({
-      status: data.status,
-      status_message: data.status_message || null,
-      status_updated_at: eventTimestamp,
-      updated_at: new Date()
-    })
-    .where(
-      and(
-        eq(mcpServerInstallations.id, data.installation_id),
-        eq(mcpServerInstallations.team_id, data.team_id)
-      )
-    );
+  // Import McpInstanceService
+  const { McpInstanceService } = await import('../../services/mcpInstanceService');
+  const instanceService = new McpInstanceService(db, logger);
 
-  // Check if update was successful (PostgreSQL returns rowCount)
-  const rowsAffected = (result as { rowCount?: number }).rowCount || 0;
+  // Update instance status (strict validation - instance must exist)
+  const updated = await instanceService.updateInstanceStatus(
+    data.installation_id,
+    data.user_id,
+    data.status,
+    data.status_message
+  );
 
-  if (rowsAffected === 0) {
-    logger.warn({
+  if (!updated) {
+    logger.error({
       operation: 'mcp_server_status_changed',
       installationId: data.installation_id,
-      teamId: data.team_id
-    }, 'No installation found matching id and team_id - status not updated');
-  } else {
-    logger.info({
-      operation: 'mcp_server_status_changed',
-      installationId: data.installation_id,
-      newStatus: data.status
-    }, 'Installation status updated successfully');
+      userId: data.user_id,
+      teamId: data.team_id,
+      status: data.status
+    }, 'CRITICAL: Instance not found for status update - no auto-creation');
+    return; // FAIL FAST
   }
+
+  logger.info({
+    operation: 'mcp_server_status_changed_instance',
+    installationId: data.installation_id,
+    userId: data.user_id,
+    newStatus: data.status
+  }, 'Instance status updated successfully');
 }

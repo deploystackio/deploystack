@@ -267,7 +267,6 @@ export interface McpInstallation {
   installation_name: string;
   server_name: string;
   server_slug: string;
-  status: string;
   created_at: string;
   last_used_at: string | null;
 }

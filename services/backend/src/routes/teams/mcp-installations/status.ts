@@ -170,17 +170,11 @@ export default async function getInstallationStatusRoute(server: FastifyInstance
 
 		try {
 			const db = getDb();
-			const { mcpServerInstallations } = getSchema();
+			const { mcpServerInstances, mcpServerInstallations } = getSchema();
 
-			// Query installation with status fields
+			// Verify installation exists and belongs to team
 			const installation = await db
-				.select({
-					id: mcpServerInstallations.id,
-					status: mcpServerInstallations.status,
-					status_message: mcpServerInstallations.status_message,
-					status_updated_at: mcpServerInstallations.status_updated_at,
-					last_health_check_at: mcpServerInstallations.last_health_check_at,
-				})
+				.select({ id: mcpServerInstallations.id })
 				.from(mcpServerInstallations)
 				.where(and(eq(mcpServerInstallations.id, installationId), eq(mcpServerInstallations.team_id, teamId)))
 				.limit(1);
@@ -204,7 +198,44 @@ export default async function getInstallationStatusRoute(server: FastifyInstance
 				return reply.status(404).type('application/json').send(jsonString);
 			}
 
-			const installationData = installation[0];
+			// Query the authenticated user's instance status
+			const instance = await db
+				.select({
+					id: mcpServerInstances.id,
+					status: mcpServerInstances.status,
+					status_message: mcpServerInstances.status_message,
+					status_updated_at: mcpServerInstances.status_updated_at,
+					last_health_check_at: mcpServerInstances.last_health_check_at,
+				})
+				.from(mcpServerInstances)
+				.where(
+					and(
+						eq(mcpServerInstances.installation_id, installationId),
+						eq(mcpServerInstances.user_id, userId)
+					)
+				)
+				.limit(1);
+
+			if (!instance || instance.length === 0) {
+				request.log.warn(
+					{
+						operation: 'get_installation_status',
+						teamId,
+						installationId,
+						userId,
+					},
+					'Instance not found for this user'
+				);
+
+				const errorResponse: ErrorResponse = {
+					success: false,
+					error: 'Instance not found for this user',
+				};
+				const jsonString = JSON.stringify(errorResponse);
+				return reply.status(404).type('application/json').send(jsonString);
+			}
+
+			const instanceData = instance[0];
 
 			request.log.info(
 				{
@@ -212,19 +243,19 @@ export default async function getInstallationStatusRoute(server: FastifyInstance
 					teamId,
 					installationId,
 					userId,
-					status: installationData.status,
+					status: instanceData.status,
 				},
-				'Retrieved status for installation'
+				'Retrieved status for user instance'
 			);
 
 			const successResponse: StatusSuccessResponse = {
 				success: true,
 				data: {
-					installation_id: installationData.id,
-					status: installationData.status,
-					status_message: installationData.status_message,
-					status_updated_at: installationData.status_updated_at.toISOString(),
-					last_health_check_at: installationData.last_health_check_at?.toISOString() || null,
+					installation_id: installationId,
+					status: instanceData.status,
+					status_message: instanceData.status_message,
+					status_updated_at: instanceData.status_updated_at?.toISOString() || new Date().toISOString(),
+					last_health_check_at: instanceData.last_health_check_at?.toISOString() || null,
 				},
 			};
 			const jsonString = JSON.stringify(successResponse);

@@ -200,16 +200,18 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 					'Failed to refresh token'
 				);
 
-				// Phase 11: Update installation status to requires_reauth
+				// Update ALL user instances status to requires_reauth
 				try {
+					const { getSchema } = await import('../db');
+					const { mcpServerInstances } = getSchema();
 					await db
-						.update(mcpServerInstallations)
+						.update(mcpServerInstances)
 						.set({
 							status: 'requires_reauth',
 							status_message: `OAuth token refresh failed: ${errorMessage}. Please re-authenticate.`,
 							status_updated_at: new Date(),
 						})
-						.where(eq(mcpServerInstallations.id, installation.id));
+						.where(eq(mcpServerInstances.installation_id, installation.id));
 
 					logger.warn(
 						{

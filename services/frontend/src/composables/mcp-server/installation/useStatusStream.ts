@@ -63,7 +63,7 @@ export function useStatusStream(
       eventSource = new EventSource(url, { withCredentials })
 
       // Handle initial snapshot
-      eventSource.addEventListener('snapshot', (event: MessageEvent) => {
+      eventSource.addEventListener('instance_snapshot', (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data) as InstallationStatusData
           statusData.value = data
@@ -76,7 +76,7 @@ export function useStatusStream(
       })
 
       // Handle status updates
-      eventSource.addEventListener('status_update', (event: MessageEvent) => {
+      eventSource.addEventListener('instance_status_update', (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data) as InstallationStatusData
           statusData.value = data

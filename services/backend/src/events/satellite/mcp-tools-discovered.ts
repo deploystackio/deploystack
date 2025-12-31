@@ -7,7 +7,7 @@
 import type { AnyDatabase } from '../../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { mcpToolMetadata } from '../../db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, notInArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 // Event type identifier
@@ -127,45 +127,92 @@ export async function handle(
   }, 'Processing tool discovery event');
 
   try {
-    // Step 1: Delete existing tools for this installation
-    await db
-      .delete(mcpToolMetadata)
-      .where(eq(mcpToolMetadata.installation_id, data.installation_id));
+    // Step 1: UPSERT each tool (preserves IDs and is_disabled status)
+    let insertedCount = 0;
+    let updatedCount = 0;
 
-    logger.debug({
-      operation: 'delete_existing_tools',
-      installation_id: data.installation_id
-    }, 'Deleted existing tool metadata');
+    for (const tool of data.tools) {
+      // Try to find existing tool by (installation_id, tool_name)
+      const existing = await db
+        .select({
+          id: mcpToolMetadata.id,
+          is_disabled: mcpToolMetadata.is_disabled
+        })
+        .from(mcpToolMetadata)
+        .where(
+          and(
+            eq(mcpToolMetadata.installation_id, data.installation_id),
+            eq(mcpToolMetadata.tool_name, tool.tool_name)
+          )
+        )
+        .limit(1);
 
-    // Step 2: Insert new tool records
-    if (data.tools.length > 0) {
-      const toolRecords = data.tools.map(tool => ({
-        id: nanoid(),
-        installation_id: data.installation_id,
-        team_id: data.team_id,
-        tool_name: tool.tool_name,
-        description: tool.description || '',
-        input_schema: tool.input_schema,
-        token_count: tool.token_count,
-        discovered_at: eventTimestamp,
-        updated_at: eventTimestamp
-      }));
+      if (existing.length > 0) {
+        // UPDATE existing tool (preserves ID and is_disabled)
+        await db
+          .update(mcpToolMetadata)
+          .set({
+            description: tool.description || '',
+            input_schema: tool.input_schema,
+            token_count: tool.token_count,
+            discovered_at: eventTimestamp,
+            updated_at: eventTimestamp
+            // NOTE: Do NOT update is_disabled - preserve user's setting
+          })
+          .where(eq(mcpToolMetadata.id, existing[0].id));
 
-      await db.insert(mcpToolMetadata).values(toolRecords);
+        updatedCount++;
+      } else {
+        // INSERT new tool
+        await db.insert(mcpToolMetadata).values({
+          id: nanoid(),
+          installation_id: data.installation_id,
+          team_id: data.team_id,
+          tool_name: tool.tool_name,
+          description: tool.description || '',
+          input_schema: tool.input_schema,
+          token_count: tool.token_count,
+          is_disabled: false, // New tools start enabled
+          discovered_at: eventTimestamp,
+          updated_at: eventTimestamp
+        });
 
-      logger.info({
-        operation: 'store_tool_metadata',
-        installation_id: data.installation_id,
-        tool_count: data.tools.length,
-        total_tokens: data.total_tokens
-      }, 'Tool metadata stored successfully');
-    } else {
-      logger.info({
-        operation: 'store_tool_metadata',
-        installation_id: data.installation_id,
-        tool_count: 0
-      }, 'No tools to store for this installation');
+        insertedCount++;
+      }
     }
+
+    // Step 2: Remove tools that no longer exist (cleanup)
+    const currentToolNames = data.tools.map(t => t.tool_name);
+    let deletedCount = 0;
+
+    if (currentToolNames.length > 0) {
+      const deleteResult = await db
+        .delete(mcpToolMetadata)
+        .where(
+          and(
+            eq(mcpToolMetadata.installation_id, data.installation_id),
+            notInArray(mcpToolMetadata.tool_name, currentToolNames)
+          )
+        );
+
+      // Drizzle returns array of deleted rows or undefined
+      deletedCount = Array.isArray(deleteResult) ? deleteResult.length : 0;
+    } else {
+      // No tools discovered - delete all existing tools for this installation
+      await db
+        .delete(mcpToolMetadata)
+        .where(eq(mcpToolMetadata.installation_id, data.installation_id));
+    }
+
+    logger.info({
+      operation: 'store_tool_metadata',
+      installation_id: data.installation_id,
+      tool_count: data.tools.length,
+      total_tokens: data.total_tokens,
+      inserted: insertedCount,
+      updated: updatedCount,
+      deleted: deletedCount
+    }, `Tool metadata stored successfully (${insertedCount} inserted, ${updatedCount} updated, ${deletedCount} deleted)`);
 
   } catch (error) {
     logger.error({

@@ -115,8 +115,9 @@ export class DynamicConfigManager {
             operation: 'config_server_added',
             server_name: serverName,
             server_url: maskUrlForLogging(serverConfig.url, serverConfig.secret_metadata?.query_params),
-            enabled: serverConfig.enabled
-          }, `Added MCP server configuration: ${serverName}`);
+            enabled: serverConfig.enabled,
+            user_id: serverConfig.user_id
+          }, `Added MCP server configuration: ${serverName}${serverConfig.user_id ? ` (user: ${serverConfig.user_id})` : ''}`);
         });
 
         changes.modifiedServers.forEach(serverName => {
@@ -125,15 +126,18 @@ export class DynamicConfigManager {
             operation: 'config_server_modified',
             server_name: serverName,
             server_url: maskUrlForLogging(serverConfig.url, serverConfig.secret_metadata?.query_params),
-            enabled: serverConfig.enabled
-          }, `Modified MCP server configuration: ${serverName}`);
+            enabled: serverConfig.enabled,
+            user_id: serverConfig.user_id
+          }, `Modified MCP server configuration: ${serverName}${serverConfig.user_id ? ` (user: ${serverConfig.user_id})` : ''}`);
         });
 
         changes.removedServers.forEach(serverName => {
+          const oldServerConfig = this.currentConfig.servers[serverName];
           this.logger.info({
             operation: 'config_server_removed',
-            server_name: serverName
-          }, `Removed MCP server configuration: ${serverName}`);
+            server_name: serverName,
+            user_id: oldServerConfig?.user_id
+          }, `Removed MCP server configuration: ${serverName}${oldServerConfig?.user_id ? ` (user: ${oldServerConfig.user_id})` : ''}`);
         });
 
         // Log unchanged servers at debug level (optional)
@@ -441,6 +445,29 @@ export class DynamicConfigManager {
    */
   getEnabledMcpServerNames(): string[] {
     return Object.keys(this.getEnabledMcpServers());
+  }
+
+  /**
+   * Find MCP server config by server_slug and user_id (Per-User Process Routing)
+   * Returns the specific user's installation for a given server
+   */
+  findConfigByServerAndUser(serverSlug: string, userId: string): McpServerConfig | undefined {
+    for (const config of Object.values(this.currentConfig.servers)) {
+      if (config.server_slug === serverSlug && config.user_id === userId) {
+        return config;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Get all MCP server configs for a specific user (Per-User Process Routing)
+   * Returns all installations the user has access to
+   */
+  getConfigsForUser(userId: string): McpServerConfig[] {
+    return Object.values(this.currentConfig.servers).filter(
+      config => config.user_id === userId
+    );
   }
 
   /**

@@ -73,6 +73,11 @@ export {
   mcpRequestLogs,
 } from './schema-tables/mcp-installations';
 
+// MCP Server Instances Table
+export {
+  mcpServerInstances,
+} from './schema-tables/mcp-instances';
+
 // OAuth2 Authorization System Tables
 export {
   oauthAuthorizationCodes,

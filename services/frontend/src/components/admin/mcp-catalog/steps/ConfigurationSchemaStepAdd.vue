@@ -219,8 +219,8 @@ const parseQueryParamsIntelligently = (url: string): ConfigItem[] => {
         dataType: isSecret ? 'secret' : 'string',
         required: true,
         locked: false,
-        default_team_locked: false,
-        visible_to_users: true,
+        default_team_locked: isPlaceholder ? true : false,
+        visible_to_users: !isSecret,
       })
     })
   } catch (error) {
@@ -693,7 +693,11 @@ const openEditModal = (index: number) => {
   editingIndex.value = index
   const item = localData.value[index]
   if (item) {
-    formDataLocal.value = { ...item }
+    formDataLocal.value = {
+      ...item,
+      default_team_locked: item.default_team_locked ?? false,
+      visible_to_users: item.visible_to_users ?? true
+    }
   }
   formErrors.value = {}
   isModalOpen.value = true

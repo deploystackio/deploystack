@@ -86,6 +86,8 @@ export interface ClientConfig {
 export class McpInstallationService {
   private readonly mcpServerInstallations: ReturnType<typeof getSchema>['mcpServerInstallations'];
   private readonly mcpServers: ReturnType<typeof getSchema>['mcpServers'];
+  private readonly mcpServerInstances: ReturnType<typeof getSchema>['mcpServerInstances'];
+  private readonly authUser: ReturnType<typeof getSchema>['authUser'];
   private readonly teams: ReturnType<typeof getSchema>['teams'];
 
   constructor(
@@ -95,17 +97,27 @@ export class McpInstallationService {
     const schema = getSchema();
     this.mcpServerInstallations = schema.mcpServerInstallations;
     this.mcpServers = schema.mcpServers;
+    this.mcpServerInstances = schema.mcpServerInstances;
+    this.authUser = schema.authUser;
     this.teams = schema.teams;
   }
 
-  async getTeamInstallations(teamId: string, userId: string): Promise<McpInstallation[]> {
-    this.logger.debug({
-      operation: 'get_team_installations',
-      teamId,
-      userId
-    }, 'Getting MCP installations for team');
+  /**
+   * Get all installation IDs for a team (used for instance provisioning)
+   * Simple query - no joins, just IDs
+   */
+  async getTeamInstallationIds(teamId: string): Promise<Array<{ id: string }>> {
+    const installations = await this.db
+      .select({ id: this.mcpServerInstallations.id })
+      .from(this.mcpServerInstallations)
+      .where(eq(this.mcpServerInstallations.team_id, teamId));
 
-    // Optimized query: Select only the minimal columns needed for list view
+    return installations;
+  }
+
+  async getTeamInstallations(teamId: string, userId: string): Promise<McpInstallation[]> {
+
+    // Optimized query: Select minimal columns + user's instance status
     const installations = await this.db
       .select({
         // Installation columns - minimal for list view
@@ -116,28 +128,32 @@ export class McpInstallationService {
         created_at: this.mcpServerInstallations.created_at,
         last_used_at: this.mcpServerInstallations.last_used_at,
 
-        // Status fields for list display
-        status: this.mcpServerInstallations.status,
-        status_message: this.mcpServerInstallations.status_message,
-        status_updated_at: this.mcpServerInstallations.status_updated_at,
-        last_health_check_at: this.mcpServerInstallations.last_health_check_at,
-
         // Server columns - minimal for list display
         server_id: this.mcpServers.id,
         server_icon_url: this.mcpServers.icon_url,
         server_category_id: this.mcpServers.category_id,
         server_runtime: this.mcpServers.runtime,
+
+        // User's instance status
+        instance_id: this.mcpServerInstances.id,
+        instance_user_id: this.mcpServerInstances.user_id,
+        user_slug: this.authUser.username,
+        status: this.mcpServerInstances.status,
+        status_message: this.mcpServerInstances.status_message,
+        status_updated_at: this.mcpServerInstances.status_updated_at,
       })
       .from(this.mcpServerInstallations)
       .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
+      .leftJoin(
+        this.mcpServerInstances,
+        and(
+          eq(this.mcpServerInstances.installation_id, this.mcpServerInstallations.id),
+          eq(this.mcpServerInstances.user_id, userId)
+        )
+      )
+      .leftJoin(this.authUser, eq(this.mcpServerInstances.user_id, this.authUser.id))
       .where(eq(this.mcpServerInstallations.team_id, teamId))
       .orderBy(desc(this.mcpServerInstallations.created_at));
-
-    this.logger.info({
-      operation: 'get_team_installations',
-      teamId,
-      installationsFound: installations.length
-    }, 'Retrieved MCP installations for team');
 
     // Return simple mapped array without heavy processing (no env masking, no args decryption)
     return installations.map(row => ({
@@ -147,10 +163,12 @@ export class McpInstallationService {
       team_id: row.team_id,
       created_at: row.created_at,
       last_used_at: row.last_used_at ?? undefined,
+      instance_id: row.instance_id,
+      user_id: row.instance_user_id,
+      user_slug: row.user_slug,
       status: row.status,
-      status_message: row.status_message ?? undefined,
-      status_updated_at: row.status_updated_at ?? undefined,
-      last_health_check_at: row.last_health_check_at ?? undefined,
+      status_message: row.status_message,
+      status_updated_at: row.status_updated_at,
       server: row.server_id ? {
         id: row.server_id,
         icon_url: row.server_icon_url,
@@ -408,7 +426,7 @@ export class McpInstallationService {
               .where(eq(this.mcpServers.id, data.server_id));
 
             // Throw error with OAuth metadata for frontend to handle
-            // Phase 5 will implement the OAuth flow redirect
+            // OAuth flow redirect is handled by frontend
             throw new Error(
               JSON.stringify({
                 error: 'oauth_required',
@@ -545,12 +563,6 @@ export class McpInstallationService {
       team_url_query_params: data.team_url_query_params
         ? JSON.stringify(data.team_url_query_params)
         : null,
-      // Installation status tracking
-      status: 'provisioning',
-      status_message: 'Waiting for satellite to pick up installation',
-      status_updated_at: now,
-      last_health_check_at: null,
-      last_credential_check_at: null,
       created_at: now,
       updated_at: now,
       last_used_at: null

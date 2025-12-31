@@ -96,11 +96,25 @@ export default async function reauthRoute(server: FastifyInstance) {
 
       const { installation, server: mcpServer } = installationData;
 
-      // Check if installation requires re-auth
-      if (installation.status !== 'requires_reauth') {
+      // Check if user's instance requires re-auth
+      const { mcpServerInstances } = getSchema();
+      const [userInstance] = await db
+        .select({ status: mcpServerInstances.status })
+        .from(mcpServerInstances)
+        .where(
+          and(
+            eq(mcpServerInstances.installation_id, installationId),
+            eq(mcpServerInstances.user_id, userId)
+          )
+        )
+        .limit(1);
+
+      if (!userInstance || userInstance.status !== 'requires_reauth') {
         const errorResponse: ErrorResponse = {
           success: false,
-          error: `Installation does not require re-authorization. Current status: ${installation.status}`
+          error: userInstance
+            ? `Installation does not require re-authorization. Current status: ${userInstance.status}`
+            : 'Instance not found for this user'
         };
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(400).type('application/json').send(jsonString);

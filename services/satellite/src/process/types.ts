@@ -5,8 +5,11 @@ import { ChildProcess } from 'child_process';
  */
 export interface MCPServerConfig {
   installation_id: string;       // Database ID from backend
-  installation_name: string;     // e.g., "context7-john-R36no6FGoMFEZO9nWJJLT"
+  instance_id?: string;          // Instance ID from mcpServerInstances table (per-user instance)
+  installation_name: string;     // e.g., "context7-john-user123-R36no6FGoMFEZO9nWJJLT" (includes user_id)
   team_id: string;              // Team UUID
+  team_slug: string;            // Team slug for identification
+  user_id?: string;             // User ID that owns this instance (per-user process)
   server_slug: string;          // Server slug (e.g., "sequential", "brightdata-mcp-1")
   command: string;              // "npx" for Node.js packages
   args: string[];               // ["-y", "@upstash/context7"]

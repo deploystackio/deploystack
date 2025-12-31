@@ -1,7 +1,8 @@
 import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
-import { getDb } from '../../../db';
+import { getDb, getSchema } from '../../../db';
+import { eq, and } from 'drizzle-orm';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
   CREATE_USER_CONFIG_REQUEST_SCHEMA,
@@ -87,6 +88,68 @@ export default async function createUserConfigRoute(server: FastifyInstance) {
         userId,
         authType
       }, 'Successfully created MCP user configuration');
+
+      // Set status for user's instance to provide feedback
+      const { mcpServerInstances } = getSchema();
+
+      // First, check current instance status
+      const [currentInstance] = await db.select()
+        .from(mcpServerInstances)
+        .where(
+          and(
+            eq(mcpServerInstances.installation_id, installationId),
+            eq(mcpServerInstances.user_id, userId)
+          )
+        )
+        .limit(1);
+
+      // Determine appropriate status based on current state
+      let newStatus: string;
+      let statusMessage: string;
+
+      if (currentInstance?.status === 'awaiting_user_config') {
+        // User just configured required fields - trigger initial spawn
+        newStatus = 'provisioning';
+        statusMessage = 'User configuration completed';
+      } else {
+        // Configuration updated on running instance - trigger restart
+        newStatus = 'restarting';
+        statusMessage = 'Configuration updated, server restarting...';
+      }
+
+      await db.update(mcpServerInstances)
+        .set({
+          status: newStatus,
+          status_message: statusMessage,
+          status_updated_at: new Date()
+        })
+        .where(
+          and(
+            eq(mcpServerInstances.installation_id, installationId),
+            eq(mcpServerInstances.user_id, userId)
+          )
+        );
+
+      // Create satellite commands for immediate notification (spawn MCP server with new config)
+      try {
+        const { SatelliteCommandService } = await import('../../../services/satelliteCommandService');
+        const satelliteCommandService = new SatelliteCommandService(db, request.log);
+        const commands = await satelliteCommandService.notifyMcpInstallation(
+          installationId,
+          teamId,
+          userId
+        );
+
+        request.log.info({
+          operation: 'create_mcp_user_config',
+          installationId,
+          commandsCreated: commands.length,
+          satelliteIds: commands.map(c => c.satellite_id)
+        }, 'Satellite commands created for user configuration creation');
+      } catch (commandError) {
+        request.log.error(commandError, `Failed to create satellite commands for user config creation ${userConfig.id}:`);
+        // Don't fail creation if command creation fails
+      }
 
       const successResponse: UserConfigSuccessResponse = {
         success: true,

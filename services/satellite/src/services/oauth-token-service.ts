@@ -20,7 +20,7 @@ export interface OAuthTokenStatus {
  * Service for retrieving OAuth tokens from backend for MCP servers
  *
  * This service:
- * - Fetches OAuth tokens from Phase 9 backend endpoints
+ * - Fetches OAuth tokens from backend endpoints
  * - Caches tokens for 5 minutes to reduce backend load
  * - Handles token expiration and missing tokens
  * - Only used for HTTP/SSE MCP servers (not stdio)

@@ -3,9 +3,8 @@ import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
-import { getDb } from '../../../db';
-import { mcpServerInstallations } from '../../../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { getDb, getSchema } from '../../../db';
+import { eq, and, sql } from 'drizzle-orm';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
   UPDATE_ENVIRONMENT_VARS_REQUEST_SCHEMA,
@@ -108,8 +107,10 @@ export default async function updateEnvironmentVariablesRoute(server: FastifyIns
         authType
       }, 'Successfully updated MCP installation environment variables');
 
-      // Set status to 'restarting' immediately to provide user feedback
-      await db.update(mcpServerInstallations)
+      // Set status to 'restarting' for instances that are ready to spawn
+      // Exclude instances awaiting user configuration
+      const { mcpServerInstances } = getSchema();
+      await db.update(mcpServerInstances)
         .set({
           status: 'restarting',
           status_message: 'Configuration updated, server restarting...',
@@ -117,8 +118,10 @@ export default async function updateEnvironmentVariablesRoute(server: FastifyIns
         })
         .where(
           and(
-            eq(mcpServerInstallations.id, installationId),
-            eq(mcpServerInstallations.team_id, teamId)
+            eq(mcpServerInstances.installation_id, installationId),
+            // Only update instances that have user config (exclude awaiting_user_config)
+            // These instances will update when user completes their config
+            sql`${mcpServerInstances.status} != 'awaiting_user_config'`
           )
         );
 

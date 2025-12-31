@@ -58,6 +58,7 @@ export interface McpServerConfig {
   headers?: Record<string, string>;
   url_query_params?: Record<string, string>;
   installation_id?: string;
+  instance_id?: string;
   team_id?: string;
   team_slug?: string;
   server_name?: string;
@@ -66,7 +67,7 @@ export interface McpServerConfig {
 
   /** OAuth support - Only for HTTP/SSE transport */
   requires_oauth?: boolean;
-  user_id?: string; // User who authorized the OAuth connection
+  user_id?: string; // User who authorized the OAuth connection OR per-user instance owner
 
   /** Installation settings */
   settings?: {

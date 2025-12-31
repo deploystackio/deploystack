@@ -4,7 +4,7 @@ import { RuntimeState } from '../process/runtime-state';
 import type { EventBus } from './event-bus';
 
 /**
- * Status callback for Phase 10 local status tracking
+ * Status callback for local status tracking
  */
 export type StdioServerStatusCallback = (
   serverSlug: string,
@@ -52,7 +52,7 @@ export class StdioToolDiscoveryManager {
   }
 
   /**
-   * Set status callback for Phase 10 local status tracking
+   * Set status callback for local status tracking
    */
   setStatusCallback(callback: StdioServerStatusCallback): void {
     this.statusCallback = callback;
@@ -71,6 +71,7 @@ export class StdioToolDiscoveryManager {
   private emitStatusChange(
     installationId: string,
     teamId: string,
+    userId: string,
     status: 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed',
     statusMessage?: string
   ): void {
@@ -81,6 +82,7 @@ export class StdioToolDiscoveryManager {
     this.eventBus.emit('mcp.server.status_changed', {
       installation_id: installationId,
       team_id: teamId,
+      user_id: userId,
       status,
       status_message: statusMessage,
       timestamp: new Date().toISOString()
@@ -264,10 +266,10 @@ export class StdioToolDiscoveryManager {
       // Emit status change event to backend
       const config = processInfo.config;
       if (config.installation_id && config.team_id) {
-        this.emitStatusChange(config.installation_id, config.team_id, 'online');
+        this.emitStatusChange(config.installation_id, config.team_id, config.user_id || 'unknown', 'online');
       }
 
-      // Phase 10: Notify about successful discovery (set status to 'online')
+      // OAuth: Notify about successful discovery (set status to 'online')
       if (this.statusCallback) {
         this.statusCallback(serverSlug, 'online');
       }
@@ -286,10 +288,10 @@ export class StdioToolDiscoveryManager {
       const config = processInfo.config;
       if (config.installation_id && config.team_id) {
         const { status, message } = this.getStatusFromError(errorMessage);
-        this.emitStatusChange(config.installation_id, config.team_id, status, message);
+        this.emitStatusChange(config.installation_id, config.team_id, config.user_id || 'unknown', status, message);
       }
 
-      // Phase 10: Notify about discovery failure
+      // OAuth: Notify about discovery failure
       if (this.statusCallback) {
         const serverSlug = processInfo.config.server_slug;
         const { status, message } = this.getStatusFromError(errorMessage);

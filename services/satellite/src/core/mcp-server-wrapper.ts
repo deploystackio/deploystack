@@ -8,6 +8,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { FastifyBaseLogger, FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
+import { AsyncLocalStorage } from 'async_hooks';
 import { UnifiedToolDiscoveryManager } from '../services/unified-tool-discovery-manager';
 import { ProcessManager } from '../process/manager';
 import { ToolSearchService } from '../services/tool-search-service';
@@ -36,6 +37,15 @@ interface BufferedRequestEntry {
 }
 
 /**
+ * User request context extracted from OAuth token
+ * Stored in AsyncLocalStorage for per-user process routing
+ */
+interface UserRequestContext {
+  user_id: string;
+  team_id: string;
+}
+
+/**
  * MCP Server Wrapper
  * Wraps the official MCP SDK server with existing Fastify server and business logic
  */
@@ -58,6 +68,9 @@ export class McpServerWrapper {
   private requestLogFlushTimeout: NodeJS.Timeout | null = null;
   private readonly REQUEST_LOG_BATCH_INTERVAL_MS = 3000; // 3 seconds
   private readonly REQUEST_LOG_BATCH_MAX_SIZE = 20; // Max logs before forced flush
+
+  // AsyncLocalStorage for per-user request context (Per-User Process Routing)
+  private readonly userContextStore = new AsyncLocalStorage<UserRequestContext>();
 
   constructor(logger: FastifyBaseLogger) {
     this.logger = logger.child({ component: 'McpServerWrapper' });
@@ -87,7 +100,7 @@ export class McpServerWrapper {
   }
 
   /**
-   * Set OAuth token service (Phase 10)
+   * Set OAuth token service (OAuth support)
    */
   setOAuthTokenService(oauthTokenService: OAuthTokenService): void {
     this.oauthTokenService = oauthTokenService;
@@ -98,7 +111,7 @@ export class McpServerWrapper {
   }
 
   /**
-   * Set EventBus for emitting request logs (Phase 7)
+   * Set EventBus for emitting request logs (Request logging)
    */
   setEventBus(eventBus: EventBus): void {
     this.eventBus = eventBus;
@@ -213,8 +226,8 @@ export class McpServerWrapper {
    * Handle discover_mcp_tools meta-tool
    */
   private async handleDiscoverTools(args: any): Promise<any> {
-    if (!this.toolSearchService) {
-      throw new Error('Tool search service not available');
+    if (!this.toolSearchService || !this.dynamicConfigManager) {
+      throw new Error('Tool search service or config manager not available');
     }
 
     const query = args.query;
@@ -224,6 +237,9 @@ export class McpServerWrapper {
       throw new Error('Invalid query parameter - must be a non-empty string');
     }
 
+    // Get user context for per-user tool filtering (per-user routing)
+    const userContext = this.userContextStore.getStore();
+
     // Handle wildcard query "*" - list all tools (max 20)
     const isWildcard = query.trim() === '*';
     const wildcardLimit = 20;
@@ -232,8 +248,10 @@ export class McpServerWrapper {
       operation: 'discover_mcp_tools',
       query: query,
       limit: isWildcard ? wildcardLimit : limit,
-      is_wildcard: isWildcard
-    }, `Discovering tools with query: "${query}"${isWildcard ? ' (wildcard mode)' : ''}`);
+      is_wildcard: isWildcard,
+      user_id: userContext?.user_id,
+      has_user_context: !!userContext
+    }, `Discovering tools with query: "${query}"${isWildcard ? ' (wildcard mode)' : ''}${userContext ? ` (user: ${userContext.user_id})` : ''}`);
 
     const startTime = Date.now();
 
@@ -252,6 +270,28 @@ export class McpServerWrapper {
     } else {
       // Normal search
       results = this.toolSearchService.search(query, limit);
+    }
+
+    // Per-user routing: Filter results to only show user's installations
+    if (userContext) {
+      const userConfigs = this.dynamicConfigManager.getConfigsForUser(userContext.user_id);
+      const userServerNames = new Set(userConfigs.map(config => config.name));
+
+      this.logger.debug({
+        operation: 'discover_mcp_tools_user_filter',
+        user_id: userContext.user_id,
+        user_server_count: userServerNames.size,
+        user_servers: Array.from(userServerNames),
+        results_before_filter: results.length
+      }, `Filtering tools to user's ${userServerNames.size} installations`);
+
+      results = results.filter(tool => userServerNames.has(tool.server_name));
+
+      this.logger.debug({
+        operation: 'discover_mcp_tools_user_filtered',
+        user_id: userContext.user_id,
+        results_after_filter: results.length
+      }, `Filtered to ${results.length} tools from user's installations`);
     }
 
     const searchTime = Date.now() - startTime;
@@ -338,7 +378,7 @@ export class McpServerWrapper {
       throw new Error(`Tool not found: ${namespacedToolName}. Available tools: ${allTools.map(t => t.namespacedName).join(', ')}`);
     }
 
-    // Phase 10: Check if server is available before executing tool
+    // OAuth: Check if server is available before executing tool
     const serverStatus = this.toolDiscoveryManager.getServerStatus(cachedTool.serverSlug);
     if (serverStatus && serverStatus.status !== 'online') {
       // Allow execution attempts for 'offline' and 'error' states to detect recovery
@@ -368,8 +408,42 @@ export class McpServerWrapper {
       }
     }
 
-    // Get config for disabled check and request logging context
-    const config = this.dynamicConfigManager?.getMcpServerConfig(cachedTool.serverName);
+    // Per-user routing: Get user-specific config for per-user process routing
+    // Extract server_slug from tool_path (format: "serverSlug:toolName")
+    const serverSlug = toolPath.substring(0, colonIndex);
+    const userContext = this.userContextStore.getStore();
+
+    let config: any | undefined;
+
+    if (userContext && this.dynamicConfigManager) {
+      // Find the user's specific installation for this server
+      config = this.dynamicConfigManager.findConfigByServerAndUser(serverSlug, userContext.user_id);
+
+      if (!config) {
+        this.logger.error({
+          operation: 'execute_mcp_tool_user_no_config',
+          tool_path: toolPath,
+          server_slug: serverSlug,
+          user_id: userContext.user_id
+        }, `User does not have access to server: ${serverSlug}`);
+
+        throw new Error(
+          `You do not have access to server '${serverSlug}'. ` +
+          `Please check your team's MCP server installations.`
+        );
+      }
+
+      this.logger.debug({
+        operation: 'execute_mcp_tool_user_config_found',
+        tool_path: toolPath,
+        server_slug: serverSlug,
+        user_id: userContext.user_id,
+        installation_name: config.name
+      }, `Found user's config for ${serverSlug}: ${config.name}`);
+    } else {
+      // Fallback: No user context (backward compatibility)
+      config = this.dynamicConfigManager?.getMcpServerConfig(cachedTool.serverName);
+    }
 
     // Check if tool is disabled
     if (config?.installation_id) {
@@ -390,7 +464,7 @@ export class McpServerWrapper {
       }
     }
 
-    // Execute tool with request logging (Phase 7)
+    // Execute tool with request logging (Request logging)
     const startTime = Date.now();
     let success = false;
     let errorMessage: string | undefined;
@@ -403,7 +477,9 @@ export class McpServerWrapper {
                               serverStatusBefore?.status === 'requires_reauth';
 
     try {
-      result = await this.executeToolCall(namespacedToolName, toolArguments);
+      // Per-user routing: Pass user's processId for per-user routing
+      const serverNameOverride = config?.name; // This is the user's processId
+      result = await this.executeToolCall(namespacedToolName, toolArguments, serverNameOverride);
       success = true;
 
       // SUCCESS PATH: Check if server was previously offline/error
@@ -490,7 +566,7 @@ export class McpServerWrapper {
   }
 
   /**
-   * Create LLM-friendly error response for unavailable servers (Phase 10)
+   * Create LLM-friendly error response for unavailable servers (OAuth support)
    */
   private createUnavailableServerResponse(
     toolPath: string,
@@ -582,16 +658,20 @@ export class McpServerWrapper {
 
   /**
    * Execute tool call - route to appropriate MCP server
+   * @param namespacedToolName - Tool path in format "serverSlug:toolName"
+   * @param toolArgs - Arguments to pass to the tool
+   * @param serverNameOverride - Optional user's processId for per-user routing (per-user routing)
    */
-  private async executeToolCall(namespacedToolName: string, toolArgs: any): Promise<any> {
+  private async executeToolCall(namespacedToolName: string, toolArgs: any, serverNameOverride?: string): Promise<any> {
     if (!this.toolDiscoveryManager) {
       throw new Error('Tool discovery manager not available');
     }
 
     this.logger.info({
       operation: 'mcp_tools_call',
-      namespaced_tool_name: namespacedToolName
-    }, `Calling namespaced tool: ${namespacedToolName}`);
+      namespaced_tool_name: namespacedToolName,
+      server_name_override: serverNameOverride
+    }, `Calling namespaced tool: ${namespacedToolName}${serverNameOverride ? ` (user's processId: ${serverNameOverride})` : ''}`);
 
     // Validate namespaced tool name format (serverSlug:toolName)
     const colonIndex = namespacedToolName.indexOf(':');
@@ -601,13 +681,14 @@ export class McpServerWrapper {
 
     // Find the cached tool to get the original tool name and verify it exists
     const cachedTool = this.toolDiscoveryManager.getTool(namespacedToolName);
-    
+
     if (!cachedTool) {
       const allTools = this.toolDiscoveryManager.getAllTools();
       throw new Error(`Tool not found: ${namespacedToolName}. Available tools: ${allTools.map(t => t.namespacedName).join(', ')}`);
     }
 
-    const serverName = cachedTool.serverName;
+    // Per-user routing: Use user's processId if provided, otherwise fall back to cached serverName
+    const serverName = serverNameOverride || cachedTool.serverName;
     const originalToolName = cachedTool.originalName;
     const transport = cachedTool.transport;
 
@@ -616,8 +697,9 @@ export class McpServerWrapper {
       server_name: serverName,
       original_tool_name: originalToolName,
       namespaced_tool_name: namespacedToolName,
-      transport: transport
-    }, `Routing tool call to ${transport} server: ${serverName}, tool: ${originalToolName}`);
+      transport: transport,
+      using_override: !!serverNameOverride
+    }, `Routing tool call to ${transport} server: ${serverName}, tool: ${originalToolName}${serverNameOverride ? ' (per-user process)' : ''}`);
 
     // Create JSON-RPC request with original tool name
     const jsonRpcRequest = {
@@ -767,7 +849,7 @@ export class McpServerWrapper {
       requires_oauth: config.requires_oauth
     }, `Sending tool call to HTTP server: ${serverName}`);
 
-    // Phase 10: OAuth token injection for HTTP/SSE MCP servers
+    // OAuth: OAuth token injection for HTTP/SSE MCP servers
     let headers: Record<string, string> = {};
 
     // Add regular headers from config (API keys, custom headers, etc.)
@@ -950,7 +1032,7 @@ export class McpServerWrapper {
         response_time_ms: responseTime
       }, `HTTP tool call failed: ${errorMessage}`);
 
-      // Phase 10: Handle OAuth 401 errors
+      // OAuth: Handle OAuth 401 errors
       if (errorMessage.includes('401') || errorMessage.toLowerCase().includes('unauthorized')) {
         this.logger.error({
           operation: 'oauth_token_invalid_or_expired',
@@ -1118,6 +1200,7 @@ export class McpServerWrapper {
       this.eventBus.emit('mcp.server.status_changed', {
         installation_id: config.installation_id,
         team_id: config.team_id,
+        user_id: config.user_id || 'unknown',
         status,
         status_message: message,
         timestamp: new Date().toISOString()
@@ -1169,6 +1252,7 @@ export class McpServerWrapper {
         this.eventBus.emit('mcp.server.status_changed', {
           installation_id: config.installation_id,
           team_id: config.team_id,
+          user_id: config.user_id || 'unknown',
           status: 'connecting',
           status_message: 'Server recovered, re-discovering tools',
           timestamp: new Date().toISOString()
@@ -1207,6 +1291,7 @@ export class McpServerWrapper {
         this.eventBus.emit('mcp.server.status_changed', {
           installation_id: config.installation_id,
           team_id: config.team_id,
+          user_id: config.user_id || 'unknown',
           status: 'error',
           status_message: `Re-discovery failed: ${errMsg}`,
           timestamp: new Date().toISOString()
@@ -1438,8 +1523,21 @@ export class McpServerWrapper {
         return;
       }
 
-      // Handle the request
-      await transport.handleRequest(request.raw, reply.raw, request.body);
+      // Extract user context from OAuth token for per-user process routing (per-user routing)
+      const userContext: UserRequestContext | undefined = request.auth ? {
+        user_id: request.auth.user.id,
+        team_id: request.auth.team.id
+      } : undefined;
+
+      // Handle the request with user context stored in AsyncLocalStorage
+      if (userContext) {
+        await this.userContextStore.run(userContext, async () => {
+          await transport.handleRequest(request.raw, reply.raw, request.body);
+        });
+      } else {
+        // No authentication - handle request without user context (backward compatibility)
+        await transport.handleRequest(request.raw, reply.raw, request.body);
+      }
     });
 
     // Handle GET requests for server-to-client notifications via SSE
@@ -1514,7 +1612,7 @@ export class McpServerWrapper {
     }, 'MCP server cleanup completed');
   }
 
-  // ==================== Request Log Batching (Phase 7) ====================
+  // ==================== Request Log Batching (Request logging) ====================
 
   /**
    * Buffer a request log entry for batched emission

@@ -2,6 +2,7 @@ import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
+import { McpInstanceService } from '../../../services/mcpInstanceService';
 import { getDb } from '../../../db';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
@@ -9,6 +10,7 @@ import {
   COMMON_ERROR_RESPONSES,
   DUAL_AUTH_SECURITY,
   formatInstallationResponse,
+  formatInstancesResponse,
   type TeamAndInstallationParams,
   type InstallationData,
   type InstallationSuccessResponse,
@@ -64,7 +66,8 @@ export default async function getInstallationRoute(server: FastifyInstance) {
     try {
       const db = getDb();
       const installationService = new McpInstallationService(db, request.log);
-      
+      const instanceService = new McpInstanceService(db, request.log);
+
       const installation = await installationService.getInstallationById(installationId, teamId) as InstallationData | null;
 
       if (!installation) {
@@ -83,17 +86,24 @@ export default async function getInstallationRoute(server: FastifyInstance) {
         return reply.status(404).type('application/json').send(jsonString);
       }
 
+      // Fetch per-user instances with user information
+      const instances = await instanceService.getInstancesWithUsersByInstallation(installationId, teamId);
+
       request.log.info({
         operation: 'get_mcp_installation',
         teamId,
         installationId,
         userId,
-      authType
-      }, 'Retrieved MCP installation');
+        authType,
+        instanceCount: instances.length
+      }, 'Retrieved MCP installation with instances');
 
       const response: InstallationSuccessResponse = {
         success: true,
-        data: formatInstallationResponse(installation)
+        data: {
+          ...formatInstallationResponse(installation),
+          instances: formatInstancesResponse(instances)
+        }
       };
       const jsonString = JSON.stringify(response);
       return reply.status(200).type('application/json').send(jsonString);

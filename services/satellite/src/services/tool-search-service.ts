@@ -123,7 +123,7 @@ export class ToolSearchService {
       return {
         tool_path: `${tool.serverSlug}:${tool.toolName}`,
         description: tool.description,
-        server_name: tool.serverSlug,
+        server_name: tool.serverName,
         transport: tool.transport,
         score: result.score
       };
@@ -217,7 +217,7 @@ export class ToolSearchService {
     return searchableTools.slice(0, limit).map(tool => ({
       tool_path: `${tool.serverSlug}:${tool.toolName}`,
       description: tool.description,
-      server_name: tool.serverSlug,
+      server_name: tool.serverName,
       transport: tool.transport,
       score: 0 // Perfect score for direct listing
     }));

@@ -118,6 +118,119 @@ export default async function addTeamMemberRoute(server: FastifyInstance) {
       // Add the member using the resolved user ID
       await TeamService.addTeamMember(teamId, targetUser.id, role);
 
+      // Provision MCP server instances for new team member
+      // Each team member gets their own instance of each team installation
+      try {
+        const { getDb } = await import('../../../db');
+        const db = getDb();
+        const { McpInstallationService } = await import('../../../services/mcpInstallationService');
+        const { McpInstanceService } = await import('../../../services/mcpInstanceService');
+        const { SatelliteCommandService } = await import('../../../services/satelliteCommandService');
+
+        const installationService = new McpInstallationService(db, request.log);
+        const instanceService = new McpInstanceService(db, request.log);
+        const satelliteCommandService = new SatelliteCommandService(db, request.log);
+
+        // Get all installations for this team
+        const installations = await installationService.getTeamInstallationIds(teamId);
+
+        request.log.info({
+          operation: 'add_team_member_provision_instances',
+          teamId,
+          userId: targetUser.id,
+          installationCount: installations.length
+        }, `Provisioning ${installations.length} instances for new member`);
+
+        // Import detection utilities
+        const { hasRequiredUserConfiguration, getRequiredUserFields } = await import('../../../utils/mcpConfigDetection');
+        const { mcpUserConfigurations } = await import('../../../db/schema');
+        const { and, eq } = await import('drizzle-orm');
+
+        // Create instance for each installation
+        for (const installation of installations) {
+          try {
+            // Get installation with server details to check for required user config
+            const installationWithServer = await installationService.getInstallationById(installation.id, teamId);
+
+            if (!installationWithServer?.server) {
+              request.log.warn({ installation_id: installation.id }, 'Server not found for installation');
+              continue;
+            }
+
+            const server = installationWithServer.server;
+
+            // Check if server requires user configuration
+            const requiresUserConfig = hasRequiredUserConfiguration(server);
+
+            // Check if user already has configuration
+            const hasUserConfig = await db
+              .select()
+              .from(mcpUserConfigurations)
+              .where(
+                and(
+                  eq(mcpUserConfigurations.installation_id, installation.id),
+                  eq(mcpUserConfigurations.user_id, targetUser.id)
+                )
+              )
+              .limit(1)
+              .then(rows => rows.length > 0);
+
+            // Determine initial status
+            let initialStatus: string;
+            let statusMessage: string | undefined;
+
+            if (requiresUserConfig && !hasUserConfig) {
+              initialStatus = 'awaiting_user_config';
+              const requiredFields = getRequiredUserFields(server);
+              statusMessage = `User configuration required. Missing fields: ${requiredFields.join(', ')}`;
+            } else {
+              initialStatus = 'provisioning';
+              statusMessage = undefined;
+            }
+
+            // Create instance with appropriate status
+            await instanceService.createInstance(
+              installation.id,
+              targetUser.id,
+              initialStatus,
+              statusMessage
+            );
+
+            // Notify satellites to spawn process (satellite will respect status)
+            await satelliteCommandService.notifyMcpInstallation(
+              installation.id,
+              teamId,
+              targetUser.id
+            );
+
+            request.log.debug({
+              operation: 'add_team_member_provision_instance',
+              installationId: installation.id,
+              userId: targetUser.id,
+              status: initialStatus
+            }, 'Instance provisioned for new member');
+
+          } catch (error) {
+            request.log.error({
+              operation: 'add_team_member_provision_instance',
+              installationId: installation.id,
+              userId: targetUser.id,
+              error: error instanceof Error ? error.message : 'Unknown'
+            }, 'Failed to provision instance');
+            // Continue with other installations
+          }
+        }
+
+      } catch (error) {
+        request.log.error({
+          operation: 'add_team_member_provision_instances',
+          teamId,
+          userId: targetUser.id,
+          error: error instanceof Error ? error.message : 'Unknown'
+        }, 'Failed to provision instances for new member');
+        // Don't fail member addition
+      }
+
       // Get the full member info to return
       const members = await TeamService.getTeamMembersWithUserInfo(teamId);
       const newMemberData = members.find(m => m.user_id === targetUser.id);

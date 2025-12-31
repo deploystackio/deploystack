@@ -20,6 +20,7 @@ import { nsjailConfig, mcpCacheBaseDir } from '../config/nsjail';
 interface BufferedLogEntry {
   installation_id: string;
   team_id: string;
+  user_id?: string;
   level: 'info' | 'warn' | 'error' | 'debug';
   message: string;
   metadata?: Record<string, unknown>;
@@ -107,10 +108,12 @@ export class ProcessManager extends EventEmitter {
     // Emit one event per installation
     for (const [installationId, logs] of grouped) {
       const teamId = logs[0].team_id;
+      const userId = logs[0].user_id;
 
       this.eventBus.emit('mcp.server.logs', {
         installation_id: installationId,
         team_id: teamId,
+        user_id: userId,
         logs: logs.map(log => ({
           level: log.level,
           message: log.message,
@@ -233,6 +236,7 @@ export class ProcessManager extends EventEmitter {
         server_id: processInfo.config.installation_id,
         server_slug: processInfo.config.installation_name,
         team_id: processInfo.config.team_id,
+        user_id: processInfo.config.user_id,
         process_id: processInfo.process.pid || 0,
         exit_code: code || 0,
         signal: signal || 'none',
@@ -260,6 +264,7 @@ export class ProcessManager extends EventEmitter {
           server_id: processInfo.config.installation_id,
           server_slug: processInfo.config.installation_name,
           team_id: processInfo.config.team_id,
+          user_id: processInfo.config.user_id,
           total_crashes: (this.restartAttempts.get(installationName) || []).length,
           last_error: `Exit code: ${code}, signal: ${signal}`,
           failed_at: new Date().toISOString()
@@ -268,11 +273,12 @@ export class ProcessManager extends EventEmitter {
         this.logger.warn({ error }, 'Failed to emit mcp.server.permanently_failed event (non-fatal)');
       }
 
-      // Phase 13: Also emit mcp.server.status_changed so backend updates installation status
+      // Also emit mcp.server.status_changed so backend updates installation status
       try {
         this.eventBus?.emit('mcp.server.status_changed', {
           installation_id: processInfo.config.installation_id,
           team_id: processInfo.config.team_id,
+          user_id: processInfo.config.user_id || 'unknown',
           status: 'permanently_failed',
           status_message: `Process crashed ${(this.restartAttempts.get(installationName) || []).length} times in 5 minutes. Manual restart required.`,
           timestamp: new Date().toISOString()
@@ -335,6 +341,7 @@ export class ProcessManager extends EventEmitter {
           server_id: processInfo.config.installation_id,
           server_slug: processInfo.config.installation_name,
           team_id: processInfo.config.team_id,
+          user_id: processInfo.config.user_id,
           old_process_id: processInfo.process.pid || 0,
           new_process_id: newProcessInfo.process.pid || 0,
           restart_reason: 'crash',
@@ -517,6 +524,7 @@ export class ProcessManager extends EventEmitter {
             server_id: config.installation_id,
             server_slug: config.installation_name,
             team_id: config.team_id,
+            user_id: config.user_id,
             process_id: childProcess.pid || 0,
             transport: 'stdio',
             tool_count: 0, // Will be updated by tool discovery
@@ -709,6 +717,7 @@ export class ProcessManager extends EventEmitter {
             server_id: dormantConfig.installation_id,
             server_slug: installationName,
             team_id: dormantConfig.team_id,
+            user_id: dormantConfig.user_id,
             process_id: processInfo.process.pid || 0,
             dormant_duration_seconds: Math.round(dormantDuration / 1000),
             respawn_duration_ms: Date.now() - respawnStartTime
@@ -772,6 +781,7 @@ export class ProcessManager extends EventEmitter {
         server_id: processInfo.config.installation_id,
         server_slug: installationName,
         team_id: processInfo.config.team_id,
+        user_id: processInfo.config.user_id,
         process_id: processInfo.process.pid || 0,
         idle_duration_seconds: Math.round(idleDuration / 1000),
         last_activity_at: new Date(processInfo.lastActivity).toISOString()
@@ -1023,6 +1033,7 @@ export class ProcessManager extends EventEmitter {
             this.bufferLogEntry({
               installation_id: config.installation_id,
               team_id: config.team_id,
+              user_id: config.user_id,
               level: 'error', // stderr typically contains errors/warnings
               message: line.trim(),
               timestamp: new Date().toISOString()

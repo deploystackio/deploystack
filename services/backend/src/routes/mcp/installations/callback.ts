@@ -321,13 +321,21 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 						expiresAt
 					}, 'Tokens updated successfully');
 
-					// UPDATE installation status
+					// UPDATE all user instances status after re-authentication
+					const { mcpServerInstances } = getSchema();
 					await db
-						.update(mcpServerInstallations)
+						.update(mcpServerInstances)
 						.set({
 							status: 'connecting',
 							status_message: 'Re-authenticated successfully, reconnecting to server',
-							status_updated_at: new Date(),
+							status_updated_at: new Date()
+						})
+						.where(eq(mcpServerInstances.installation_id, flow.installation_id!));
+
+					// Update installation OAuth pending flag
+					await db
+						.update(mcpServerInstallations)
+						.set({
 							oauth_pending: false
 						})
 						.where(eq(mcpServerInstallations.id, flow.installation_id!));
@@ -461,9 +469,6 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					oauth_provider_id: null,
 					oauth_token_endpoint: null,
 					oauth_token_endpoint_auth_method: null,
-					status: 'connecting',
-					status_message: 'Authenticated successfully, waiting for satellite to connect',
-					status_updated_at: new Date(),
 					created_at: new Date(),
 					updated_at: new Date(),
 					last_used_at: null,

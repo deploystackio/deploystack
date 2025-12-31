@@ -78,6 +78,7 @@ export interface EventDataMap {
     server_id: string;
     server_slug: string;
     team_id: string;
+    user_id?: string;
     process_id: number;
     transport: 'stdio' | 'http';
     tool_count: number;
@@ -88,6 +89,7 @@ export interface EventDataMap {
     server_id: string;
     server_slug: string;
     team_id: string;
+    user_id?: string;
     process_id: number;
     exit_code: number;
     signal: string;
@@ -100,6 +102,7 @@ export interface EventDataMap {
     server_id: string;
     server_slug: string;
     team_id: string;
+    user_id?: string;
     old_process_id: number;
     new_process_id: number;
     restart_reason: 'crash' | 'health_check_failed';
@@ -110,6 +113,7 @@ export interface EventDataMap {
     server_id: string;
     server_slug: string;
     team_id: string;
+    user_id?: string;
     total_crashes: number;
     last_error: string;
     failed_at: string;
@@ -119,6 +123,7 @@ export interface EventDataMap {
     server_id: string;
     server_slug: string;
     team_id: string;
+    user_id?: string;
     process_id: number;
     idle_duration_seconds: number;
     last_activity_at: string;
@@ -128,6 +133,7 @@ export interface EventDataMap {
     server_id: string;
     server_slug: string;
     team_id: string;
+    user_id?: string;
     process_id: number;
     dormant_duration_seconds: number;
     respawn_duration_ms: number;
@@ -136,6 +142,7 @@ export interface EventDataMap {
   'mcp.server.status_changed': {
     installation_id: string;
     team_id: string;
+    user_id: string; // Required for per-instance tracking
     status: 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed';
     status_message?: string;
     timestamp: string;
@@ -144,6 +151,7 @@ export interface EventDataMap {
   'mcp.server.logs': {
     installation_id: string;
     team_id: string;
+    user_id?: string;
     logs: Array<{
       level: 'info' | 'warn' | 'error' | 'debug';
       message: string;

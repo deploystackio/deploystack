@@ -28,6 +28,7 @@ const CONFIG_RESPONSE_SCHEMA = {
         type: 'object',
         properties: {
           installation_id: { type: 'string', description: 'Installation ID from mcpServerInstallations table' },
+          instance_id: { type: 'string', description: 'Instance ID from mcpServerInstances table (per-user instance)' },
           team_id: { type: 'string', description: 'Team ID that owns this installation' },
           team_slug: { type: 'string', description: 'Team slug for identification' },
           server_name: { type: 'string', description: 'MCP server name (e.g., "context7")' },
@@ -41,8 +42,9 @@ const CONFIG_RESPONSE_SCHEMA = {
           headers: { type: 'object', description: 'HTTP headers for HTTP/SSE transport' },
           timeout: { type: 'integer', description: 'Timeout in milliseconds' },
           enabled: { type: 'boolean', description: 'Whether this server is enabled' },
-          requires_oauth: { type: 'boolean', description: 'Whether this MCP server requires OAuth authentication (Phase 10)' },
-          user_id: { type: 'string', description: 'User ID who created the installation (for OAuth token retrieval, Phase 10)' },
+          requires_oauth: { type: 'boolean', description: 'Whether this MCP server requires OAuth authentication' },
+          user_id: { type: 'string', description: 'User ID for this specific instance (per-user process)' },
+          user_slug: { type: 'string', description: 'User ID used in processId for this specific instance' },
           secret_metadata: {
             type: 'object',
             properties: {
@@ -141,6 +143,7 @@ interface SatelliteIdParams {
 
 interface McpServerConfig {
   installation_id: string;
+  instance_id?: string;
   team_id: string;
   team_slug: string;
   server_name: string;
@@ -155,9 +158,12 @@ interface McpServerConfig {
   url_query_params?: Record<string, string>;
   timeout?: number;
   enabled: boolean;
-  // Phase 10: OAuth support for HTTP/SSE MCP servers
+  // Per-user instance fields
+  user_id: string;
+  user_slug: string;
+  instance_status?: string; // Instance status from mcpServerInstances
+  // OAuth support for HTTP/SSE MCP servers
   requires_oauth?: boolean;
-  user_id?: string;
   settings?: {
     request_logging_enabled?: boolean;
   };
@@ -239,7 +245,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
     const { satelliteId } = request.params as SatelliteIdParams;
 
     const db = getDb();
-    const { satellites, mcpServerInstallations, mcpServers, teams, mcpUserConfigurations } = getSchema();
+    const { satellites, mcpServerInstallations, mcpServers, teams, mcpUserConfigurations, teamMemberships, authUser } = getSchema();
 
     try {
       // Verify satellite exists and get its configuration
@@ -362,7 +368,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
           installation: mcpServerInstallations,
           server: mcpServers,
           team_slug: teams.slug,
-          created_by_user_id: mcpServerInstallations.created_by // Phase 10: User ID for OAuth
+          created_by_user_id: mcpServerInstallations.created_by // User ID for OAuth authentication
         })
         .from(mcpServerInstallations)
         .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
@@ -370,7 +376,8 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
         .where(whereClause);
 
       // Process each installation using proven gateway logic
-      for (const { installation, server, team_slug, created_by_user_id } of installations) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for (const { installation, server, team_slug, created_by_user_id: _created_by_user_id } of installations) {
         if (!server || !team_slug) {
           request.log.warn({
             operation: 'config_installation_skipped_missing_data',
@@ -381,9 +388,30 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
           continue;
         }
 
-        try {
-          // Create unique process identifier: {server_slug}-{team_slug}-{installation_id}
-          const processId = `${server.slug}-${team_slug}-${installation.id}`;
+        // Get ALL team members for this installation (per-user instances)
+        const teamMembers = await db
+          .select({
+            id: authUser.id,
+            username: authUser.username
+          })
+          .from(teamMemberships)
+          .innerJoin(authUser, eq(teamMemberships.user_id, authUser.id))
+          .where(eq(teamMemberships.team_id, installation.team_id));
+
+        if (teamMembers.length === 0) {
+          request.log.warn({
+            operation: 'config_installation_skipped_no_members',
+            installation_id: installation.id,
+            team_id: installation.team_id
+          }, 'Skipping installation - no team members found');
+          continue;
+        }
+
+        // Process configuration for EACH team member (per-user instances)
+        for (const member of teamMembers) {
+          try {
+            // Create unique per-user process identifier: {server_slug}-{team_slug}-{user_id}-{installation_id}
+            const processId = `${server.slug}-${team_slug}-${member.id}-${installation.id}`;
 
           // Initialize configuration variables
           let finalCommand: string | undefined;
@@ -481,56 +509,54 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
               }
             }
 
-            // 3. Fetch and add user args for the installation creator
-            if (created_by_user_id) {
-              try {
-                const userConfigs = await db
-                  .select()
-                  .from(mcpUserConfigurations)
-                  .where(
-                    and(
-                      eq(mcpUserConfigurations.installation_id, installation.id),
-                      eq(mcpUserConfigurations.user_id, created_by_user_id)
-                    )
+            // 3. Fetch and add user args for THIS team member
+            try {
+              const userConfigs = await db
+                .select()
+                .from(mcpUserConfigurations)
+                .where(
+                  and(
+                    eq(mcpUserConfigurations.installation_id, installation.id),
+                    eq(mcpUserConfigurations.user_id, member.id)
                   )
-                  .limit(1);
+                )
+                .limit(1);
 
-                const userConfig = userConfigs[0];
-                if (userConfig?.user_args) {
-                  const userArgsSchema = JSON.parse(server.user_args_schema || '[]');
-                  const decryptedUserArgs = await McpArgsStorage.retrieveUserArgs(
-                    userConfig.user_args,
-                    userArgsSchema,
-                    { maskSecrets: false }, // Decrypt secrets for satellite
-                    request.log
-                  );
+              const userConfig = userConfigs[0];
+              if (userConfig?.user_args) {
+                const userArgsSchema = JSON.parse(server.user_args_schema || '[]');
+                const decryptedUserArgs = await McpArgsStorage.retrieveUserArgs(
+                  userConfig.user_args,
+                  userArgsSchema,
+                  { maskSecrets: false }, // Decrypt secrets for satellite
+                  request.log
+                );
 
-                  // Add user args to orderedArgs with their schema order
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  userArgsSchema.forEach((schema: any, index: number) => {
-                    const value = decryptedUserArgs[schema.name];
-                    if (value !== undefined && value !== '') {
-                      orderedArgs.push({
-                        value: value,
-                        order: schema.order ?? (200 + index), // User args after template and team
-                        source: 'user' as const
-                      });
-                    }
-                  });
+                // Add user args to orderedArgs with their schema order
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                userArgsSchema.forEach((schema: any, index: number) => {
+                  const value = decryptedUserArgs[schema.name];
+                  if (value !== undefined && value !== '') {
+                    orderedArgs.push({
+                      value: value,
+                      order: schema.order ?? (200 + index), // User args after template and team
+                      source: 'user' as const
+                    });
+                  }
+                });
 
-                  request.log.debug({
-                    serverId: server.id,
-                    userId: created_by_user_id,
-                    userArgsCount: Object.keys(decryptedUserArgs).length
-                  }, 'Added user args to configuration');
-                }
-              } catch (error) {
-                request.log.warn({
+                request.log.debug({
                   serverId: server.id,
-                  userId: created_by_user_id,
-                  error: error instanceof Error ? error.message : String(error)
-                }, 'Failed to fetch or parse user args');
+                  userId: member.id,
+                  userArgsCount: Object.keys(decryptedUserArgs).length
+                }, 'Added user args to configuration');
               }
+            } catch (error) {
+              request.log.warn({
+                serverId: server.id,
+                userId: member.id,
+                error: error instanceof Error ? error.message : String(error)
+              }, 'Failed to fetch or parse user args');
             }
 
             // Sort by order and extract values
@@ -600,58 +626,98 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
 
           // Fetch and apply user-level environment variables (Tier 3) for stdio transport
           // User config overrides team config for environment variables
-          if (created_by_user_id) {
-            try {
-              const stdioUserConfigs = await db
-                .select()
-                .from(mcpUserConfigurations)
-                .where(
-                  and(
-                    eq(mcpUserConfigurations.installation_id, installation.id),
-                    eq(mcpUserConfigurations.user_id, created_by_user_id)
-                  )
+          try {
+            const stdioUserConfigs = await db
+              .select()
+              .from(mcpUserConfigurations)
+              .where(
+                and(
+                  eq(mcpUserConfigurations.installation_id, installation.id),
+                  eq(mcpUserConfigurations.user_id, member.id)
                 )
-                .limit(1);
+              )
+              .limit(1);
 
-              const stdioUserConfig = stdioUserConfigs[0];
+            const stdioUserConfig = stdioUserConfigs[0];
 
-              // Process user environment variables (overrides team env)
-              if (stdioUserConfig?.user_env) {
-                try {
-                  const userEnvSchema = JSON.parse(server.user_env_schema || '[]');
-                  const decryptedUserEnv = await McpEnvStorage.retrieveUserEnv(
-                    stdioUserConfig.user_env,
-                    userEnvSchema,
-                    { maskSecrets: false }, // Decrypt secrets for satellite
-                    request.log
-                  );
-                  finalEnv = { ...finalEnv, ...decryptedUserEnv };
+            // Process user environment variables (overrides team env)
+            if (stdioUserConfig?.user_env) {
+              try {
+                const userEnvSchema = JSON.parse(server.user_env_schema || '[]');
+                const decryptedUserEnv = await McpEnvStorage.retrieveUserEnv(
+                  stdioUserConfig.user_env,
+                  userEnvSchema,
+                  { maskSecrets: false }, // Decrypt secrets for satellite
+                  request.log
+                );
+                finalEnv = { ...finalEnv, ...decryptedUserEnv };
 
-                  request.log.debug({
-                    serverId: server.id,
-                    userId: created_by_user_id,
-                    userEnvCount: Object.keys(decryptedUserEnv).length
-                  }, 'Added user environment variables to stdio configuration');
-                } catch (error) {
-                  request.log.warn({
-                    serverId: server.id,
-                    userId: created_by_user_id,
-                    error: error instanceof Error ? error.message : String(error)
-                  }, 'Failed to decrypt and parse user_env');
-                }
+                request.log.debug({
+                  serverId: server.id,
+                  userId: member.id,
+                  userEnvCount: Object.keys(decryptedUserEnv).length
+                }, 'Added user environment variables to stdio configuration');
+              } catch (error) {
+                request.log.warn({
+                  serverId: server.id,
+                  userId: member.id,
+                  error: error instanceof Error ? error.message : String(error)
+                }, 'Failed to decrypt and parse user_env');
               }
-            } catch (error) {
-              request.log.warn({
-                serverId: server.id,
-                userId: created_by_user_id,
-                error: error instanceof Error ? error.message : String(error)
-              }, 'Failed to fetch user configuration for stdio transport');
             }
+          } catch (error) {
+            request.log.warn({
+              serverId: server.id,
+              userId: member.id,
+              error: error instanceof Error ? error.message : String(error)
+            }, 'Failed to fetch user configuration for stdio transport');
+          }
+
+          // Query instance_id and status for this installation + user
+          let instanceId: string | undefined;
+          let instanceStatus: string | undefined;
+          try {
+            const { mcpServerInstances } = getSchema();
+            const instances = await db
+              .select({
+                id: mcpServerInstances.id,
+                status: mcpServerInstances.status
+              })
+              .from(mcpServerInstances)
+              .where(
+                and(
+                  eq(mcpServerInstances.installation_id, installation.id),
+                  eq(mcpServerInstances.user_id, member.id)
+                )
+              )
+              .limit(1);
+
+            instanceId = instances[0]?.id;
+            instanceStatus = instances[0]?.status;
+          } catch (error) {
+            request.log.warn({
+              serverId: server.id,
+              userId: member.id,
+              installationId: installation.id,
+              error: error instanceof Error ? error.message : String(error)
+            }, 'Failed to fetch instance ID for user');
+          }
+
+          // Skip configs with awaiting_user_config status
+          if (instanceStatus === 'awaiting_user_config') {
+            request.log.debug({
+              serverId: server.id,
+              userId: member.id,
+              installationId: installation.id,
+              status: instanceStatus
+            }, 'Skipping config for user awaiting configuration');
+            continue; // Skip this member - don't add config to response
           }
 
           // Build server configuration based on transport type
           const serverConfig: McpServerConfig = {
             installation_id: installation.id,
+            instance_id: instanceId,
             team_id: installation.team_id,
             team_slug: team_slug,
             server_name: server.name,
@@ -659,9 +725,11 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             installation_name: installation.installation_name,
             transport_type: server.transport_type as 'stdio' | 'http' | 'sse',
             enabled: true,
-            // Phase 10: OAuth support for HTTP/SSE MCP servers
-            requires_oauth: server.requires_oauth || false,
-            user_id: created_by_user_id // User who created the installation (for OAuth token retrieval)
+            // Per-user instance fields
+            user_id: member.id,
+            user_slug: member.id,
+            // OAuth support for HTTP/SSE MCP servers
+            requires_oauth: server.requires_oauth || false
           };
 
           if (server.transport_type === 'stdio') {
@@ -717,79 +785,77 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
 
             // Fetch and apply user-level HTTP configuration (Tier 3)
             // User config overrides team config for headers and URL query params
-            if (created_by_user_id) {
-              try {
-                const httpUserConfigs = await db
-                  .select()
-                  .from(mcpUserConfigurations)
-                  .where(
-                    and(
-                      eq(mcpUserConfigurations.installation_id, installation.id),
-                      eq(mcpUserConfigurations.user_id, created_by_user_id)
-                    )
+            try {
+              const httpUserConfigs = await db
+                .select()
+                .from(mcpUserConfigurations)
+                .where(
+                  and(
+                    eq(mcpUserConfigurations.installation_id, installation.id),
+                    eq(mcpUserConfigurations.user_id, member.id)
                   )
-                  .limit(1);
+                )
+                .limit(1);
 
-                const httpUserConfig = httpUserConfigs[0];
+              const httpUserConfig = httpUserConfigs[0];
 
-                // Process user headers (overrides team headers)
-                if (httpUserConfig?.user_headers) {
-                  try {
-                    const userHeadersSchema = JSON.parse(server.user_headers_schema || '[]');
-                    const decryptedUserHeaders = await McpEnvStorage.retrieveUserEnv(
-                      httpUserConfig.user_headers,
-                      userHeadersSchema,
-                      { maskSecrets: false }, // Decrypt secrets for satellite
-                      request.log
-                    );
-                    serverConfig.headers = { ...serverConfig.headers, ...decryptedUserHeaders };
+              // Process user headers (overrides team headers)
+              if (httpUserConfig?.user_headers) {
+                try {
+                  const userHeadersSchema = JSON.parse(server.user_headers_schema || '[]');
+                  const decryptedUserHeaders = await McpEnvStorage.retrieveUserEnv(
+                    httpUserConfig.user_headers,
+                    userHeadersSchema,
+                    { maskSecrets: false }, // Decrypt secrets for satellite
+                    request.log
+                  );
+                  serverConfig.headers = { ...serverConfig.headers, ...decryptedUserHeaders };
 
-                    request.log.debug({
-                      serverId: server.id,
-                      userId: created_by_user_id,
-                      userHeadersCount: Object.keys(decryptedUserHeaders).length
-                    }, 'Added user headers to HTTP configuration');
-                  } catch (error) {
-                    request.log.warn({
-                      serverId: server.id,
-                      userId: created_by_user_id,
-                      error: error instanceof Error ? error.message : String(error)
-                    }, 'Failed to decrypt and parse user_headers');
-                  }
+                  request.log.debug({
+                    serverId: server.id,
+                    userId: member.id,
+                    userHeadersCount: Object.keys(decryptedUserHeaders).length
+                  }, 'Added user headers to HTTP configuration');
+                } catch (error) {
+                  request.log.warn({
+                    serverId: server.id,
+                    userId: member.id,
+                    error: error instanceof Error ? error.message : String(error)
+                  }, 'Failed to decrypt and parse user_headers');
                 }
-
-                // Process user URL query params (overrides team query params)
-                if (httpUserConfig?.user_url_query_params) {
-                  try {
-                    const userUrlQueryParamsSchema = JSON.parse(server.user_url_query_params_schema || '[]');
-                    const decryptedUserQueryParams = await McpEnvStorage.retrieveUserEnv(
-                      httpUserConfig.user_url_query_params,
-                      userUrlQueryParamsSchema,
-                      { maskSecrets: false }, // Decrypt secrets for satellite
-                      request.log
-                    );
-                    finalQueryParams = { ...finalQueryParams, ...decryptedUserQueryParams };
-
-                    request.log.debug({
-                      serverId: server.id,
-                      userId: created_by_user_id,
-                      userQueryParamsCount: Object.keys(decryptedUserQueryParams).length
-                    }, 'Added user URL query params to HTTP configuration');
-                  } catch (error) {
-                    request.log.warn({
-                      serverId: server.id,
-                      userId: created_by_user_id,
-                      error: error instanceof Error ? error.message : String(error)
-                    }, 'Failed to decrypt and parse user_url_query_params');
-                  }
-                }
-              } catch (error) {
-                request.log.warn({
-                  serverId: server.id,
-                  userId: created_by_user_id,
-                  error: error instanceof Error ? error.message : String(error)
-                }, 'Failed to fetch user configuration for HTTP transport');
               }
+
+              // Process user URL query params (overrides team query params)
+              if (httpUserConfig?.user_url_query_params) {
+                try {
+                  const userUrlQueryParamsSchema = JSON.parse(server.user_url_query_params_schema || '[]');
+                  const decryptedUserQueryParams = await McpEnvStorage.retrieveUserEnv(
+                    httpUserConfig.user_url_query_params,
+                    userUrlQueryParamsSchema,
+                    { maskSecrets: false }, // Decrypt secrets for satellite
+                    request.log
+                  );
+                  finalQueryParams = { ...finalQueryParams, ...decryptedUserQueryParams };
+
+                  request.log.debug({
+                    serverId: server.id,
+                    userId: member.id,
+                    userQueryParamsCount: Object.keys(decryptedUserQueryParams).length
+                  }, 'Added user URL query params to HTTP configuration');
+                } catch (error) {
+                  request.log.warn({
+                    serverId: server.id,
+                    userId: member.id,
+                    error: error instanceof Error ? error.message : String(error)
+                  }, 'Failed to decrypt and parse user_url_query_params');
+                }
+              }
+            } catch (error) {
+              request.log.warn({
+                serverId: server.id,
+                userId: member.id,
+                error: error instanceof Error ? error.message : String(error)
+              }, 'Failed to fetch user configuration for HTTP transport');
             }
 
             // Apply query params to URL if any exist
@@ -933,6 +999,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             serverId: server.id,
             serverName: server.name,
             teamSlug: team_slug,
+            userId: member.id,
             transportType: server.transport_type,
             hasCommand: !!serverConfig.command,
             hasUrl: !!serverConfig.url,
@@ -940,26 +1007,30 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             envCount: Object.keys(serverConfig.env || {}).length
           }, 'MCP server configuration processed for satellite');
 
-        } catch (error) {
-          request.log.error({
-            serverId: server.id,
-            error: error instanceof Error ? error.message : String(error)
-          }, 'Failed to process server configuration');
-          
-          // Add server as disabled on error
-          const processId = `${server.slug}-${team_slug}-${installation.id}`;
-          mcpServerConfigs[processId] = {
-            installation_id: installation.id,
-            team_id: installation.team_id,
-            team_slug: team_slug,
-            server_name: server.name,
-            server_slug: server.slug,
-            installation_name: installation.installation_name,
-            transport_type: server.transport_type as 'stdio' | 'http' | 'sse',
-            enabled: false // Disabled due to processing error
-          };
-        }
-      }
+          } catch (error) {
+            request.log.error({
+              serverId: server.id,
+              userId: member.id,
+              error: error instanceof Error ? error.message : String(error)
+            }, 'Failed to process server configuration for user');
+
+            // Add server as disabled on error for this user
+            const processId = `${server.slug}-${team_slug}-${member.id}-${installation.id}`;
+            mcpServerConfigs[processId] = {
+              installation_id: installation.id,
+              team_id: installation.team_id,
+              team_slug: team_slug,
+              server_name: server.name,
+              server_slug: server.slug,
+              installation_name: installation.installation_name,
+              transport_type: server.transport_type as 'stdio' | 'http' | 'sse',
+              user_id: member.id,
+              user_slug: member.id,
+              enabled: false // Disabled due to processing error
+            };
+          }
+        } // Close member loop
+      } // Close installation loop
       
       const response: ConfigResponse = {
         mcp_servers: mcpServerConfigs,

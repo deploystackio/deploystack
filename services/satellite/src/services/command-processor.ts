@@ -102,6 +102,7 @@ export class CommandProcessor {
   private emitStatusChange(
     installationId: string,
     teamId: string,
+    userId: string,
     status: 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed',
     statusMessage?: string
   ): void {
@@ -117,6 +118,7 @@ export class CommandProcessor {
     this.eventBus.emit('mcp.server.status_changed', {
       installation_id: installationId,
       team_id: teamId,
+      user_id: userId,
       status,
       status_message: statusMessage,
       timestamp: new Date().toISOString()
@@ -515,7 +517,9 @@ export class CommandProcessor {
       installation_id: payload.installation_id as string,
       installation_name: payload.installation_name as string,
       team_id: payload.team_id as string,
+      team_slug: (payload.team_slug as string) || 'unknown',
       server_slug: (payload.server_slug as string) || (payload.installation_name as string),
+      user_id: payload.user_id as string,
       command: payload.command as string,
       args: payload.args as string[],
       env: (payload.env as Record<string, string>) || {}
@@ -534,6 +538,7 @@ export class CommandProcessor {
     this.emitStatusChange(
       config.installation_id,
       config.team_id,
+      config.user_id || 'unknown',
       'connecting',
       'Connecting to MCP server process'
     );
@@ -554,6 +559,7 @@ export class CommandProcessor {
       this.emitStatusChange(
         config.installation_id,
         config.team_id,
+        config.user_id || 'unknown',
         'discovering_tools',
         'Discovering available tools from MCP server'
       );
@@ -575,6 +581,7 @@ export class CommandProcessor {
       this.emitStatusChange(
         config.installation_id,
         config.team_id,
+        config.user_id || 'unknown',
         'online',
         'MCP server is online and ready'
       );
@@ -606,6 +613,7 @@ export class CommandProcessor {
       this.emitStatusChange(
         config.installation_id,
         config.team_id,
+        config.user_id || 'unknown',
         'error',
         `Failed to spawn MCP server: ${errorMessage}`
       );
@@ -757,7 +765,7 @@ export class CommandProcessor {
   private async handleHealthCheckCommand(command: SatelliteCommand): Promise<CommandResult> {
     const payload = command.payload;
 
-    // Check if this is a credential validation request (Phase 9)
+    // Check if this is a credential validation request 
     if (payload.check_type === 'credential_validation' && payload.installation_id) {
       return await this.handleCredentialValidation(command);
     }
@@ -890,7 +898,7 @@ export class CommandProcessor {
   }
 
   /**
-   * Handle credential validation for a specific installation (Phase 9)
+   * Handle credential validation for a specific installation 
    * Tries to call tools/list with the installation's credentials
    */
   private async handleCredentialValidation(command: SatelliteCommand): Promise<CommandResult> {
@@ -1043,7 +1051,7 @@ export class CommandProcessor {
 
           if (isAuthError) {
             // Emit requires_reauth status
-            this.emitStatusChange(installation_id, validatedTeamId, 'requires_reauth', errorMessage);
+            this.emitStatusChange(installation_id, validatedTeamId, serverConfig.user_id || 'unknown', 'requires_reauth', errorMessage);
           }
 
           return {
@@ -1098,7 +1106,7 @@ export class CommandProcessor {
 
         if (isAuthError) {
           // Emit requires_reauth status
-          this.emitStatusChange(installation_id, validatedTeamId, 'requires_reauth', errorMessage);
+          this.emitStatusChange(installation_id, validatedTeamId, serverConfig.user_id || 'unknown', 'requires_reauth', errorMessage);
         }
 
         return {

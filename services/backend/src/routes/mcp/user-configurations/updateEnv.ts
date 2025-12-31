@@ -2,8 +2,7 @@ import { type FastifyInstance } from 'fastify';
 import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
-import { getDb } from '../../../db';
-import { mcpServerInstallations } from '../../../db/schema';
+import { getDb, getSchema } from '../../../db';
 import { eq, and } from 'drizzle-orm';
 import {
   updateUserEnvSchema,
@@ -90,17 +89,44 @@ export default async function updateUserEnvRoute(server: FastifyInstance) {
           authType
         }, 'Successfully updated MCP user configuration environment variables');
 
-        // Set status to 'restarting' immediately to provide user feedback
-        await db.update(mcpServerInstallations)
+        // Set status for user's instance to provide feedback
+        const { mcpServerInstances } = getSchema();
+
+        // First, check current instance status
+        const [currentInstance] = await db.select()
+          .from(mcpServerInstances)
+          .where(
+            and(
+              eq(mcpServerInstances.installation_id, installationId),
+              eq(mcpServerInstances.user_id, userId)
+            )
+          )
+          .limit(1);
+
+        // Determine appropriate status based on current state
+        let newStatus: string;
+        let statusMessage: string;
+
+        if (currentInstance?.status === 'awaiting_user_config') {
+          // User just configured required fields - trigger initial spawn
+          newStatus = 'provisioning';
+          statusMessage = 'User configuration completed';
+        } else {
+          // Configuration updated on running instance - trigger restart
+          newStatus = 'restarting';
+          statusMessage = 'Configuration updated, server restarting...';
+        }
+
+        await db.update(mcpServerInstances)
           .set({
-            status: 'restarting',
-            status_message: 'Configuration updated, server restarting...',
+            status: newStatus,
+            status_message: statusMessage,
             status_updated_at: new Date()
           })
           .where(
             and(
-              eq(mcpServerInstallations.id, installationId),
-              eq(mcpServerInstallations.team_id, teamId)
+              eq(mcpServerInstances.installation_id, installationId),
+              eq(mcpServerInstances.user_id, userId)
             )
           );
 

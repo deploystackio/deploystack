@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { TeamService } from '../../../services/teamService';
 import { checkUserPermission } from '../../../middleware/roleMiddleware';
+import type { EventContext } from '../../../events/types';
 import {
   SUCCESS_RESPONSE_SCHEMA,
   ERROR_RESPONSE_SCHEMA,
@@ -112,8 +113,102 @@ export default async function removeTeamMemberRoute(server: FastifyInstance) {
         return reply.status(403).type('application/json').send(jsonString);
       }
 
+      // Get user email before removal (for event emission)
+      const { UserService } = await import('../../../services/userService');
+      const userService = new UserService();
+      const targetUser = await userService.getUserById(targetUserId);
+      const targetUserEmail = targetUser?.email || 'unknown@email.com';
+
       // Remove the member
       await TeamService.removeTeamMember(teamId, targetUserId);
+
+      // Clean up MCP server instances for removed team member
+      try {
+        const { getDb } = await import('../../../db');
+        const db = getDb();
+        const { McpInstanceService } = await import('../../../services/mcpInstanceService');
+        const { SatelliteCommandService } = await import('../../../services/satelliteCommandService');
+
+        const instanceService = new McpInstanceService(db, server.log);
+        const satelliteCommandService = new SatelliteCommandService(db, server.log);
+
+        // Delete all instances
+        const deletedCount = await instanceService.deleteInstancesByUserInTeam(targetUserId, teamId);
+
+        server.log.info({
+          operation: 'remove_team_member_cleanup_instances',
+          teamId,
+          userId: targetUserId,
+          instancesDeleted: deletedCount
+        }, `Deleted ${deletedCount} instances for removed member`);
+
+        // Notify satellites to terminate processes
+        await satelliteCommandService.createCommandForAllGlobalSatellites({
+          commandType: 'configure',
+          priority: 'immediate',
+          payload: {
+            event: 'team_member_removed',
+            team_id: teamId,
+            user_id: targetUserId
+          },
+          targetTeamId: teamId,
+          expiresInMinutes: 5
+        });
+
+      } catch (error) {
+        server.log.error({
+          operation: 'remove_team_member_cleanup_instances',
+          teamId,
+          userId: targetUserId,
+          error: error instanceof Error ? error.message : 'Unknown'
+        }, 'Failed to delete instances for removed member');
+        // Don't fail member removal
+      }
+
+      // Emit TEAM_MEMBER_REMOVED event for audit trail and notifications
+      try {
+        const { EVENT_NAMES } = await import('../../../events');
+
+        const eventContext: EventContext = {
+          db: server.db,
+          logger: server.log,
+          user: {
+            id: request.user!.id,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'unknown'
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.TEAM_MEMBER_REMOVED,
+          {
+            team: { id: teamId, name: team.name },
+            member: {
+              id: targetUserId,
+              email: targetUserEmail,
+              name: targetUser?.username || targetUserEmail
+            },
+            removedBy: {
+              id: request.user!.id,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            metadata: { ip: request.ip }
+          },
+          eventContext
+        );
+
+        server.log.info(`TEAM_MEMBER_REMOVED event emitted for team: ${teamId}, member: ${targetUserId}`);
+      } catch (eventError) {
+        server.log.error(eventError, `Failed to emit TEAM_MEMBER_REMOVED event`);
+      }
 
       const successResponse: SuccessResponse = {
         success: true,

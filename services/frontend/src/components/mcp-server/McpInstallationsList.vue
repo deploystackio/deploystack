@@ -277,6 +277,9 @@ onUnmounted(() => {
               <InstallationStatusBadge
                 :status-data="installation.status ? {
                   installation_id: installation.id,
+                  instance_id: installation.instance_id || '',
+                  user_id: installation.user_id || '',
+                  user_slug: installation.user_slug || '',
                   status: installation.status,
                   status_message: installation.status_message || null,
                   status_updated_at: installation.status_updated_at || '',

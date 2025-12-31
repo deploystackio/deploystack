@@ -12831,8 +12831,21 @@
         "tags": [
           "MCP Installations"
         ],
-        "description": "Real-time installation status stream via Server-Sent Events. Sends initial snapshot then streams status changes as they occur. Connection automatically reconnects on disconnect.",
+        "description": "Real-time installation status stream via Server-Sent Events. Sends initial snapshot then streams status changes as they occur. Connection automatically reconnects on disconnect. Add ?user_only=true to filter to requesting user's instance only.",
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "in": "query",
+            "name": "user_only",
+            "required": false,
+            "description": "Filter to requesting user instance only"
+          },
           {
             "schema": {
               "type": "string",
@@ -23147,6 +23160,64 @@
                             }
                           },
                           "description": "Optional server details if included"
+                        },
+                        "instances": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Unique instance ID"
+                              },
+                              "user_id": {
+                                "type": "string",
+                                "description": "User ID who owns this instance"
+                              },
+                              "user_slug": {
+                                "type": "string",
+                                "description": "User slug (username) for display"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Current instance status"
+                              },
+                              "status_message": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional status message"
+                              },
+                              "status_updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When status was last updated"
+                              },
+                              "last_health_check_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "Last health check timestamp"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Instance creation timestamp"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Last update timestamp"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "user_id",
+                              "user_slug",
+                              "status",
+                              "status_updated_at"
+                            ]
+                          },
+                          "description": "Per-user instances (optional)"
                         }
                       },
                       "required": [
@@ -23560,6 +23631,64 @@
                               }
                             },
                             "description": "Optional server details if included"
+                          },
+                          "instances": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "Unique instance ID"
+                                },
+                                "user_id": {
+                                  "type": "string",
+                                  "description": "User ID who owns this instance"
+                                },
+                                "user_slug": {
+                                  "type": "string",
+                                  "description": "User slug (username) for display"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "description": "Current instance status"
+                                },
+                                "status_message": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "Optional status message"
+                                },
+                                "status_updated_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "When status was last updated"
+                                },
+                                "last_health_check_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "nullable": true,
+                                  "description": "Last health check timestamp"
+                                },
+                                "created_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Instance creation timestamp"
+                                },
+                                "updated_at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "description": "Last update timestamp"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "user_id",
+                                "user_slug",
+                                "status",
+                                "status_updated_at"
+                              ]
+                            },
+                            "description": "Per-user instances (optional)"
                           }
                         },
                         "required": [
@@ -23992,6 +24121,64 @@
                             }
                           },
                           "description": "Optional server details if included"
+                        },
+                        "instances": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Unique instance ID"
+                              },
+                              "user_id": {
+                                "type": "string",
+                                "description": "User ID who owns this instance"
+                              },
+                              "user_slug": {
+                                "type": "string",
+                                "description": "User slug (username) for display"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Current instance status"
+                              },
+                              "status_message": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional status message"
+                              },
+                              "status_updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When status was last updated"
+                              },
+                              "last_health_check_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "Last health check timestamp"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Instance creation timestamp"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Last update timestamp"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "user_id",
+                              "user_slug",
+                              "status",
+                              "status_updated_at"
+                            ]
+                          },
+                          "description": "Per-user instances (optional)"
                         }
                       },
                       "required": [
@@ -24417,6 +24604,64 @@
                             }
                           },
                           "description": "Optional server details if included"
+                        },
+                        "instances": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Unique instance ID"
+                              },
+                              "user_id": {
+                                "type": "string",
+                                "description": "User ID who owns this instance"
+                              },
+                              "user_slug": {
+                                "type": "string",
+                                "description": "User slug (username) for display"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Current instance status"
+                              },
+                              "status_message": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional status message"
+                              },
+                              "status_updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When status was last updated"
+                              },
+                              "last_health_check_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "Last health check timestamp"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Instance creation timestamp"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Last update timestamp"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "user_id",
+                              "user_slug",
+                              "status",
+                              "status_updated_at"
+                            ]
+                          },
+                          "description": "Per-user instances (optional)"
                         }
                       },
                       "required": [
@@ -25048,6 +25293,64 @@
                             }
                           },
                           "description": "Optional server details if included"
+                        },
+                        "instances": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Unique instance ID"
+                              },
+                              "user_id": {
+                                "type": "string",
+                                "description": "User ID who owns this instance"
+                              },
+                              "user_slug": {
+                                "type": "string",
+                                "description": "User slug (username) for display"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Current instance status"
+                              },
+                              "status_message": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional status message"
+                              },
+                              "status_updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When status was last updated"
+                              },
+                              "last_health_check_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "Last health check timestamp"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Instance creation timestamp"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Last update timestamp"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "user_id",
+                              "user_slug",
+                              "status",
+                              "status_updated_at"
+                            ]
+                          },
+                          "description": "Per-user instances (optional)"
                         }
                       },
                       "required": [
@@ -25472,6 +25775,64 @@
                             }
                           },
                           "description": "Optional server details if included"
+                        },
+                        "instances": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Unique instance ID"
+                              },
+                              "user_id": {
+                                "type": "string",
+                                "description": "User ID who owns this instance"
+                              },
+                              "user_slug": {
+                                "type": "string",
+                                "description": "User slug (username) for display"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Current instance status"
+                              },
+                              "status_message": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional status message"
+                              },
+                              "status_updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When status was last updated"
+                              },
+                              "last_health_check_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "Last health check timestamp"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Instance creation timestamp"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Last update timestamp"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "user_id",
+                              "user_slug",
+                              "status",
+                              "status_updated_at"
+                            ]
+                          },
+                          "description": "Per-user instances (optional)"
                         }
                       },
                       "required": [
@@ -25896,6 +26257,64 @@
                             }
                           },
                           "description": "Optional server details if included"
+                        },
+                        "instances": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Unique instance ID"
+                              },
+                              "user_id": {
+                                "type": "string",
+                                "description": "User ID who owns this instance"
+                              },
+                              "user_slug": {
+                                "type": "string",
+                                "description": "User slug (username) for display"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Current instance status"
+                              },
+                              "status_message": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional status message"
+                              },
+                              "status_updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When status was last updated"
+                              },
+                              "last_health_check_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "Last health check timestamp"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Instance creation timestamp"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Last update timestamp"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "user_id",
+                              "user_slug",
+                              "status",
+                              "status_updated_at"
+                            ]
+                          },
+                          "description": "Per-user instances (optional)"
                         }
                       },
                       "required": [
@@ -26320,6 +26739,64 @@
                             }
                           },
                           "description": "Optional server details if included"
+                        },
+                        "instances": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Unique instance ID"
+                              },
+                              "user_id": {
+                                "type": "string",
+                                "description": "User ID who owns this instance"
+                              },
+                              "user_slug": {
+                                "type": "string",
+                                "description": "User slug (username) for display"
+                              },
+                              "status": {
+                                "type": "string",
+                                "description": "Current instance status"
+                              },
+                              "status_message": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Optional status message"
+                              },
+                              "status_updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "When status was last updated"
+                              },
+                              "last_health_check_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true,
+                                "description": "Last health check timestamp"
+                              },
+                              "created_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Instance creation timestamp"
+                              },
+                              "updated_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "Last update timestamp"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "user_id",
+                              "user_slug",
+                              "status",
+                              "status_updated_at"
+                            ]
+                          },
+                          "description": "Per-user instances (optional)"
                         }
                       },
                       "required": [
@@ -27250,6 +27727,13 @@
                       "type": "string"
                     },
                     "description": "User-specific HTTP headers"
+                  },
+                  "user_url_query_params": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "User-specific URL query parameters"
                   }
                 },
                 "additionalProperties": false
@@ -38200,6 +38684,10 @@
                             "type": "string",
                             "description": "Installation ID from mcpServerInstallations table"
                           },
+                          "instance_id": {
+                            "type": "string",
+                            "description": "Instance ID from mcpServerInstances table (per-user instance)"
+                          },
                           "team_id": {
                             "type": "string",
                             "description": "Team ID that owns this installation"
@@ -38262,11 +38750,15 @@
                           },
                           "requires_oauth": {
                             "type": "boolean",
-                            "description": "Whether this MCP server requires OAuth authentication (Phase 10)"
+                            "description": "Whether this MCP server requires OAuth authentication"
                           },
                           "user_id": {
                             "type": "string",
-                            "description": "User ID who created the installation (for OAuth token retrieval, Phase 10)"
+                            "description": "User ID for this specific instance (per-user process)"
+                          },
+                          "user_slug": {
+                            "type": "string",
+                            "description": "User ID used in processId for this specific instance"
                           },
                           "secret_metadata": {
                             "type": "object",

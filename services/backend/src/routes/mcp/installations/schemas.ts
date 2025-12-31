@@ -402,6 +402,55 @@ export const SERVER_DETAILS_SCHEMA = {
   }
 } as const;
 
+export const INSTANCE_SCHEMA = {
+  type: 'object',
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Unique instance ID'
+    },
+    user_id: {
+      type: 'string',
+      description: 'User ID who owns this instance'
+    },
+    user_slug: {
+      type: 'string',
+      description: 'User slug (username) for display'
+    },
+    status: {
+      type: 'string',
+      description: 'Current instance status'
+    },
+    status_message: {
+      type: 'string',
+      nullable: true,
+      description: 'Optional status message'
+    },
+    status_updated_at: {
+      type: 'string',
+      format: 'date-time',
+      description: 'When status was last updated'
+    },
+    last_health_check_at: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description: 'Last health check timestamp'
+    },
+    created_at: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Instance creation timestamp'
+    },
+    updated_at: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Last update timestamp'
+    }
+  },
+  required: ['id', 'user_id', 'user_slug', 'status', 'status_updated_at']
+} as const;
+
 export const INSTALLATION_ENTITY_SCHEMA = {
   type: 'object',
   properties: {
@@ -467,6 +516,11 @@ export const INSTALLATION_ENTITY_SCHEMA = {
     server: {
       ...SERVER_DETAILS_SCHEMA,
       description: 'Optional server details if included'
+    },
+    instances: {
+      type: 'array',
+      items: INSTANCE_SCHEMA,
+      description: 'Per-user instances (optional)'
     }
   },
   required: ['id', 'team_id', 'server_id', 'created_by', 'installation_name', 'installation_type', 'created_at', 'updated_at', 'last_used_at']
@@ -695,6 +749,30 @@ export interface ServerDetails {
   transport_type: 'stdio' | 'http' | 'sse';
 }
 
+export interface InstanceData {
+  id: string;
+  user_id: string;
+  user_slug: string;
+  status: string;
+  status_message: string | null;
+  status_updated_at: Date | null;
+  last_health_check_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface InstanceResponse {
+  id: string;
+  user_id: string;
+  user_slug: string;
+  status: string;
+  status_message: string | null;
+  status_updated_at: string;
+  last_health_check_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface InstallationData {
   id: string;
   team_id: string;
@@ -709,6 +787,7 @@ export interface InstallationData {
   updated_at: Date;
   last_used_at: Date | null;
   server?: ServerDetails;
+  instances?: InstanceData[];
 }
 
 export interface InstallationResponse {
@@ -725,6 +804,7 @@ export interface InstallationResponse {
   updated_at: string;
   last_used_at: string | null;
   server?: ServerDetails;
+  instances?: InstanceResponse[];
 }
 
 // Raw installation data from database (before formatting)
@@ -858,11 +938,15 @@ export const DUAL_AUTH_SECURITY = [
  * Converts InstallationData (with Date objects) to InstallationResponse (with ISO strings)
  */
 export function formatInstallationResponse(installation: InstallationData): InstallationResponse {
+  // Destructure to remove instances if present
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { instances: _instances, created_at, updated_at, last_used_at, ...rest } = installation;
+
   return {
-    ...installation,
-    created_at: installation.created_at.toISOString(),
-    updated_at: installation.updated_at.toISOString(),
-    last_used_at: installation.last_used_at?.toISOString() || null
+    ...rest,
+    created_at: created_at.toISOString(),
+    updated_at: updated_at.toISOString(),
+    last_used_at: last_used_at?.toISOString() || null
   };
 }
 
@@ -883,5 +967,22 @@ export function formatInstallationListResponse(installations: RawInstallationLis
     status_updated_at: installation.status_updated_at?.toISOString(),
     last_health_check_at: installation.last_health_check_at?.toISOString() || null,
     server: installation.server
+  }));
+}
+
+/**
+ * Converts array of InstanceData (with Date objects) to array of InstanceResponse (with ISO strings)
+ */
+export function formatInstancesResponse(instances: InstanceData[]): InstanceResponse[] {
+  return instances.map(inst => ({
+    id: inst.id,
+    user_id: inst.user_id,
+    user_slug: inst.user_slug,
+    status: inst.status,
+    status_message: inst.status_message,
+    status_updated_at: inst.status_updated_at?.toISOString() || new Date().toISOString(),
+    last_health_check_at: inst.last_health_check_at?.toISOString() || null,
+    created_at: inst.created_at.toISOString(),
+    updated_at: inst.updated_at.toISOString()
   }));
 }

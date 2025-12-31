@@ -42,7 +42,10 @@ export interface McpServerConfig {
   
   /** Installation ID from backend */
   installation_id?: string;
-  
+
+  /** Instance ID from backend (per-user instance) */
+  instance_id?: string;
+
   /** Team ID that owns this installation */
   team_id?: string;
   
@@ -57,6 +60,9 @@ export interface McpServerConfig {
   
   /** Installation name from backend */
   installation_name?: string;
+
+  /** User ID that owns this instance (per-user process) */
+  user_id?: string;
 
   /** Metadata about which fields contain secrets (for secure logging) */
   secret_metadata?: {

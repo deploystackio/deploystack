@@ -123,12 +123,6 @@ export const mcpServerInstallations = pgTable('mcpServerInstallations', {
   oauth_token_endpoint: text('oauth_token_endpoint'), // Stored token endpoint for callback handler
   oauth_token_endpoint_auth_method: text('oauth_token_endpoint_auth_method'), // Auth method for token exchange
 
-  // Installation Status Tracking
-  status: text('status').notNull().default('provisioning'), // 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'restarting' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed'
-  status_message: text('status_message'), // Human-readable status message or error details
-  status_updated_at: timestamp('status_updated_at', { withTimezone: true }).notNull().defaultNow(),
-  last_health_check_at: timestamp('last_health_check_at', { withTimezone: true }), // When health was last checked
-  last_credential_check_at: timestamp('last_credential_check_at', { withTimezone: true }), // When credentials were last validated (for 15-min checks)
   settings: jsonb('settings').default('{}'), // Generic settings object: {request_logging_enabled: boolean, ...}
 
   // Metadata
@@ -139,7 +133,6 @@ export const mcpServerInstallations = pgTable('mcpServerInstallations', {
   teamInstallationNameIdx: index('mcp_installations_team_name_idx').on(table.team_id, table.installation_name),
   teamServerIdx: index('mcp_installations_team_server_idx').on(table.team_id, table.server_id),
   createdByIdx: index('mcp_installations_created_by_idx').on(table.created_by),
-  statusIdx: index('mcp_installations_status_idx').on(table.status), // For querying by status
 }));
 
 // MCP User Configurations - Individual user configurations per installation (Tier 3)

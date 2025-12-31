@@ -31,7 +31,6 @@ export interface InstallationForCredentialCheck {
   team_id: string;
   server_id: string;
   installation_name: string;
-  status: string;
   requires_oauth: boolean;
   transport_type: 'stdio' | 'http' | 'sse';
 }
@@ -51,6 +50,7 @@ export interface InstallationForCredentialCheck {
 export class McpHealthCheckService {
   private readonly mcpServers: ReturnType<typeof getSchema>['mcpServers'];
   private readonly mcpServerInstallations: ReturnType<typeof getSchema>['mcpServerInstallations'];
+  private readonly mcpServerInstances: ReturnType<typeof getSchema>['mcpServerInstances'];
   private readonly mcpOauthTokens: ReturnType<typeof getSchema>['mcpOauthTokens'];
 
   private readonly HEALTH_CHECK_TIMEOUT_MS = 10000; // 10 seconds
@@ -66,6 +66,7 @@ export class McpHealthCheckService {
     const schema = getSchema();
     this.mcpServers = schema.mcpServers;
     this.mcpServerInstallations = schema.mcpServerInstallations;
+    this.mcpServerInstances = schema.mcpServerInstances;
     this.mcpOauthTokens = schema.mcpOauthTokens;
   }
 
@@ -211,13 +212,13 @@ export class McpHealthCheckService {
   }
 
   /**
-   * Distribute health status to all installations using this template
+   * Distribute health status to all user instances using this template
    *
    * Logic:
-   * - If template is offline AND installation status was 'online', set to 'offline'
-   * - If template is online AND installation status was 'offline' (from health check), set to 'connecting'
-   *   (Phase 13: Use 'connecting' for recovery to trigger satellite reconnection)
-   * - Don't overwrite 'error', 'requires_reauth', or 'permanently_failed' statuses
+   * - If template is offline, mark ALL 'online' instances as 'offline'
+   * - If template is online, mark ALL 'offline' instances as 'connecting'
+   *   (Use 'connecting' for recovery to trigger satellite reconnection)
+   * - Updates ALL user instances (including dormant ones) since they share the same remote URL
    */
   async distributeHealthStatus(
     templateId: string,
@@ -237,92 +238,96 @@ export class McpHealthCheckService {
       })
       .where(eq(this.mcpServers.id, templateId));
 
-    // Statuses that should NOT be overwritten by health checks
-    const protectedStatuses = ['error', 'requires_reauth', 'permanently_failed', 'provisioning', 'command_received', 'connecting', 'discovering_tools', 'syncing_tools'];
+    // Get all installations for this template
+    const installations = await this.db
+      .select({
+        id: this.mcpServerInstallations.id,
+        team_id: this.mcpServerInstallations.team_id
+      })
+      .from(this.mcpServerInstallations)
+      .where(eq(this.mcpServerInstallations.server_id, templateId));
 
+    if (installations.length === 0) {
+      this.logger.debug({
+        operation: 'distribute_health_status',
+        templateId,
+        status
+      }, 'No installations found for template');
+      return { updatedCount: 0, recoveredInstallations: [] };
+    }
+
+    const installationIds = installations.map(i => i.id);
     let updatedCount = 0;
     const recoveredInstallations: Array<{ id: string; team_id: string }> = [];
 
     if (status === 'offline') {
-      // If template is offline, mark 'online' installations as 'offline'
+      // If template is offline, mark ALL 'online' instances as 'offline'
       const result = await this.db
-        .update(this.mcpServerInstallations)
+        .update(this.mcpServerInstances)
         .set({
           status: 'offline',
           status_message: error || 'MCP server is unreachable',
           status_updated_at: now,
-          last_health_check_at: now,
-          updated_at: now
+          last_health_check_at: now
         })
         .where(
           and(
-            eq(this.mcpServerInstallations.server_id, templateId),
-            eq(this.mcpServerInstallations.status, 'online')
+            inArray(this.mcpServerInstances.installation_id, installationIds),
+            eq(this.mcpServerInstances.status, 'online')
           )
         );
 
       updatedCount = result.rowCount || 0;
     } else if (status === 'online') {
-      // Phase 13: First, get installations that will be recovered (for triggering rediscovery)
-      const installationsToRecover = await this.db
-        .select({
-          id: this.mcpServerInstallations.id,
-          team_id: this.mcpServerInstallations.team_id
+      // Get installations with offline instances (for recovery notifications)
+      const installationsWithOfflineInstances = await this.db
+        .selectDistinctOn([this.mcpServerInstances.installation_id], {
+          installation_id: this.mcpServerInstances.installation_id
         })
-        .from(this.mcpServerInstallations)
+        .from(this.mcpServerInstances)
         .where(
           and(
-            eq(this.mcpServerInstallations.server_id, templateId),
-            eq(this.mcpServerInstallations.status, 'offline')
+            inArray(this.mcpServerInstances.installation_id, installationIds),
+            eq(this.mcpServerInstances.status, 'offline')
           )
         );
 
-      // Phase 13: Mark 'offline' installations as 'connecting' (not 'online')
+      // Mark ALL 'offline' instances as 'connecting'
       // Satellite will update to 'online' after successful tool rediscovery
-      if (installationsToRecover.length > 0) {
+      if (installationsWithOfflineInstances.length > 0) {
         const result = await this.db
-          .update(this.mcpServerInstallations)
+          .update(this.mcpServerInstances)
           .set({
             status: 'connecting',
             status_message: 'Server recovered, waiting for satellite to reconnect',
             status_updated_at: now,
-            last_health_check_at: now,
-            updated_at: now
+            last_health_check_at: now
           })
           .where(
             and(
-              eq(this.mcpServerInstallations.server_id, templateId),
-              eq(this.mcpServerInstallations.status, 'offline')
+              inArray(this.mcpServerInstances.installation_id, installationIds),
+              eq(this.mcpServerInstances.status, 'offline')
             )
           );
 
         updatedCount = result.rowCount || 0;
-        recoveredInstallations.push(...installationsToRecover);
+
+        // Map installation IDs back to installation+team info for recovery notifications
+        const recoveredInstallationIds = installationsWithOfflineInstances.map(i => i.installation_id);
+        recoveredInstallations.push(
+          ...installations.filter(inst => recoveredInstallationIds.includes(inst.id))
+        );
       }
     }
-
-    // Always update last_health_check_at for all installations of this template
-    // (but don't change their status if protected)
-    await this.db
-      .update(this.mcpServerInstallations)
-      .set({
-        last_health_check_at: now
-      })
-      .where(
-        and(
-          eq(this.mcpServerInstallations.server_id, templateId),
-          // Only update if status is in protected list (to avoid overwriting)
-          inArray(this.mcpServerInstallations.status, protectedStatuses)
-        )
-      );
 
     this.logger.debug({
       operation: 'distribute_health_status',
       templateId,
       status,
       updatedCount,
-      recoveredCount: recoveredInstallations.length
-    }, `Distributed ${status} status to ${updatedCount} installations (${recoveredInstallations.length} recovered)`);
+      recoveredCount: recoveredInstallations.length,
+      installationCount: installations.length
+    }, `Distributed ${status} status to ${updatedCount} instances across ${installations.length} installations (${recoveredInstallations.length} recovered)`);
 
     return { updatedCount, recoveredInstallations };
   }
@@ -382,7 +387,7 @@ export class McpHealthCheckService {
 
       installationsUpdated += distribution.updatedCount;
 
-      // Phase 13: Handle recovered installations - trigger satellite rediscovery
+      // Handle recovered installations - trigger satellite rediscovery
       if (distribution.recoveredInstallations.length > 0) {
         installationsRecovered += distribution.recoveredInstallations.length;
         await this.handleRecovery(distribution.recoveredInstallations);
@@ -421,10 +426,10 @@ export class McpHealthCheckService {
     };
   }
 
-  // ==================== Auto-Recovery (Phase 13) ====================
+  // ==================== Auto-Recovery ====================
 
   /**
-   * Phase 13: Handle recovered installations by triggering satellite rediscovery
+   * Handle recovered installations by triggering satellite rediscovery
    * Called when template health check detects server is back online
    */
   private async handleRecovery(
@@ -474,38 +479,44 @@ export class McpHealthCheckService {
     }, `Recovery notifications sent for ${recoveredInstallations.length} installations`);
   }
 
-  // ==================== Credential Validation (Phase 9) ====================
+  // ==================== Credential Validation ====================
 
   /**
    * Get installations that need credential validation
-   * Returns installations where last_credential_check_at is NULL or > 15 minutes ago
+   * Returns installations that have at least one 'online' instance
+   * and haven't been checked recently
    */
   async getInstallationsNeedingCredentialCheck(): Promise<InstallationForCredentialCheck[]> {
     const threshold = new Date(Date.now() - this.CREDENTIAL_CHECK_INTERVAL_MS);
 
+    // Get distinct installations with at least one online instance
+    // that need credential checking (based on instances' last_credential_check_at)
     const results = await this.db
-      .select({
+      .selectDistinctOn([this.mcpServerInstallations.id], {
         id: this.mcpServerInstallations.id,
         team_id: this.mcpServerInstallations.team_id,
         server_id: this.mcpServerInstallations.server_id,
         installation_name: this.mcpServerInstallations.installation_name,
-        status: this.mcpServerInstallations.status,
         requires_oauth: this.mcpServers.requires_oauth,
         transport_type: this.mcpServers.transport_type
       })
-      .from(this.mcpServerInstallations)
+      .from(this.mcpServerInstances)
+      .innerJoin(
+        this.mcpServerInstallations,
+        eq(this.mcpServerInstances.installation_id, this.mcpServerInstallations.id)
+      )
       .innerJoin(
         this.mcpServers,
         eq(this.mcpServerInstallations.server_id, this.mcpServers.id)
       )
       .where(
         and(
-          // Only check 'online' installations (don't check already-failed ones)
-          eq(this.mcpServerInstallations.status, 'online'),
+          // Only check instances that are 'online' (don't check already-failed ones)
+          eq(this.mcpServerInstances.status, 'online'),
           // Need credential check if never checked or > 15 min ago
           or(
-            isNull(this.mcpServerInstallations.last_credential_check_at),
-            lt(this.mcpServerInstallations.last_credential_check_at, threshold)
+            isNull(this.mcpServerInstances.last_credential_check_at),
+            lt(this.mcpServerInstances.last_credential_check_at, threshold)
           )
         )
       )
@@ -609,7 +620,8 @@ export class McpHealthCheckService {
   }
 
   /**
-   * Update installation status based on credential validation result
+   * Update instance statuses based on credential validation result
+   * Updates ALL instances for this installation since credentials are shared
    */
   async updateInstallationCredentialStatus(
     installationId: string,
@@ -618,42 +630,39 @@ export class McpHealthCheckService {
     const now = new Date();
 
     if (result.needsReauth) {
-      // Set status to requires_reauth
+      // Set ALL instances to requires_reauth since credentials are shared at installation level
       await this.db
-        .update(this.mcpServerInstallations)
+        .update(this.mcpServerInstances)
         .set({
           status: 'requires_reauth',
           status_message: result.error || 'Authentication required',
           status_updated_at: now,
-          last_credential_check_at: now,
-          updated_at: now
+          last_credential_check_at: now
         })
-        .where(eq(this.mcpServerInstallations.id, installationId));
+        .where(eq(this.mcpServerInstances.installation_id, installationId));
 
       this.logger.info({
         operation: 'installation_requires_reauth',
         installationId,
         error: result.error
-      }, `Installation ${installationId} set to requires_reauth`);
+      }, `All instances for installation ${installationId} set to requires_reauth`);
     } else if (!result.valid) {
       // Invalid credentials but doesn't need reauth (e.g., refresh pending)
-      // Just update last_credential_check_at, don't change status
+      // Just update last_credential_check_at for all instances, don't change status
       await this.db
-        .update(this.mcpServerInstallations)
+        .update(this.mcpServerInstances)
         .set({
-          last_credential_check_at: now,
-          updated_at: now
+          last_credential_check_at: now
         })
-        .where(eq(this.mcpServerInstallations.id, installationId));
+        .where(eq(this.mcpServerInstances.installation_id, installationId));
     } else {
-      // Valid credentials - update last check timestamp
+      // Valid credentials - update last check timestamp for all instances
       await this.db
-        .update(this.mcpServerInstallations)
+        .update(this.mcpServerInstances)
         .set({
-          last_credential_check_at: now,
-          updated_at: now
+          last_credential_check_at: now
         })
-        .where(eq(this.mcpServerInstallations.id, installationId));
+        .where(eq(this.mcpServerInstances.installation_id, installationId));
     }
   }
 
@@ -718,23 +727,23 @@ export class McpHealthCheckService {
             await this.requestCredentialValidation(installation.id, installation.team_id);
             apiKeyRequested++;
 
-            // Update last_credential_check_at to prevent immediate re-check
+            // Update last_credential_check_at for all instances to prevent immediate re-check
             const now = new Date();
             await this.db
-              .update(this.mcpServerInstallations)
+              .update(this.mcpServerInstances)
               .set({
                 last_credential_check_at: now
               })
-              .where(eq(this.mcpServerInstallations.id, installation.id));
+              .where(eq(this.mcpServerInstances.installation_id, installation.id));
           } else {
-            // stdio servers without OAuth - just update timestamp
+            // stdio servers without OAuth - just update timestamp for all instances
             const now = new Date();
             await this.db
-              .update(this.mcpServerInstallations)
+              .update(this.mcpServerInstances)
               .set({
                 last_credential_check_at: now
               })
-              .where(eq(this.mcpServerInstallations.id, installation.id));
+              .where(eq(this.mcpServerInstances.installation_id, installation.id));
           }
         }
       } catch (error) {

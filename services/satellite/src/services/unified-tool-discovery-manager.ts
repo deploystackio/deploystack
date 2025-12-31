@@ -7,7 +7,7 @@ import { ProcessManager } from '../process/manager';
 import { RuntimeState } from '../process/runtime-state';
 
 /**
- * Server availability status for tool filtering (Phase 10)
+ * Server availability status for tool filtering (OAuth support)
  */
 export type ServerAvailabilityStatus =
   | 'online'
@@ -72,7 +72,7 @@ export class UnifiedToolDiscoveryManager {
   private disabledTools: Map<string, Set<string>> = new Map();
 
   /**
-   * Tracks server availability status for tool filtering (Phase 10)
+   * Tracks server availability status for tool filtering (OAuth support)
    * Key: serverSlug, Value: ServerStatusEntry
    */
   private serverStatus: Map<string, ServerStatusEntry> = new Map();
@@ -94,7 +94,7 @@ export class UnifiedToolDiscoveryManager {
     this.stdioToolManager = stdioToolManager;
     this.logger = logger.child({ component: 'UnifiedToolDiscoveryManager' });
 
-    // Phase 10: Wire up status callbacks from discovery managers
+    // OAuth: Wire up status callbacks from discovery managers
     this.remoteToolManager.setStatusCallback((serverSlug, status, message) => {
       this.setServerStatus(serverSlug, status, message);
     });
@@ -215,7 +215,7 @@ export class UnifiedToolDiscoveryManager {
 
   /**
    * Get all cached tools (merged from both stdio and remote HTTP/SSE managers)
-   * Filters out tools from unavailable servers (Phase 10)
+   * Filters out tools from unavailable servers (OAuth support)
    */
   getAllTools(): UnifiedCachedTool[] {
     const remoteTools = this.remoteToolManager.getCachedTools();
@@ -246,7 +246,7 @@ export class UnifiedToolDiscoveryManager {
       }))
     ];
 
-    // Filter out tools from unavailable servers (Phase 10)
+    // Filter out tools from unavailable servers (OAuth support)
     return unifiedTools.filter(tool => {
       const status = this.serverStatus.get(tool.serverSlug);
       // If no status recorded, assume available (unknown = available)
@@ -507,11 +507,11 @@ export class UnifiedToolDiscoveryManager {
   }
 
   // =========================================================================
-  // SERVER STATUS TRACKING (Phase 10)
+  // SERVER STATUS TRACKING (OAuth support)
   // =========================================================================
 
   /**
-   * Set server availability status (Phase 10)
+   * Set server availability status (OAuth support)
    * Called by discovery managers when discovery succeeds or fails
    */
   setServerStatus(
@@ -547,21 +547,21 @@ export class UnifiedToolDiscoveryManager {
   }
 
   /**
-   * Get server availability status (Phase 10)
+   * Get server availability status (OAuth support)
    */
   getServerStatus(serverSlug: string): ServerStatusEntry | undefined {
     return this.serverStatus.get(serverSlug);
   }
 
   /**
-   * Get all server statuses (Phase 10)
+   * Get all server statuses (OAuth support)
    */
   getAllServerStatuses(): Map<string, ServerStatusEntry> {
     return new Map(this.serverStatus);
   }
 
   /**
-   * Check if a server is available for tool execution (Phase 10)
+   * Check if a server is available for tool execution (OAuth support)
    */
   isServerAvailable(serverSlug: string): boolean {
     const status = this.serverStatus.get(serverSlug);
@@ -584,7 +584,7 @@ export class UnifiedToolDiscoveryManager {
   }
 
   /**
-   * Get server status statistics (Phase 10)
+   * Get server status statistics (OAuth support)
    */
   getServerStatusStats(): {
     total: number;

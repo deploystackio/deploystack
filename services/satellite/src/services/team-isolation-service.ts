@@ -20,29 +20,31 @@ export class TeamIsolationService {
 
   /**
    * Extract team information from installation name
-   * 
-   * Format: {server_slug}-{team_slug}-{installation_id}
+   *
+   * Format: {server_slug}-{team_slug}-{user_id}-{installation_id}
+   * Note: user_id is parsed but not returned (available in config.user_id)
    * Examples:
-   *   "filesystem-john-R36no6FGoMFEZO9nWJJLT" → {serverSlug: "filesystem", teamSlug: "john", installationId: "R36no6FGoMFEZO9nWJJLT"}
-   *   "context7-alice-S47mp8GHpNGFZP0oWKKMU" → {serverSlug: "context7", teamSlug: "alice", installationId: "S47mp8GHpNGFZP0oWKKMU"}
+   *   "filesystem-john-user1-R36no6FGoMFEZO9nWJJLT" → {serverSlug: "filesystem", teamSlug: "john", installationId: "R36no6FGoMFEZO9nWJJLT"}
+   *   "context7-alice-user2-S47mp8GHpNGFZP0oWKKMU" → {serverSlug: "context7", teamSlug: "alice", installationId: "S47mp8GHpNGFZP0oWKKMU"}
    */
   extractTeamInfo(installationName: string): TeamInfo {
     const parts = installationName.split('-');
-    
-    if (parts.length < 3) {
+
+    if (parts.length < 4) {
       this.logger.error({
         operation: 'team_info_extraction_failed',
         installation_name: installationName,
         parts_count: parts.length
       }, `Invalid installation name format: ${installationName}`);
-      
-      throw new Error(`Invalid installation name format: ${installationName} (expected format: serverSlug-teamSlug-installationId)`);
+
+      throw new Error(`Invalid installation name format: ${installationName} (expected format: serverSlug-teamSlug-userId-installationId)`);
     }
 
     // Extract components
     const serverSlug = parts[0];
     const teamSlug = parts[1];
-    const installationId = parts.slice(2).join('-'); // Handle IDs with hyphens
+    // parts[2] is user_id - not extracted (use config.user_id instead)
+    const installationId = parts.slice(3).join('-'); // Handle IDs with hyphens
 
     this.logger.debug({
       operation: 'team_info_extracted',

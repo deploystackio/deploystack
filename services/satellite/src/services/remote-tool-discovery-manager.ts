@@ -33,7 +33,7 @@ interface ServerToolState {
 }
 
 /**
- * Status callback for Phase 10 local status tracking
+ * Status callback for local status tracking
  */
 export type ServerStatusCallback = (
   serverSlug: string,
@@ -62,7 +62,7 @@ export class RemoteToolDiscoveryManager {
   }
 
   /**
-   * Set status callback for Phase 10 local status tracking
+   * Set status callback for local status tracking
    */
   setStatusCallback(callback: ServerStatusCallback): void {
     this.statusCallback = callback;
@@ -101,6 +101,7 @@ export class RemoteToolDiscoveryManager {
   private emitStatusChange(
     installationId: string,
     teamId: string,
+    userId: string,
     status: 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed',
     statusMessage?: string
   ): void {
@@ -111,6 +112,7 @@ export class RemoteToolDiscoveryManager {
     this.eventBus.emit('mcp.server.status_changed', {
       installation_id: installationId,
       team_id: teamId,
+      user_id: userId,
       status,
       status_message: statusMessage,
       timestamp: new Date().toISOString()
@@ -151,7 +153,7 @@ export class RemoteToolDiscoveryManager {
       return { status: 'offline', message: `Server not responding: ${errorMessage}` };
     }
 
-    // Phase 11: HTTP 401/403 -> requires_reauth (token likely expired or revoked)
+    // HTTP 401/403 -> requires_reauth (token likely expired or revoked)
     if (lowerError.includes('401') || lowerError.includes('unauthorized')) {
       return { status: 'requires_reauth', message: `Authentication failed (HTTP 401). Please re-authenticate: ${errorMessage}` };
     }
@@ -373,7 +375,7 @@ export class RemoteToolDiscoveryManager {
     // Build URL with query parameters
     const finalUrl = this.buildMcpServerUrl(config.url, config.url_query_params);
 
-    // Phase 10: OAuth token injection for tool discovery
+    // OAuth: OAuth token injection for tool discovery
     let headers: Record<string, string> = {};
 
     // Add regular headers from config (API keys, custom headers, etc.)
@@ -558,10 +560,10 @@ export class RemoteToolDiscoveryManager {
 
       // Emit status change event to backend
       if (config.installation_id && config.team_id) {
-        this.emitStatusChange(config.installation_id, config.team_id, 'online');
+        this.emitStatusChange(config.installation_id, config.team_id, config.user_id || 'unknown', 'online');
       }
 
-      // Phase 10: Notify about successful discovery (set status to 'online')
+      // OAuth: Notify about successful discovery (set status to 'online')
       if (this.statusCallback) {
         this.statusCallback(serverSlug, 'online');
       }
@@ -584,10 +586,10 @@ export class RemoteToolDiscoveryManager {
       // Emit status change based on error type
       if (config.installation_id && config.team_id) {
         const { status, message } = RemoteToolDiscoveryManager.getStatusFromError(errorMessage);
-        this.emitStatusChange(config.installation_id, config.team_id, status, message);
+        this.emitStatusChange(config.installation_id, config.team_id, config.user_id || 'unknown', status, message);
       }
 
-      // Phase 10: Notify about discovery failure
+      // OAuth: Notify about discovery failure
       if (this.statusCallback) {
         const serverSlug = config.server_slug || config.server_name || serverName;
         const { status, message } = RemoteToolDiscoveryManager.getStatusFromError(errorMessage);

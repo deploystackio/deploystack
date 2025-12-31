@@ -62,6 +62,11 @@ export const CREATE_USER_CONFIG_REQUEST_SCHEMA = {
       type: 'object',
       additionalProperties: { type: 'string' },
       description: 'User-specific HTTP headers'
+    },
+    user_url_query_params: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      description: 'User-specific URL query parameters'
     }
   },
   additionalProperties: false

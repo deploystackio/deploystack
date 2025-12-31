@@ -62,6 +62,9 @@ export type InstallationStatus =
 
 export interface InstallationStatusData {
   installation_id: string
+  instance_id: string
+  user_id: string
+  user_slug: string
   status: InstallationStatus
   status_message: string | null
   status_updated_at: string
@@ -87,6 +90,8 @@ export interface McpInstallation {
   team_url_query_params?: Record<string, string>
   user_id?: string
   updated_at?: string
+  instance_id?: string
+  user_slug?: string
   status?: InstallationStatus
   status_message?: string | null
   status_updated_at?: string

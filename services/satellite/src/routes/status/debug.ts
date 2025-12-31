@@ -4,15 +4,16 @@ import { ProcessManager } from '../../process/manager';
 import { RuntimeState } from '../../process/runtime-state';
 import { UnifiedToolDiscoveryManager } from '../../services/unified-tool-discovery-manager';
 import { DynamicConfigManager } from '../../services/dynamic-config-manager';
-import { TeamIsolationService } from '../../services/team-isolation-service';
 import { getVersionString } from '../../config/version';
 
 interface ServerInfo {
   installation_name: string;
   installation_id: string;
+  instance_id: string;
   team_id: string;
   team_slug: string;
   server_slug: string;
+  user_id: string;
   transport_type: string;
   status: string;
   command: string;
@@ -41,9 +42,11 @@ const serverInfoSchema = {
   properties: {
     installation_name: { type: 'string' },
     installation_id: { type: 'string' },
+    instance_id: { type: 'string' },
     team_id: { type: 'string' },
     team_slug: { type: 'string' },
     server_slug: { type: 'string' },
+    user_id: { type: 'string' },
     transport_type: { type: 'string' },
     status: { type: 'string' },
     command: { type: 'string' },
@@ -172,7 +175,6 @@ export async function registerDebugRoutes(server: FastifyInstance) {
   const runtimeState = (server as any).runtimeState as RuntimeState | undefined;
   const toolDiscoveryManager = (server as any).toolDiscoveryManager as UnifiedToolDiscoveryManager | undefined;
   const dynamicConfigManager = (server as any).dynamicConfigManager as DynamicConfigManager | undefined;
-  const teamIsolationService = (server as any).teamIsolationService as TeamIsolationService | undefined;
 
   if (!processManager || !runtimeState || !toolDiscoveryManager || !dynamicConfigManager) {
     server.log.error('Required services not found on server instance');
@@ -219,21 +221,6 @@ export async function registerDebugRoutes(server: FastifyInstance) {
         };
       });
 
-      const extractTeamInfoSafely = (installationName: string) => {
-        try {
-          if (teamIsolationService) {
-            return teamIsolationService.extractTeamInfo(installationName);
-          }
-        } catch (error) {
-          request.log.debug({
-            operation: 'debug_team_info_extraction_failed',
-            installation_name: installationName,
-            error: error instanceof Error ? error.message : String(error)
-          }, 'Failed to extract team info');
-        }
-        return { serverSlug: 'unknown', teamSlug: 'unknown', installationId: 'unknown' };
-      };
-
       // Helper function to get backend status for an installation
       const getBackendStatus = (installationId: string) => {
         const backendStatus = toolDiscoveryManager?.getBackendStatus(installationId);
@@ -253,15 +240,16 @@ export async function registerDebugRoutes(server: FastifyInstance) {
         }
 
         const status = runtimeStatus[processInfo.config.installation_name];
-        const teamInfo = extractTeamInfoSafely(processInfo.config.installation_name);
         const backendStatusData = getBackendStatus(processInfo.config.installation_id);
 
         serversByTeam[teamId].running.push({
           installation_name: processInfo.config.installation_name,
           installation_id: processInfo.config.installation_id,
+          instance_id: processInfo.config.instance_id || 'unknown',
           team_id: processInfo.config.team_id,
-          team_slug: teamInfo.teamSlug,
-          server_slug: teamInfo.serverSlug,
+          team_slug: processInfo.config.team_slug || 'unknown',
+          server_slug: processInfo.config.server_slug || 'unknown',
+          user_id: processInfo.config.user_id || 'unknown',
           transport_type: 'stdio',
           // Use backend_status if available, otherwise fall back to process status
           status: backendStatusData.backend_status || status?.status || processInfo.status,
@@ -283,15 +271,16 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           serversByTeam[teamId] = { running: [], dormant: [], configured: [] };
         }
 
-        const teamInfo = extractTeamInfoSafely(installationName);
         const backendStatusData = getBackendStatus(config.installation_id);
 
         serversByTeam[teamId].dormant.push({
           installation_name: installationName,
           installation_id: config.installation_id,
+          instance_id: config.instance_id || 'unknown',
           team_id: config.team_id,
-          team_slug: teamInfo.teamSlug,
-          server_slug: teamInfo.serverSlug,
+          team_slug: config.team_slug || 'unknown',
+          server_slug: config.server_slug || 'unknown',
+          user_id: config.user_id || 'unknown',
           transport_type: 'stdio',
           // Use backend_status if available, otherwise 'dormant'
           status: backendStatusData.backend_status || 'dormant',
@@ -314,8 +303,6 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           serversByTeam[teamId] = { running: [], dormant: [], configured: [] };
         }
 
-        const teamInfo = extractTeamInfoSafely(serverName);
-
         // Check backend status to determine if HTTP/SSE server is online
         const backendStatusData = serverConfig.installation_id ? getBackendStatus(serverConfig.installation_id) : {};
         const isOnline = backendStatusData.backend_status === 'online';
@@ -323,9 +310,11 @@ export async function registerDebugRoutes(server: FastifyInstance) {
         const serverInfo: ServerInfo = {
           installation_name: serverName,
           installation_id: serverConfig.installation_id || 'unknown',
+          instance_id: serverConfig.instance_id || 'unknown',
           team_id: teamId,
-          team_slug: teamInfo.teamSlug,
-          server_slug: teamInfo.serverSlug,
+          team_slug: serverConfig.team_slug || 'unknown',
+          server_slug: serverConfig.server_slug || serverName,
+          user_id: serverConfig.user_id || 'unknown',
           transport_type: serverConfig.transport_type || serverConfig.type || 'unknown',
           status: backendStatusData.backend_status || 'configured',
           command: serverConfig.command || serverConfig.url || '',
@@ -369,7 +358,7 @@ export async function registerDebugRoutes(server: FastifyInstance) {
       const stdioServers = Object.values(currentConfig.servers)
         .filter(s => s.enabled !== false && (s.transport_type === 'stdio' || s.type === 'stdio')).length;
 
-      // Phase 10: Get server availability status
+      // OAuth: Get server availability status
       const serverStatusMap = toolDiscoveryManager.getAllServerStatuses();
       const serverStatusStats = toolDiscoveryManager.getServerStatusStats();
       const serverStatusData: Record<string, { status: string; last_updated: string; message?: string }> = {};
@@ -396,7 +385,7 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           total_configured: totalConfigured,
           total_servers: totalRunning + totalDormant + totalConfigured
         },
-        // Phase 10: Server availability status
+        // OAuth: Server availability status
         server_status: {
           stats: serverStatusStats,
           servers: serverStatusData
