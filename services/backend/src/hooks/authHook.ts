@@ -20,7 +20,13 @@ export async function authHook(
   // Check if database is configured before attempting authentication
   const dbStatus = getDbStatus();
   if (!dbStatus.configured || !dbStatus.initialized) {
-    // Database not ready, skip authentication
+    // Database not ready, skip authentication - log this for debugging
+    request.log.warn({
+      operation: 'auth_hook',
+      dbConfigured: dbStatus.configured,
+      dbInitialized: dbStatus.initialized,
+      dialect: dbStatus.dialect
+    }, 'Auth hook: Database not ready, skipping authentication');
     request.user = null;
     request.session = null;
     return;

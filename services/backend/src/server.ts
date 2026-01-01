@@ -748,6 +748,20 @@ export const createServer = async () => {
       }
     }
   });
-  
+
+  // Verify database is ready before allowing server to accept requests
+  // This prevents workers from accepting requests before database is initialized
+  const finalDbStatus = getDbStatus();
+  if (!finalDbStatus.configured || !finalDbStatus.initialized) {
+    server.log.error({
+      operation: 'startup_check',
+      dbConfigured: finalDbStatus.configured,
+      dbInitialized: finalDbStatus.initialized,
+      dialect: finalDbStatus.dialect
+    }, 'Database not ready at startup - refusing to start server');
+    process.exit(1);
+  }
+  server.log.info('Database ready, server initialization complete');
+
   return server;
 }
