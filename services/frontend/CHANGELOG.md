@@ -12,6 +12,18 @@
 * refactor(frontend): convert admin users detail page to multi-route structure ([bd3f8cd93426677250f8c83f43cfd8bf7575a452](https://github.com/deploystackio/deploystack/commit/bd3f8cd93426677250f8c83f43cfd8bf7575a452))
 * refactor(frontend): simplify server installation routing logic ([cacd4430ad1fcdcb87e2de9960813e49770bc47d](https://github.com/deploystackio/deploystack/commit/cacd4430ad1fcdcb87e2de9960813e49770bc47d))
 
+## 0.53.0 (2026-01-01)
+
+* chore(all): update deploystack banner image ([924cbcb5835e1a91c572f658db1e47b6465a20a9](https://github.com/deploystackio/deploystack/commit/924cbcb5835e1a91c572f658db1e47b6465a20a9))
+* chore(frontend): update logo and favicon images ([5d5153c47f63b5972ce87ede7d6e6b38a8735545](https://github.com/deploystackio/deploystack/commit/5d5153c47f63b5972ce87ede7d6e6b38a8735545))
+* feat(all): implement per-user MCP instance isolation for multi-user teams ([bc9d18336a33185ece6c92e286596c9846dfab4f](https://github.com/deploystackio/deploystack/commit/bc9d18336a33185ece6c92e286596c9846dfab4f))
+* feat(frontend): add role change dialog to user detail page ([786c015184f688e4ba4c7cb344b1fe69fee66acd](https://github.com/deploystackio/deploystack/commit/786c015184f688e4ba4c7cb344b1fe69fee66acd))
+* feat(frontend): add runtime badge visibility toggle to server card ([95f9a8bae348e10b2b9fb4c50af4efb7e1cb7989](https://github.com/deploystackio/deploystack/commit/95f9a8bae348e10b2b9fb4c50af4efb7e1cb7989))
+* feat(frontend): add template and schema props to server configuration ([e4d389f89da20776defa4f9307668ebcb9adc25e](https://github.com/deploystackio/deploystack/commit/e4d389f89da20776defa4f9307668ebcb9adc25e))
+* refactor(all): move admin user routes to /api/admin/users ([c319dd06904ddba21a0babb3644d02d235ad1bb5](https://github.com/deploystackio/deploystack/commit/c319dd06904ddba21a0babb3644d02d235ad1bb5))
+* refactor(frontend): convert admin users detail page to multi-route structure ([bd3f8cd93426677250f8c83f43cfd8bf7575a452](https://github.com/deploystackio/deploystack/commit/bd3f8cd93426677250f8c83f43cfd8bf7575a452))
+* refactor(frontend): simplify server installation routing logic ([cacd4430ad1fcdcb87e2de9960813e49770bc47d](https://github.com/deploystackio/deploystack/commit/cacd4430ad1fcdcb87e2de9960813e49770bc47d))
+
 ## 0.52.0 (2025-12-29)
 
 * feat(all): add MCP servers page to admin teams detail with pagination ([6186e7bb519b493e2d4e7354d9ae694beb2b1186](https://github.com/deploystackio/deploystack/commit/6186e7bb519b493e2d4e7354d9ae694beb2b1186))
