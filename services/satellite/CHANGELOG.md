@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.17.0 (2026-01-01)
+
+* chore(all): update deploystack banner image ([924cbcb5835e1a91c572f658db1e47b6465a20a9](https://github.com/deploystackio/deploystack/commit/924cbcb5835e1a91c572f658db1e47b6465a20a9))
+* feat(all): add MCP servers page to admin teams detail with pagination ([6186e7bb519b493e2d4e7354d9ae694beb2b1186](https://github.com/deploystackio/deploystack/commit/6186e7bb519b493e2d4e7354d9ae694beb2b1186))
+* feat(all): add OAuth re-authentication for MCP installations ([f08e92a29ba06850def5a9dac17f5cc19be6a5a5](https://github.com/deploystackio/deploystack/commit/f08e92a29ba06850def5a9dac17f5cc19be6a5a5))
+* feat(all): add per-team remote MCP server permission - global setting ([69ace9d7f15c1b26857f3c6528a4d161e58d2466](https://github.com/deploystackio/deploystack/commit/69ace9d7f15c1b26857f3c6528a4d161e58d2466))
+* feat(all): implement per-user MCP instance isolation for multi-user teams ([bc9d18336a33185ece6c92e286596c9846dfab4f](https://github.com/deploystackio/deploystack/commit/bc9d18336a33185ece6c92e286596c9846dfab4f))
+* feat(all): make team member limits configurable per-team ([1c70523ce3d0e83ea4c1032ca4dce7fca48ca869](https://github.com/deploystackio/deploystack/commit/1c70523ce3d0e83ea4c1032ca4dce7fca48ca869))
+* refactor(all): move admin user routes to /api/admin/users ([c319dd06904ddba21a0babb3644d02d235ad1bb5](https://github.com/deploystackio/deploystack/commit/c319dd06904ddba21a0babb3644d02d235ad1bb5))
+* docs(all): update project description for clarity and focus ([cbbfcf6f1392f8a357075b4c0447357bd647cac9](https://github.com/deploystackio/deploystack/commit/cbbfcf6f1392f8a357075b4c0447357bd647cac9))
+
 ## 0.16.0 (2025-12-24)
 
 ## 0.16.0 (2025-12-24)
