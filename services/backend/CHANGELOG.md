@@ -9,6 +9,15 @@
 * style(backend): improve email template styles and layout ([290b7d846bf6739dd247d0f76ee7ee2e94afb2da](https://github.com/deploystackio/deploystack/commit/290b7d846bf6739dd247d0f76ee7ee2e94afb2da))
 * refactor(all): move admin user routes to /api/admin/users ([c319dd06904ddba21a0babb3644d02d235ad1bb5](https://github.com/deploystackio/deploystack/commit/c319dd06904ddba21a0babb3644d02d235ad1bb5))
 
+## 0.57.0 (2026-01-01)
+
+* chore(all): update deploystack banner image ([924cbcb5835e1a91c572f658db1e47b6465a20a9](https://github.com/deploystackio/deploystack/commit/924cbcb5835e1a91c572f658db1e47b6465a20a9))
+* fix(backend): log database status during authentication and server startup ([31e5497bb9c5d85bd29131773fa1a2e69a33610f](https://github.com/deploystackio/deploystack/commit/31e5497bb9c5d85bd29131773fa1a2e69a33610f))
+* feat(all): implement per-user MCP instance isolation for multi-user teams ([bc9d18336a33185ece6c92e286596c9846dfab4f](https://github.com/deploystackio/deploystack/commit/bc9d18336a33185ece6c92e286596c9846dfab4f))
+* feat(backend): add email notifications for global admin role changes ([843f51aa30bed200cff2797afa301c92c9f1e10f](https://github.com/deploystackio/deploystack/commit/843f51aa30bed200cff2797afa301c92c9f1e10f))
+* style(backend): improve email template styles and layout ([290b7d846bf6739dd247d0f76ee7ee2e94afb2da](https://github.com/deploystackio/deploystack/commit/290b7d846bf6739dd247d0f76ee7ee2e94afb2da))
+* refactor(all): move admin user routes to /api/admin/users ([c319dd06904ddba21a0babb3644d02d235ad1bb5](https://github.com/deploystackio/deploystack/commit/c319dd06904ddba21a0babb3644d02d235ad1bb5))
+
 ## 0.56.0 (2025-12-29)
 
 * feat(all): add MCP servers page to admin teams detail with pagination ([6186e7bb519b493e2d4e7354d9ae694beb2b1186](https://github.com/deploystackio/deploystack/commit/6186e7bb519b493e2d4e7354d9ae694beb2b1186))
