@@ -2,6 +2,8 @@
 
 ## 0.17.0 (2026-01-01)
 
+## 0.17.0 (2026-01-01)
+
 * chore(all): update deploystack banner image ([924cbcb5835e1a91c572f658db1e47b6465a20a9](https://github.com/deploystackio/deploystack/commit/924cbcb5835e1a91c572f658db1e47b6465a20a9))
 * feat(all): add MCP servers page to admin teams detail with pagination ([6186e7bb519b493e2d4e7354d9ae694beb2b1186](https://github.com/deploystackio/deploystack/commit/6186e7bb519b493e2d4e7354d9ae694beb2b1186))
 * feat(all): add OAuth re-authentication for MCP installations ([f08e92a29ba06850def5a9dac17f5cc19be6a5a5](https://github.com/deploystackio/deploystack/commit/f08e92a29ba06850def5a9dac17f5cc19be6a5a5))
