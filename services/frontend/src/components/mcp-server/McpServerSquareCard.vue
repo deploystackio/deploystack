@@ -14,9 +14,12 @@ import McpServerAvatar from './McpServerAvatar.vue'
 
 interface Props {
   server: McpServer
+  showRuntimeBadge?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  showRuntimeBadge: true
+})
 
 const emit = defineEmits<{
   install: [server: McpServer]
@@ -93,7 +96,7 @@ const truncateServerName = (name: string, maxLength: number = 30) => {
             <span class="truncate">{{ truncateServerName(server.name) }}</span>
           </dt>
         </div>
-        <div class="flex-none pt-6 pr-6">
+        <div v-if="showRuntimeBadge" class="flex-none pt-6 pr-6">
           <Badge v-if="server.runtime" variant="secondary" :class="['font-mono text-xs', getRuntimeBadgeClass(server.runtime)]">
             {{ server.runtime }}
           </Badge>

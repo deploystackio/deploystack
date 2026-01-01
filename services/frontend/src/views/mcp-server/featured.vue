@@ -157,6 +157,7 @@ onMounted(async () => {
                     v-for="server in group.servers"
                     :key="server.id"
                     :server="server"
+                    :show-runtime-badge="false"
                   />
                 </div>
               </div>
