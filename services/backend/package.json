@@ -26,7 +26,7 @@
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/sse": "^0.4.0",
     "@fastify/swagger": "^9.6.1",
-    "@fastify/swagger-ui": "^5.2.3",
+    "@fastify/swagger-ui": "^5.2.4",
     "@lucia-auth/adapter-drizzle": "^1.1.0",
     "@node-rs/argon2": "^2.0.2",
     "@octokit/auth-app": "^8.1.2",
