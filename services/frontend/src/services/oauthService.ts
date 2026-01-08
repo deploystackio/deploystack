@@ -20,6 +20,24 @@ export interface ConsentDecision {
   error_description?: string;
 }
 
+export interface AuthorizeDetails {
+  success: boolean;
+  request_id: string;
+  user_email: string;
+  scopes: Array<{
+    name: string;
+    description: string;
+  }>;
+  expires_at: string;
+}
+
+export interface AuthorizeDecision {
+  success: boolean;
+  redirect_url?: string;
+  error?: string;
+  error_description?: string;
+}
+
 export class OAuthService {
   private static getApiUrl(): string {
     const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL');
@@ -113,6 +131,99 @@ export class OAuthService {
       return data;
     } catch (error) {
       console.error('Error submitting consent decision:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get authorization details for team selection page
+   */
+  static async getAuthorizeDetails(requestId: string): Promise<AuthorizeDetails> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/oauth2/authorize/details?request_id=${encodeURIComponent(requestId)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('UNAUTHORIZED');
+        }
+        if (response.status === 404) {
+          throw new Error('REQUEST_NOT_FOUND');
+        }
+        if (response.status === 400) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error_description || 'INVALID_REQUEST');
+        }
+
+        throw new Error(`Failed to get authorization details: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error_description || 'Failed to get authorization details');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error getting authorization details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Submit authorization decision with team selection
+   */
+  static async submitAuthorization(requestId: string, teamId: string, action: 'approve' | 'deny'): Promise<AuthorizeDecision> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/oauth2/authorize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          request_id: requestId,
+          team_id: teamId,
+          action: action
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('UNAUTHORIZED');
+        }
+        if (response.status === 404) {
+          throw new Error('REQUEST_NOT_FOUND');
+        }
+        if (response.status === 403) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error_description || 'ACCESS_DENIED');
+        }
+        if (response.status === 400) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error_description || 'INVALID_REQUEST');
+        }
+
+        throw new Error(`Failed to submit authorization: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error_description || 'Failed to process authorization');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error submitting authorization:', error);
       throw error;
     }
   }

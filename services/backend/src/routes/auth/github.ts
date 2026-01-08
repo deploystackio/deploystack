@@ -26,20 +26,48 @@ const redirectResponseSchema = z.object({
   }).describe('Response headers')
 });
 
+// Validate return_to URL is a safe redirect (must be our backend OAuth URL)
+const isValidReturnTo = (url: string, backendUrl: string): boolean => {
+  try {
+    const parsedUrl = new URL(url);
+    const backendParsed = new URL(backendUrl);
+    // Only allow redirects to our backend's OAuth endpoints
+    return parsedUrl.origin === backendParsed.origin &&
+           parsedUrl.pathname.startsWith('/api/oauth2/');
+  } catch {
+    return false;
+  }
+};
+
+// Interface for GitHub login query params
+interface GitHubLoginQuery {
+  return_to?: string;
+}
+
 export default async function githubAuthRoutes(fastify: FastifyInstance) {
   // Route to initiate GitHub login
-  fastify.get('/login', {
+  fastify.get<{ Querystring: GitHubLoginQuery }>('/login', {
     schema: {
       tags: ['Authentication'],
       summary: 'Initiate GitHub OAuth login',
       description: 'Redirects the user to GitHub for OAuth authentication. This endpoint generates a state parameter for CSRF protection and redirects to GitHub\'s authorization URL.',
+      querystring: {
+        type: 'object',
+        properties: {
+          return_to: {
+            type: 'string',
+            description: 'Optional URL to redirect to after successful authentication (must be a valid backend OAuth URL)'
+          }
+        },
+        additionalProperties: false
+      },
       response: {
         302: createSchema(redirectResponseSchema.describe('Redirect to GitHub OAuth authorization URL')),
         403: createSchema(errorResponseSchema.describe('Forbidden - Login is disabled by administrator or GitHub OAuth is disabled')),
         500: createSchema(errorResponseSchema.describe('Internal Server Error'))
       }
     }
-  }, async (_request, reply: FastifyReply) => { // _request type can be FastifyRequest if no specific generics needed here
+  }, async (request, reply: FastifyReply) => {
       // Check if login is enabled
       const isLoginEnabled = await GlobalSettingsInitService.isLoginEnabled();
       if (!isLoginEnabled) {
@@ -60,7 +88,25 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
       // PKCE is recommended for OAuth 2.0 public clients, but for confidential clients (server-side),
       // state alone is often sufficient for CSRF. Lucia's GitHub provider handles PKCE if code_verifier is passed.
       // For server-to-server, PKCE might be overkill if client_secret is kept secure.
-      // const codeVerifier = generateCodeVerifier(); 
+      // const codeVerifier = generateCodeVerifier();
+
+      // Get return_to from query params and validate it
+      const { return_to } = request.query;
+      let validatedReturnTo: string | null = null;
+
+      if (return_to) {
+        // Get configured backend URL for validation
+        const backendUrl = await GlobalSettingsInitService.getBackendUrl();
+        if (isValidReturnTo(return_to, backendUrl)) {
+          validatedReturnTo = return_to;
+        } else {
+          fastify.log.warn({
+            operation: 'github_oauth_login',
+            return_to,
+            configuredBackendUrl: backendUrl,
+          }, 'Invalid return_to URL provided, ignoring');
+        }
+      }
 
       // Create GitHub OAuth instance with settings from database
       const { GitHub } = await import('arctic');
@@ -73,9 +119,13 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
       const scopes = githubConfig.scope.split(',').map(s => s.trim());
       const url = await githubAuth.createAuthorizationURL(state, scopes);
 
-      // Store state and code_verifier (if using PKCE) in a temporary cookie or server-side session
-      // to verify them in the callback
-      reply.setCookie('oauth_state', state, {
+      // Store state and return_to in a JSON cookie
+      const stateData = JSON.stringify({
+        state,
+        returnTo: validatedReturnTo
+      });
+
+      reply.setCookie('oauth_state', stateData, {
         path: '/',
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -122,10 +172,25 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
         });
       }
 
-      const storedState = request.cookies?.oauth_state; // Access cookies safely, ensure @fastify/cookie is registered
+      const storedStateRaw = request.cookies?.oauth_state; // Access cookies safely, ensure @fastify/cookie is registered
       // const storedCodeVerifier = request.cookies?.oauth_code_verifier; // if using PKCE
 
       const { code, state } = request.query as GithubCallbackInput; // Cast if TS doesn't infer from generic, or rely on schema validation
+
+      // Parse stored state JSON
+      let storedState: string | null = null;
+      let returnTo: string | null = null;
+
+      if (storedStateRaw) {
+        try {
+          const stateData = JSON.parse(storedStateRaw);
+          storedState = stateData.state;
+          returnTo = stateData.returnTo;
+        } catch {
+          // Fallback for old format (plain state string)
+          storedState = storedStateRaw;
+        }
+      }
 
       // Validate state
       if (!storedState || !state || storedState !== state) {
@@ -135,6 +200,14 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
 
       // Clear the state cookie
       reply.setCookie('oauth_state', '', { maxAge: -1, path: '/' });
+
+      // Helper to get redirect URL (return_to or frontend)
+      const getRedirectUrl = async (): Promise<string> => {
+        if (returnTo) {
+          return returnTo;
+        }
+        return await GlobalSettingsInitService.getPageUrl();
+      };
 
       try {
         // Create GitHub OAuth instance with settings from database
@@ -249,10 +322,10 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
             
             const sessionCookie = getLucia().createSessionCookie(sessionId);
             reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
-            
-            const frontendUrl = await GlobalSettingsInitService.getPageUrl();
-            return reply.redirect(frontendUrl);
-            
+
+            const redirectUrl = await getRedirectUrl();
+            return reply.redirect(redirectUrl);
+
           } catch (sessionError) {
             // Fallback to Lucia session creation
             fastify.log.warn(sessionError, 'Manual session creation failed, falling back to Lucia');
@@ -260,9 +333,9 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
               const session = await getLucia().createSession(userId, {});
               const sessionCookie = getLucia().createSessionCookie(session.id);
               reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
-              
-              const frontendUrl = await GlobalSettingsInitService.getPageUrl();
-              return reply.redirect(frontendUrl);
+
+              const redirectUrl = await getRedirectUrl();
+              return reply.redirect(redirectUrl);
             } catch (luciaError) {
               throw luciaError;
             }
@@ -290,10 +363,9 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
           const session = await getLucia().createSession(existingUserId, {});
           const sessionCookie = getLucia().createSessionCookie(session.id);
           reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
-          
-          // Get frontend URL from global settings
-          const frontendUrl = await GlobalSettingsInitService.getPageUrl();
-          return reply.redirect(frontendUrl);
+
+          const redirectUrl = await getRedirectUrl();
+          return reply.redirect(redirectUrl);
         }
 
         // Check if this would be the first user (prevent GitHub from creating global_admin)
@@ -433,10 +505,9 @@ export default async function githubAuthRoutes(fastify: FastifyInstance) {
           fastify.log.error(sessionError, 'Failed to create session for new GitHub user');
           throw sessionError;
         }
-        
-        // Get frontend URL from global settings
-        const frontendUrl = await GlobalSettingsInitService.getPageUrl();
-        return reply.redirect(frontendUrl);
+
+        const redirectUrl = await getRedirectUrl();
+        return reply.redirect(redirectUrl);
 
       } catch (error: unknown) {
         fastify.log.error(error, 'Error during GitHub OAuth callback:');

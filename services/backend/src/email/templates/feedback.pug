@@ -1,0 +1,30 @@
+//- @description User feedback submission email template
+//- @variables senderEmail, senderUsername, feedbackMessage, submissionTime
+extends layouts/base.pug
+
+block content
+  h1 New Feedback Received
+
+  .info-box
+    p
+      strong From:
+      = ' ' + senderEmail
+      if senderUsername
+        |  (#{senderUsername})
+
+    p
+      strong Submitted:
+      = ' ' + submissionTime
+
+  h2 Feedback Message
+  .feedback-content
+    //- Note: feedbackMessage is pre-sanitized in route handler, safe to use unescaped
+    p!= feedbackMessage
+
+  hr
+
+  .footer-note
+    p
+      em This is an automated message from DeployStack feedback system.
+      br
+      | To respond to this user, reply directly to #{senderEmail}.

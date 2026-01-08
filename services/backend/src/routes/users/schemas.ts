@@ -93,37 +93,42 @@ export const USER_SCHEMA = {
 export const USER_PROFILE_SCHEMA = {
   type: 'object',
   properties: {
-    id: { 
+    id: {
       type: 'string',
       description: 'User unique identifier'
     },
-    username: { 
+    username: {
       type: 'string',
       description: 'Username'
     },
-    email: { 
+    email: {
       type: 'string',
       description: 'User email address'
     },
-    first_name: { 
+    first_name: {
       type: ['string', 'null'],
       description: 'User first name'
     },
-    last_name: { 
+    last_name: {
       type: ['string', 'null'],
       description: 'User last name'
     },
-    role_id: { 
+    role_id: {
       type: ['string', 'null'],
       description: 'User role identifier'
     },
-    auth_type: { 
+    auth_type: {
       type: ['string', 'null'],
       description: 'Authentication method used'
     },
-    github_id: { 
+    github_id: {
       type: ['string', 'null'],
       description: 'GitHub user identifier if authenticated via GitHub'
+    },
+    user_display_settings: {
+      type: 'object',
+      description: 'User interface display settings',
+      additionalProperties: true
     }
   },
   required: ['id', 'username', 'email'],
@@ -401,6 +406,10 @@ export interface UserProfile {
   role_id: string | null;
   auth_type: string | null;
   github_id: string | null;
+}
+
+export interface CurrentUserProfile extends UserProfile {
+  user_display_settings: Record<string, unknown>;
 }
 
 export interface TeamItem {

@@ -15,6 +15,11 @@ export interface User {
     name: string;
     permissions: string[];
   };
+  user_display_settings?: {
+    header_show_discord?: boolean;
+    header_show_feedback?: boolean;
+    [key: string]: string | boolean | null | undefined;
+  };
 }
 
 interface CacheEntry {

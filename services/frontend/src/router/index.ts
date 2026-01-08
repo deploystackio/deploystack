@@ -2,6 +2,23 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useDatabaseStore } from '@/stores/database'
 import { UserService } from '@/services/userService'
+import { getEnv } from '@/utils/env'
+
+// Validate return_to URL is a safe redirect (must be our backend OAuth URL)
+const isValidReturnTo = (url: string): boolean => {
+  try {
+    const parsedUrl = new URL(url)
+    const backendUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+    if (!backendUrl) return false
+
+    const backendParsed = new URL(backendUrl)
+    // Only allow redirects to our backend's OAuth endpoints
+    return parsedUrl.origin === backendParsed.origin &&
+           parsedUrl.pathname.startsWith('/api/oauth2/')
+  } catch {
+    return false
+  }
+}
 
 const routes: RouteRecordRaw[] = [
   {
@@ -57,6 +74,15 @@ const routes: RouteRecordRaw[] = [
     meta: {
       requiresSetup: true,
       title: 'Authorize Application'
+    },
+  },
+  {
+    path: '/oauth/authorize',
+    name: 'OAuthAuthorize',
+    component: () => import('../views/oauth/AuthorizePage.vue'),
+    meta: {
+      requiresSetup: true,
+      title: 'Authorize MCP Access'
     },
   },
   {
@@ -405,10 +431,33 @@ router.beforeEach(async (to, from, next) => {
     // currentUser remains null, proceed as unauthenticated for safety
   }
 
-  // If user is logged in and trying to access Login or Register, redirect to Dashboard
+  // If user is logged in and trying to access Login or Register, handle redirect
   if (currentUser && (to.name === 'Login' || to.name === 'Register')) {
-    next('/dashboard');
-    return;
+    // Check for return_to in query params (from OAuth flow)
+    const returnTo = to.query.return_to as string | undefined
+
+    // Also check localStorage for return_to (from GitHub OAuth flow)
+    const storedReturnTo = localStorage.getItem('oauth_return_to')
+
+    // Use query param first, then localStorage
+    const targetReturnTo = returnTo || storedReturnTo
+
+    if (targetReturnTo && isValidReturnTo(targetReturnTo)) {
+      // Clear stored return_to
+      localStorage.removeItem('oauth_return_to')
+      // Redirect to the OAuth URL (full page redirect since it's a backend URL)
+      window.location.href = targetReturnTo
+      return
+    }
+
+    // Clear any stale stored return_to
+    if (storedReturnTo) {
+      localStorage.removeItem('oauth_return_to')
+    }
+
+    // Default redirect to dashboard
+    next('/dashboard')
+    return
   }
 
   // Skip setup check for the setup route itself

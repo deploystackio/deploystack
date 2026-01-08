@@ -1884,6 +1884,11 @@
                         "string"
                       ],
                       "description": "GitHub user identifier if authenticated via GitHub"
+                    },
+                    "user_display_settings": {
+                      "type": "object",
+                      "description": "User interface display settings",
+                      "additionalProperties": true
                     }
                   },
                   "required": [
@@ -2370,6 +2375,11 @@
                         "string"
                       ],
                       "description": "GitHub user identifier if authenticated via GitHub"
+                    },
+                    "user_display_settings": {
+                      "type": "object",
+                      "description": "User interface display settings",
+                      "additionalProperties": true
                     }
                   },
                   "required": [
@@ -5472,6 +5482,163 @@
         "responses": {
           "200": {
             "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/users/me/feedback": {
+      "post": {
+        "summary": "Submit user feedback",
+        "tags": [
+          "User Feedback"
+        ],
+        "description": "Submit feedback to DeployStack support. Requires Content-Type: application/json header. Feedback is sent via email if SMTP is configured.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 5000,
+                    "description": "Feedback message (1-5000 characters)"
+                  }
+                },
+                "required": [
+                  "message"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feedback submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "description": "Feedback submitted successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid input"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable - Email service not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Service Unavailable - Email service not configured"
+                }
+              }
+            }
           }
         }
       }
@@ -30595,6 +30762,476 @@
         }
       }
     },
+    "/api/oauth2/authorize/details": {
+      "get": {
+        "summary": "Get OAuth2 Authorization Details",
+        "tags": [
+          "OAuth2"
+        ],
+        "description": "Returns authorization details as JSON for frontend to display team selection and consent page.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "query",
+            "name": "request_id",
+            "required": true,
+            "description": "Authorization request ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorization details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Whether the request was found"
+                    },
+                    "request_id": {
+                      "type": "string",
+                      "description": "Authorization request ID"
+                    },
+                    "user_email": {
+                      "type": "string",
+                      "description": "Email of the authenticated user"
+                    },
+                    "scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Scope name"
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Human-readable scope description"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "description"
+                        ]
+                      },
+                      "description": "Requested scopes with descriptions"
+                    },
+                    "expires_at": {
+                      "type": "string",
+                      "description": "When the authorization request expires (ISO string)"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "request_id",
+                    "user_email",
+                    "scopes",
+                    "expires_at"
+                  ],
+                  "description": "Authorization details"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid request ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "OAuth2 error code"
+                    },
+                    "error_description": {
+                      "type": "string",
+                      "description": "Human-readable error description"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_description"
+                  ],
+                  "description": "Bad Request - Invalid request ID"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - User not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "OAuth2 error code"
+                    },
+                    "error_description": {
+                      "type": "string",
+                      "description": "Human-readable error description"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_description"
+                  ],
+                  "description": "Unauthorized - User not authenticated"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - User mismatch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "OAuth2 error code"
+                    },
+                    "error_description": {
+                      "type": "string",
+                      "description": "Human-readable error description"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_description"
+                  ],
+                  "description": "Forbidden - User mismatch"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Request not found or expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "OAuth2 error code"
+                    },
+                    "error_description": {
+                      "type": "string",
+                      "description": "Human-readable error description"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_description"
+                  ],
+                  "description": "Not Found - Request not found or expired"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "OAuth2 error code"
+                    },
+                    "error_description": {
+                      "type": "string",
+                      "description": "Human-readable error description"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_description"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oauth2/authorize": {
+      "post": {
+        "summary": "Process OAuth2 Authorization",
+        "tags": [
+          "OAuth2"
+        ],
+        "description": "Processes user authorization decision with team selection and returns redirect URL. Requires Content-Type: application/json header.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "request_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Authorization request ID"
+                  },
+                  "team_id": {
+                    "type": "string",
+                    "description": "Selected team ID"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "approve",
+                      "deny"
+                    ],
+                    "description": "User consent decision"
+                  }
+                },
+                "required": [
+                  "request_id",
+                  "team_id",
+                  "action"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorization processed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Whether the authorization was processed successfully"
+                    },
+                    "redirect_url": {
+                      "type": "string",
+                      "description": "URL to redirect to after authorization"
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ],
+                  "description": "Authorization processed successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "OAuth2 error code"
+                    },
+                    "error_description": {
+                      "type": "string",
+                      "description": "Human-readable error description"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_description"
+                  ],
+                  "description": "Bad Request - Invalid parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - User not authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "OAuth2 error code"
+                    },
+                    "error_description": {
+                      "type": "string",
+                      "description": "Human-readable error description"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_description"
+                  ],
+                  "description": "Unauthorized - User not authenticated"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - User mismatch or invalid team access",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "OAuth2 error code"
+                    },
+                    "error_description": {
+                      "type": "string",
+                      "description": "Human-readable error description"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_description"
+                  ],
+                  "description": "Forbidden - User mismatch or invalid team access"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Request not found or expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "OAuth2 error code"
+                    },
+                    "error_description": {
+                      "type": "string",
+                      "description": "Human-readable error description"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_description"
+                  ],
+                  "description": "Not Found - Request not found or expired"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Always false for errors"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "OAuth2 error code"
+                    },
+                    "error_description": {
+                      "type": "string",
+                      "description": "Human-readable error description"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error",
+                    "error_description"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/oauth2/token": {
       "post": {
         "summary": "OAuth2 Token Endpoint",
@@ -42640,6 +43277,17 @@
           "Authentication"
         ],
         "description": "Redirects the user to GitHub for OAuth authentication. This endpoint generates a state parameter for CSRF protection and redirects to GitHub's authorization URL.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "return_to",
+            "required": false,
+            "description": "Optional URL to redirect to after successful authentication (must be a valid backend OAuth URL)"
+          }
+        ],
         "responses": {
           "302": {
             "description": "Default Response",

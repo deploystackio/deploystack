@@ -1,11 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { UserService } from '../../services/userService';
 import { requireAuthentication } from '../../middleware/roleMiddleware';
-import { 
-  ERROR_RESPONSE_SCHEMA, 
+import { GlobalSettings } from '../../global-settings/helpers';
+import {
+  ERROR_RESPONSE_SCHEMA,
   USER_PROFILE_SCHEMA,
   type ErrorResponse,
-  type UserProfile
+  type CurrentUserProfile
 } from './schemas';
 
 export default async function getCurrentUserRoute(server: FastifyInstance) {
@@ -13,7 +14,7 @@ export default async function getCurrentUserRoute(server: FastifyInstance) {
 
   // GET /users/me - Get current user profile
   server.get('/users/me', {
-    preValidation: requireAuthentication(), // ✅ Authorization BEFORE validation
+    preValidation: requireAuthentication(),
     schema: {
       tags: ['Users'],
       summary: 'Get current user profile',
@@ -45,7 +46,7 @@ export default async function getCurrentUserRoute(server: FastifyInstance) {
       const userId = request.user!.id;
 
       const user = await userService.getUserById(userId);
-      
+
       if (!user) {
         const errorResponse: ErrorResponse = {
           success: false,
@@ -55,8 +56,23 @@ export default async function getCurrentUserRoute(server: FastifyInstance) {
         return reply.status(404).type('application/json').send(jsonString);
       }
 
+      // Fetch user-display settings dynamically
+      const userDisplaySettingsRaw = await GlobalSettings.getGroupValues('user-display');
+
+      // Convert string values to proper types (booleans)
+      const userDisplaySettings: Record<string, string | boolean | null> = {};
+      for (const [key, value] of Object.entries(userDisplaySettingsRaw)) {
+        if (value === 'true') {
+          userDisplaySettings[key] = true;
+        } else if (value === 'false') {
+          userDisplaySettings[key] = false;
+        } else {
+          userDisplaySettings[key] = value;
+        }
+      }
+
       // Create clean response object to avoid serialization issues
-      const userProfile: UserProfile = {
+      const userProfile: CurrentUserProfile = {
         id: String(user.id),
         username: String(user.username),
         email: String(user.email),
@@ -64,7 +80,8 @@ export default async function getCurrentUserRoute(server: FastifyInstance) {
         last_name: user.last_name ? String(user.last_name) : null,
         role_id: user.role_id ? String(user.role_id) : null,
         auth_type: user.auth_type ? String(user.auth_type) : null,
-        github_id: user.github_id ? String(user.github_id) : null
+        github_id: user.github_id ? String(user.github_id) : null,
+        user_display_settings: userDisplaySettings
       };
 
       const jsonString = JSON.stringify(userProfile);

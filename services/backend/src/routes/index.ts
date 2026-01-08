@@ -9,6 +9,7 @@ import dbSetupRoute from './db/setup'
 // Import role and user management routes
 import rolesRoute from './roles'
 import usersRoute from './users'
+import submitFeedbackRoute from './users/submitFeedback'
 // Import global settings routes
 import globalSettingsRoute from './globalSettings'
 // Import teams routes
@@ -54,6 +55,7 @@ export const registerRoutes = (server: FastifyInstance): void => {
     // Register role and user management routes
     await apiInstance.register(rolesRoute);
     await apiInstance.register(usersRoute);
+    await apiInstance.register(submitFeedbackRoute);
 
     // Register global settings routes
     await apiInstance.register(globalSettingsRoute);

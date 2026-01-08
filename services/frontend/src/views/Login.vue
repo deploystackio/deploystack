@@ -3,7 +3,7 @@ import { useForm } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { Mail, Lock, AlertTriangle } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { UserService } from '@/services/userService'
@@ -34,10 +34,28 @@ import {
 import { Input } from '@/components/ui/input'
 
 const router = useRouter()
+const route = useRoute()
 const isLoading = ref(false)
 const errorMessage = ref('')
 const githubOAuthEnabled = ref(false)
+const returnTo = ref<string | null>(null)
 const { t } = useI18n() // Initialize i18n composable
+
+// Validate return_to URL is a safe redirect (must be our backend OAuth URL)
+const isValidReturnTo = (url: string): boolean => {
+  try {
+    const parsedUrl = new URL(url)
+    const backendUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+    if (!backendUrl) return false
+
+    const backendParsed = new URL(backendUrl)
+    // Only allow redirects to our backend's OAuth endpoints
+    return parsedUrl.origin === backendParsed.origin &&
+           parsedUrl.pathname.startsWith('/api/oauth2/')
+  } catch {
+    return false
+  }
+}
 
 // Define validation schema using Zod
 const formSchema = toTypedSchema(
@@ -112,7 +130,13 @@ const onSubmit = form.handleSubmit(async (values) => {
   try {
     // Use the UserService login method which handles cache clearing
     await UserService.login(values.login, values.password)
-    router.push('/dashboard')
+
+    // Redirect to return_to URL if present and valid, otherwise dashboard
+    if (returnTo.value) {
+      window.location.href = returnTo.value
+    } else {
+      router.push('/dashboard')
+    }
 
   } catch (e) {
     console.error('Login error:', e);
@@ -188,16 +212,34 @@ const handleGitHubLogin = async () => {
       return
     }
 
+    // Store return_to in localStorage as backup for after GitHub callback
+    if (returnTo.value) {
+      localStorage.setItem('oauth_return_to', returnTo.value)
+    }
+
+    // Build GitHub OAuth URL with return_to parameter if present
+    let githubUrl = `${apiUrl}/api/auth/github/login`
+    if (returnTo.value) {
+      githubUrl += `?return_to=${encodeURIComponent(returnTo.value)}`
+    }
+
     // Redirect to GitHub OAuth endpoint
-    window.location.href = `${apiUrl}/api/auth/github/login`
+    window.location.href = githubUrl
   } catch (error) {
     console.error('GitHub OAuth error:', error)
     errorMessage.value = t('login.errors.githubOAuthError')
   }
 }
 
-// Initialize GitHub OAuth status on component mount
+// Initialize on component mount
 onMounted(async () => {
+  // Check for return_to query parameter (from OAuth redirect)
+  const returnToParam = route.query.return_to as string | undefined
+  if (returnToParam && isValidReturnTo(returnToParam)) {
+    returnTo.value = returnToParam
+  }
+
+  // Check GitHub OAuth status
   githubOAuthEnabled.value = await checkGitHubOAuthStatus()
 })
 

@@ -427,6 +427,41 @@ export class AuthorizationService {
   }
 
   /**
+   * Update the team_id on an authorization request
+   * Used when user selects a team during the authorization flow
+   */
+  static async updateAuthorizationRequestTeam(
+    requestId: string,
+    teamId: string,
+    logger?: FastifyBaseLogger
+  ): Promise<boolean> {
+    const { db, schema } = this.getDbAndSchema();
+
+    try {
+      await (db as any)
+        .update(schema.oauthAuthorizationCodes)
+        .set({ team_id: teamId })
+        .where(eq(schema.oauthAuthorizationCodes.id, requestId));
+
+      logger?.debug({
+        operation: 'update_authorization_request_team',
+        requestId,
+        teamId,
+      }, 'Authorization request team updated');
+
+      return true;
+    } catch (error) {
+      logger?.error({
+        operation: 'update_authorization_request_team',
+        error,
+        requestId,
+        teamId,
+      }, 'Failed to update authorization request team');
+      return false;
+    }
+  }
+
+  /**
    * Generate authorization code after user consent
    */
   static async generateAuthorizationCode(

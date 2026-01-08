@@ -58,185 +58,6 @@ interface AuthorizationQuery {
   team?: string;
 }
 
-interface TeamSelectionData {
-  clientId: string;
-  redirectUri: string;
-  scope: string;
-  state: string;
-  codeChallenge: string;
-  codeChallengeMethod: string;
-  userTeams: Array<{id: string, name: string, isDefault: boolean}>;
-  userName: string;
-}
-
-// Helper function to generate team selection HTML
-function generateTeamSelectionHTML(data: TeamSelectionData): string {
-  const clientNames: Record<string, string> = {
-    'vscode_mcp_extension': 'VS Code MCP Extension',
-    'cursor_mcp_client': 'Cursor MCP Client',
-    'claude_ai_mcp_client': 'Claude.ai MCP Client',
-    'cline_mcp_client': 'Cline MCP Client'
-  };
-
-  const clientName = clientNames[data.clientId] || data.clientId;
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Authorize MCP Client</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-      max-width: 500px; 
-      margin: 50px auto; 
-      padding: 20px; 
-      background: #f8f9fa;
-    }
-    .container {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .client-info { 
-      background: #f5f5f5; 
-      padding: 20px; 
-      border-radius: 8px; 
-      margin-bottom: 25px; 
-      border-left: 4px solid #007bff;
-    }
-    .team-selection { 
-      margin-bottom: 25px; 
-    }
-    select { 
-      width: 100%; 
-      padding: 12px; 
-      border: 2px solid #ddd; 
-      border-radius: 6px; 
-      font-size: 16px; 
-      background: white;
-    }
-    select:focus {
-      border-color: #007bff;
-      outline: none;
-    }
-    .actions { 
-      display: flex; 
-      gap: 15px; 
-      margin-top: 30px;
-    }
-    button { 
-      padding: 12px 24px; 
-      border: none; 
-      border-radius: 6px; 
-      font-size: 16px; 
-      cursor: pointer; 
-      flex: 1;
-      font-weight: 500;
-    }
-    .approve { 
-      background: #007bff; 
-      color: white; 
-    }
-    .approve:hover {
-      background: #0056b3;
-    }
-    .deny { 
-      background: #6c757d; 
-      color: white; 
-    }
-    .deny:hover {
-      background: #545b62;
-    }
-    .help-text { 
-      font-size: 14px; 
-      color: #666; 
-      margin-top: 8px; 
-      line-height: 1.4;
-    }
-    h1 {
-      color: #333;
-      margin-bottom: 10px;
-    }
-    .user-info {
-      color: #666;
-      font-size: 14px;
-      margin-bottom: 25px;
-    }
-    .scope-info {
-      background: #e3f2fd;
-      padding: 15px;
-      border-radius: 6px;
-      margin-top: 15px;
-    }
-    .scope-info h4 {
-      margin: 0 0 8px 0;
-      color: #1976d2;
-    }
-    .scope-list {
-      margin: 0;
-      padding-left: 20px;
-      color: #555;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Authorize MCP Client</h1>
-    <div class="user-info">Signed in as: <strong>${data.userName}</strong></div>
-    
-    <div class="client-info">
-      <h3>${clientName} wants to access your MCP tools</h3>
-      <p><strong>Client ID:</strong> ${data.clientId}</p>
-      <div class="scope-info">
-        <h4>Requested Permissions:</h4>
-        <ul class="scope-list">
-          ${data.scope.split(' ').map(s => {
-            const scopeDescriptions: Record<string, string> = {
-              'mcp:read': 'Discover and list your team\'s MCP tools',
-              'mcp:tools:execute': 'Execute MCP tools on your behalf',
-              'offline_access': 'Maintain access when you\'re not actively using the app'
-            };
-            return `<li>${scopeDescriptions[s] || s}</li>`;
-          }).join('')}
-        </ul>
-      </div>
-    </div>
-    
-    <form method="POST" action="/api/oauth2/auth">
-      <div class="team-selection">
-        <label for="team_id"><strong>Select Team:</strong></label>
-        <select name="team_id" id="team_id" required>
-          ${data.userTeams.map(team => 
-            `<option value="${team.id}" ${team.isDefault ? 'selected' : ''}>${team.name}${team.isDefault ? ' (Default)' : ''}</option>`
-          ).join('')}
-        </select>
-        <p class="help-text">MCP servers are team-scoped. Select which team's MCP servers this client can access.</p>
-      </div>
-      
-      <!-- Hidden OAuth parameters -->
-      <input type="hidden" name="client_id" value="${data.clientId}">
-      <input type="hidden" name="redirect_uri" value="${data.redirectUri}">
-      <input type="hidden" name="scope" value="${data.scope}">
-      <input type="hidden" name="state" value="${data.state}">
-      <input type="hidden" name="code_challenge" value="${data.codeChallenge}">
-      <input type="hidden" name="code_challenge_method" value="${data.codeChallengeMethod}">
-      <input type="hidden" name="response_type" value="code">
-      
-      <div class="actions">
-        <button type="submit" name="consent" value="true" class="approve">Authorize Access</button>
-        <button type="submit" name="consent" value="false" class="deny">Deny Access</button>
-      </div>
-    </form>
-  </div>
-</body>
-</html>
-  `;
-}
-
 export default async function authorizationRoute(server: FastifyInstance) {
   // POST handler for team selection form submission
   server.post('/oauth2/auth', {
@@ -440,14 +261,66 @@ export default async function authorizationRoute(server: FastifyInstance) {
           error: 'user_not_authenticated',
         }, 'User not authenticated for OAuth authorization');
 
-        // For OAuth flows, redirect to error page with instructions
-        const errorUrl = `${redirect_uri}?error=access_denied&error_description=${encodeURIComponent('Please log in to DeployStack web interface first, then retry the OAuth authorization')}&state=${state}`;
-        return reply.redirect(errorUrl);
+        // Build the full OAuth URL for return_to parameter using configured backend URL
+        const backendUrl = await GlobalSettingsInitService.getBackendUrl();
+        const fullOAuthUrl = `${backendUrl}${request.url}`;
+
+        // Redirect to frontend login with return_to parameter
+        const frontendUrl = await GlobalSettingsInitService.getPageUrl();
+        const loginUrl = `${frontendUrl}/login?return_to=${encodeURIComponent(fullOAuthUrl)}`;
+
+        request.log.debug({
+          operation: 'oauth2_authorization',
+          loginUrl,
+          returnTo: fullOAuthUrl,
+        }, 'Redirecting unauthenticated user to login');
+
+        return reply.redirect(loginUrl);
       }
 
-      // Team selection will happen in HTML form - no automatic team assignment
+      // Team selection will happen in frontend Vue page
       if (!team) {
-        // No team provided - show team selection form
+        // Validate client and redirect_uri before redirecting to frontend
+        if (!await AuthorizationService.validateClient(client_id, request.log)) {
+          request.log.warn({
+            operation: 'oauth2_authorization',
+            clientId: client_id,
+            error: 'invalid_client',
+          }, 'Invalid OAuth2 client');
+
+          const errorUrl = `${redirect_uri}?error=invalid_client&error_description=${encodeURIComponent('Invalid client identifier')}&state=${state}`;
+          return reply.redirect(errorUrl);
+        }
+
+        if (!await AuthorizationService.validateRedirectUri(redirect_uri, client_id, request.log)) {
+          request.log.warn({
+            operation: 'oauth2_authorization',
+            clientId: client_id,
+            redirectUri: redirect_uri,
+            error: 'invalid_redirect_uri',
+          }, 'Invalid OAuth2 redirect URI');
+
+          const errorResponse: OAuth2ErrorResponse = {
+            error: 'invalid_request',
+            error_description: 'Invalid redirect URI'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+
+        if (!AuthorizationService.validateScope(scope)) {
+          request.log.warn({
+            operation: 'oauth2_authorization',
+            clientId: client_id,
+            scope,
+            error: 'invalid_scope',
+          }, 'Invalid OAuth2 scope');
+
+          const errorUrl = `${redirect_uri}?error=invalid_scope&error_description=${encodeURIComponent('Invalid or unsupported scope')}&state=${state}`;
+          return reply.redirect(errorUrl);
+        }
+
+        // Get user's teams to use default as placeholder
         const userTeams = await AuthorizationService.getUserTeams(request.user.id, request.log);
 
         if (userTeams.length === 0) {
@@ -455,19 +328,33 @@ export default async function authorizationRoute(server: FastifyInstance) {
           return reply.redirect(errorUrl);
         }
 
-        // Render HTML page with team selection + consent form
-        const html = generateTeamSelectionHTML({
-          clientId: client_id,
-          redirectUri: redirect_uri,
+        // Use default team or first team as placeholder (will be updated when user selects)
+        const defaultTeam = userTeams.find(t => t.isDefault) || userTeams[0];
+
+        // Store pending authorization request with placeholder team
+        const requestId = await AuthorizationService.storeAuthorizationRequest(
+          request.user.id,
+          defaultTeam.id,
+          client_id,
+          redirect_uri,
           scope,
           state,
-          codeChallenge: code_challenge,
-          codeChallengeMethod: code_challenge_method,
-          userTeams,
-          userName: (request.user as any).username || (request.user as any).email || 'User'
-        });
+          code_challenge,
+          code_challenge_method,
+          request.log
+        );
 
-        return reply.type('text/html').send(html);
+        request.log.debug({
+          operation: 'oauth2_authorization',
+          clientId: client_id,
+          userId: request.user.id,
+          requestId,
+        }, 'Authorization request stored, redirecting to frontend authorize page');
+
+        // Get frontend URL and redirect to frontend authorize page
+        const frontendUrl = await GlobalSettingsInitService.getPageUrl();
+        const authorizeUrl = `${frontendUrl}/oauth/authorize?request_id=${requestId}`;
+        return reply.redirect(authorizeUrl);
       }
       
       const teamId = team;

@@ -1,4 +1,52 @@
 export default {
+  authorize: {
+    title: 'Authorize MCP Access',
+    subtitle: 'An application wants to access your MCP tools',
+    signedInAs: 'Signed in as',
+    permissionsTitle: 'Requested permissions:',
+    teamSelection: {
+      label: 'Select Team',
+      placeholder: 'Choose a team...',
+      default: 'Default',
+      helpText: 'MCP servers are team-scoped. Select which team\'s MCP servers this application can access.'
+    },
+    buttons: {
+      authorize: 'Authorize Access',
+      deny: 'Deny Access',
+      authorizing: 'Authorizing...',
+      denying: 'Denying...'
+    },
+    loading: {
+      message: 'Loading authorization details...'
+    },
+    errors: {
+      title: 'Authorization Error',
+      missingRequestId: 'Missing request ID parameter',
+      requestNotFound: 'Authorization request not found or has expired',
+      unauthorized: 'You must be logged in to authorize applications',
+      invalidRequest: 'Invalid authorization request',
+      accessDenied: 'You do not have access to the selected team',
+      noTeamSelected: 'Please select a team',
+      networkError: 'Network error occurred. Please try again.',
+      processingError: 'Failed to process authorization request',
+      unknownError: 'An unknown error occurred',
+      returnToDashboard: 'Return to Dashboard'
+    },
+    scopes: {
+      'mcp:read': {
+        name: 'Discover MCP Tools',
+        description: 'Discover and list your team\'s MCP tools'
+      },
+      'mcp:tools:execute': {
+        name: 'Execute MCP Tools',
+        description: 'Execute MCP tools on your behalf'
+      },
+      'offline_access': {
+        name: 'Offline Access',
+        description: 'Maintain access when you\'re not actively using the app'
+      }
+    }
+  },
   consent: {
     title: 'Authorize Application',
     subtitle: 'Allow {clientName} to access your account?',

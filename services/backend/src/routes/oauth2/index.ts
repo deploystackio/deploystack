@@ -1,5 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import authorizationRoute from './authorization';
+import authorizeRoute from './authorize';
 import tokenRoute from './token';
 import consentRoute from './consent';
 import userinfoRoute from './userinfo';
@@ -24,6 +25,7 @@ export async function oauth2DiscoveryRoutes(fastify: FastifyInstance) {
 export async function oauth2ApiRoutes(fastify: FastifyInstance) {
   await fastify.register(registerRoute);
   await fastify.register(authorizationRoute);
+  await fastify.register(authorizeRoute);
   await fastify.register(tokenRoute);
   await fastify.register(consentRoute);
   await fastify.register(userinfoRoute);
@@ -38,6 +40,7 @@ export default async function oauth2Routes(fastify: FastifyInstance) {
   await fastify.register(discoveryRoute);
   await fastify.register(registerRoute);
   await fastify.register(authorizationRoute);
+  await fastify.register(authorizeRoute);
   await fastify.register(tokenRoute);
   await fastify.register(consentRoute);
   await fastify.register(userinfoRoute);
