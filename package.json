@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "markdownlint-cli2": "^0.20.0",
-    "webpack": "^5.102.1"
+    "webpack": "^5.104.1"
   },
   "overrides": {
     "glob": "^10.4.5",

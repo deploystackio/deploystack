@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { GlobalSettings } from '../global-settings';
 import type { FastifyBaseLogger } from 'fastify';
-import DOMPurify from 'isomorphic-dompurify';
+import { sanitizeMarkdown } from '../utils/sanitization';
 
 export interface GitHubReadmeResult {
   content: string;
@@ -10,52 +10,6 @@ export interface GitHubReadmeResult {
 
 // Maximum README size: 2MB (prevents DoS attacks)
 const MAX_README_SIZE_BYTES = 2 * 1024 * 1024;
-
-// DOMPurify configuration optimized for GitHub Markdown
-const SANITIZE_CONFIG = {
-  // Allow common markdown/HTML tags
-  ALLOWED_TAGS: [
-    // Text formatting
-    'p', 'br', 'strong', 'em', 'u', 's', 'del', 'ins',
-    // Headings
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    // Lists
-    'ul', 'ol', 'li', 'dl', 'dt', 'dd',
-    // Links and code
-    'a', 'code', 'pre', 'blockquote',
-    // Images
-    'img', 'picture', 'source',
-    // Tables
-    'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th',
-    // Containers
-    'div', 'span', 'section', 'article',
-    // GitHub-specific
-    'details', 'summary',
-    // Other
-    'hr', 'sup', 'sub'
-  ],
-  
-  // Allow safe attributes
-  ALLOWED_ATTR: [
-    'href', 'src', 'alt', 'title', 'class', 'id',
-    'width', 'height', 'align', 
-    'colspan', 'rowspan',
-    'type', 'start', 'reversed',
-    'open' // for <details> tag
-  ],
-  
-  // Only allow safe URL protocols (prevents javascript: attacks)
-  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-  
-  // Keep content of removed tags (don't lose text)
-  KEEP_CONTENT: true,
-  
-  // Security settings
-  ALLOW_DATA_ATTR: false, // No data-* attributes
-  ALLOW_UNKNOWN_PROTOCOLS: false, // Block unknown protocols
-  SANITIZE_DOM: true, // Enable DOM Clobbering protection
-  FORCE_BODY: false, // Don't force body wrapper
-};
 
 export class GitHubReadmeService {
   
@@ -351,43 +305,39 @@ export class GitHubReadmeService {
         repo,
         original_size: decodedContent.length
       }, 'Starting README sanitization');
-      
-      const sanitizedContent = DOMPurify.sanitize(decodedContent, SANITIZE_CONFIG);
-      
-      // Calculate how much content was removed
-      const removalBytes = decodedContent.length - sanitizedContent.length;
-      const removalPercentage = ((removalBytes / decodedContent.length) * 100);
-      
+
+      const sanitizationResult = sanitizeMarkdown(decodedContent);
+
       // Log warning if significant content was removed (possible malicious content)
-      if (removalPercentage > 10) {
+      if (sanitizationResult.removalPercentage > 10) {
         logger.warn({
           operation: 'github_readme_get_content',
           step: 'high_sanitization_removal',
           owner,
           repo,
-          removal_percentage: removalPercentage.toFixed(2),
-          removal_bytes: removalBytes,
+          removal_percentage: sanitizationResult.removalPercentage.toFixed(2),
+          removal_bytes: sanitizationResult.removalBytes,
           repository_url: repositoryUrl
-        }, `High sanitization removal rate detected: ${removalPercentage.toFixed(2)}% of content removed`);
+        }, `High sanitization removal rate detected: ${sanitizationResult.removalPercentage.toFixed(2)}% of content removed`);
       }
-      
+
       const duration = Date.now() - startTime;
-      
+
       logger.debug({
         operation: 'github_readme_get_content',
         step: 'complete',
         owner,
         repo,
-        original_size: decodedContent.length,
-        sanitized_size: sanitizedContent.length,
-        removal_bytes: removalBytes,
-        removal_percentage: removalPercentage.toFixed(2),
+        original_size: sanitizationResult.originalLength,
+        sanitized_size: sanitizationResult.sanitizedLength,
+        removal_bytes: sanitizationResult.removalBytes,
+        removal_percentage: sanitizationResult.removalPercentage.toFixed(2),
         duration_ms: duration,
         readme_name: data.name
       }, `Successfully fetched and sanitized README for ${owner}/${repo}`);
-      
+
       return {
-        content: sanitizedContent,
+        content: sanitizationResult.content,
         encoding: 'utf8'
       };
       

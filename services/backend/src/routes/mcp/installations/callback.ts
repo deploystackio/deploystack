@@ -6,6 +6,7 @@ import { encrypt, decrypt } from '../../../utils/encryption';
 import { GlobalSettingsInitService } from '../../../global-settings';
 import { GlobalSettings } from '../../../global-settings';
 import { nanoid } from 'nanoid';
+import { sanitizeText } from '../../../utils/sanitization';
 import {
 	OAUTH_CALLBACK_QUERY_SCHEMA,
 	FLOW_ID_PARAM_SCHEMA,
@@ -70,15 +71,15 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 						</head>
 						<body>
 							<h1>Authorization Failed</h1>
-							<p><strong>Error:</strong> ${escapeHtml(query.error)}</p>
-							${query.error_description ? `<p>${escapeHtml(query.error_description)}</p>` : ''}
+							<p><strong>Error:</strong> ${sanitizeText(query.error)}</p>
+							${query.error_description ? `<p>${sanitizeText(query.error_description)}</p>` : ''}
 							<p>Closing window...</p>
 							<script>
 								// Post error message to parent window
 								if (window.opener) {
 									window.opener.postMessage({
 										type: 'oauth_error',
-										error: '${escapeHtml(errorMsg)}'
+										error: '${sanitizeText(errorMsg)}'
 									}, '${frontendUrl}');
 								}
 
@@ -589,7 +590,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 								if (window.opener) {
 									window.opener.postMessage({
 										type: 'oauth_error',
-										error: '${escapeHtml(errorMessage)}'
+										error: '${sanitizeText(errorMessage)}'
 									}, '${frontendUrl}');
 								}
 
@@ -604,18 +605,4 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 			}
 		}
 	);
-}
-
-/**
- * Escape HTML to prevent XSS
- */
-function escapeHtml(text: string): string {
-	const map: Record<string, string> = {
-		'&': '&amp;',
-		'<': '&lt;',
-		'>': '&gt;',
-		'"': '&quot;',
-		"'": '&#039;',
-	};
-	return text.replace(/[&<>"']/g, (m) => map[m]);
 }

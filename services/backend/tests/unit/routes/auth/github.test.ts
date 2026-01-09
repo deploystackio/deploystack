@@ -207,7 +207,7 @@ describe('GitHub Auth Routes', () => {
       expect(mockGlobalSettingsInitService.isLoginEnabled).toHaveBeenCalled();
       expect(mockGlobalSettingsInitService.getGitHubOAuthConfiguration).toHaveBeenCalled();
       expect(mockGenerateState).toHaveBeenCalled();
-      expect((mockReply as any).setCookie).toHaveBeenCalledWith('oauth_state', 'test-state', expect.any(Object));
+      expect((mockReply as any).setCookie).toHaveBeenCalledWith('oauth_state', '{"state":"test-state","returnTo":null}', expect.any(Object));
       expect(mockReply.redirect).toHaveBeenCalledWith('https://github.com/login/oauth/authorize?state=test-state');
     });
 
@@ -231,7 +231,7 @@ describe('GitHub Auth Routes', () => {
       const handler = routeHandlers['GET /login'];
       await handler(mockRequest, mockReply);
 
-      expect((mockReply as any).setCookie).toHaveBeenCalledWith('oauth_state', 'test-state', 
+      expect((mockReply as any).setCookie).toHaveBeenCalledWith('oauth_state', '{"state":"test-state","returnTo":null}',
         expect.objectContaining({
           secure: true,
           httpOnly: true,
