@@ -40,6 +40,29 @@ MCP changes how AI agents use tools, but it has created two critical challenges:
 
 DeployStack solves both problems with a complete MCP management platform and intelligent context window optimization.
 
+## Who DeployStack Is For
+
+### For Platform / DevOps Teams
+
+- **End credential chaos**: Move API keys from Slack DMs and `.env` files into an encrypted vault with automatic injection
+- **Control MCP access**: Role-based permissions determine who can use which MCP servers and tools
+- **Prevent data exposure**: Team isolation and audit logging show exactly what tools accessed what data
+- **Centralize configuration**: One source of truth instead of N developers × M configurations
+
+### For Developers
+
+- **Zero setup**: Add one URL to VS Code, get access to all team MCP tools instantly
+- **No local installs**: No `npm install`, no process management, no port conflicts
+- **Just works**: Same configuration everywhere - no more "works on my machine" debugging
+- **Focus on code**: Security and credentials are handled for you
+
+### For Engineering Managers
+
+- **1-click team onboarding**: New developer? They're productive with MCP tools in minutes, not hours
+- **Reduce AI costs**: 98% token reduction means lower API bills and better LLM performance
+- **Full visibility**: See which tools your team uses, how often, and what they access
+- **Offboarding safety**: When someone leaves, revoke access instantly - no credential rotation nightmare
+
 ## 🚀 How It Works: A Quick Tour
 
 ### Global Satellite (Zero Installation)
