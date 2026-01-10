@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.58.0 (2026-01-10)
+
+* feat(all): implement OAuth2 authorization flow and user feedback system ([dedacf74aa1da000bf4b13933dae17fc3a1846a9](https://github.com/deploystackio/deploystack/commit/dedacf74aa1da000bf4b13933dae17fc3a1846a9))
+* feat(backend): implement sanitization utilities for XSS prevention ([981faf2c25fd654943a0f0c54fdb7cee19097c83](https://github.com/deploystackio/deploystack/commit/981faf2c25fd654943a0f0c54fdb7cee19097c83))
+* chore(all): bump webpack from 5.103.0 to 5.104.1 ([dc39724170dad1d801c9867506251560a34f004f](https://github.com/deploystackio/deploystack/commit/dc39724170dad1d801c9867506251560a34f004f))
+
+## 0.58.0 (2026-01-10)
+
+* feat(all): implement OAuth2 authorization flow and user feedback system ([dedacf74aa1da000bf4b13933dae17fc3a1846a9](https://github.com/deploystackio/deploystack/commit/dedacf74aa1da000bf4b13933dae17fc3a1846a9))
+* feat(backend): implement sanitization utilities for XSS prevention ([981faf2c25fd654943a0f0c54fdb7cee19097c83](https://github.com/deploystackio/deploystack/commit/981faf2c25fd654943a0f0c54fdb7cee19097c83))
+* chore(all): bump webpack from 5.103.0 to 5.104.1 ([dc39724170dad1d801c9867506251560a34f004f](https://github.com/deploystackio/deploystack/commit/dc39724170dad1d801c9867506251560a34f004f))
+
 ## 0.57.0 (2026-01-01)
 
 * chore(all): update deploystack banner image ([924cbcb5835e1a91c572f658db1e47b6465a20a9](https://github.com/deploystackio/deploystack/commit/924cbcb5835e1a91c572f658db1e47b6465a20a9))
