@@ -80,7 +80,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.52.0",
-    "vitest": "^3.2.4",
+    "vitest": "^4.0.17",
     "webpack": "^5.104.1",
     "webpack-cli": "^6.0.1",
     "webpack-node-externals": "^3.0.0"
