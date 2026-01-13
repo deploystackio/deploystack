@@ -36,3 +36,54 @@ export const nsjailConfig = {
  * Falls back to /opt/deploystack if HOME is not set
  */
 export const mcpCacheBaseDir = process.env.HOME || '/opt/deploystack';
+
+/**
+ * Blocked Environment Variables
+ * These env vars are stripped from user-provided config before passing to nsjail.
+ * They can be exploited for code injection, library hijacking, or privilege escalation.
+ */
+export const BLOCKED_ENV_VARS = new Set([
+  // Linux dynamic linker (affects ALL processes)
+  'LD_PRELOAD',           // Shared library injection - most dangerous
+  'LD_LIBRARY_PATH',      // Library search path hijacking
+  'LD_AUDIT',             // Audit library injection
+  'LD_DEBUG',             // Debug output manipulation
+  'LD_DEBUG_OUTPUT',      // Debug output file
+  'LD_PROFILE',           // Profiling library injection
+  'LD_SHOW_AUXV',         // Auxiliary vector exposure
+  'LD_DYNAMIC_WEAK',      // Weak symbol manipulation
+
+  // Node.js specific
+  'NODE_OPTIONS',         // Can inject --require, --inspect, etc.
+  'NODE_REPL_EXTERNAL_MODULE', // External module loading
+  'NODE_EXTRA_CA_CERTS',  // Could point to malicious CA cert
+  'NODE_PATH',            // Module resolution hijacking
+  'NODE_REDIRECT_WARNINGS', // Warning output redirection
+
+  // Python specific
+  'PYTHONSTARTUP',        // Executes script on Python interpreter start
+  'PYTHONPATH',           // Module resolution hijacking
+  'PYTHONHOME',           // Python installation path hijacking
+  'PYTHONWARNINGS',       // Warning behavior manipulation
+  'PYTHONDEBUG',          // Debug mode enabling
+  'PYTHONINSPECT',        // Forces interactive mode after script
+  'PYTHONUSERSITE',       // User site-packages manipulation
+  'PYTHONEXECUTABLE',     // Executable path override
+  'PYTHONHASHSEED',       // Hash randomization control
+
+  // Shell injection (if any subprocess spawns shell)
+  'BASH_ENV',             // Executed on non-interactive bash start
+  'ENV',                  // Executed on sh start
+  'ZDOTDIR',              // Zsh config directory override
+  'SHELL',                // Default shell override
+
+  // Path and temp manipulation (already set by nsjail)
+  'PATH',                 // Already controlled by nsjail
+  'HOME',                 // Already set by nsjail
+  'TMPDIR',               // Could redirect temp to attacker location
+  'TMP',                  // Windows-style temp
+  'TEMP',                 // Windows-style temp
+
+  // Misc dangerous
+  'IFS',                  // Shell word splitting manipulation
+]);

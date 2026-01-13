@@ -7,7 +7,7 @@ import { existsSync } from 'fs';
 import { MCPServerConfig, ProcessInfo } from './types';
 import type { EventBus } from '../services/event-bus';
 import type { RuntimeState } from './runtime-state';
-import { nsjailConfig, mcpCacheBaseDir } from '../config/nsjail';
+import { nsjailConfig, mcpCacheBaseDir, BLOCKED_ENV_VARS } from '../config/nsjail';
 
 /**
  * Process Manager for MCP server subprocesses
@@ -138,6 +138,39 @@ export class ProcessManager extends EventEmitter {
    */
   setBackendStatusCallback(callback: (installationId: string, status: string, statusMessage?: string) => void): void {
     this.backendStatusCallback = callback;
+  }
+
+  /**
+   * Sanitize environment variables by removing dangerous entries
+   * Prevents library injection (LD_PRELOAD), code injection (NODE_OPTIONS, PYTHONSTARTUP), etc.
+   * @param env - User-provided environment variables
+   * @param installationName - For logging blocked vars
+   * @returns Array of nsjail -E arguments with safe env vars only
+   */
+  private sanitizeEnvVars(env: Record<string, string>, installationName: string): string[] {
+    const sanitized: string[] = [];
+    const blocked: string[] = [];
+
+    for (const [key, value] of Object.entries(env)) {
+      // Check against blocklist (case-insensitive for safety)
+      if (BLOCKED_ENV_VARS.has(key) || BLOCKED_ENV_VARS.has(key.toUpperCase())) {
+        blocked.push(key);
+        continue;
+      }
+      sanitized.push('-E', `${key}=${value}`);
+    }
+
+    // Log blocked vars for security auditing
+    if (blocked.length > 0) {
+      this.logger.warn({
+        operation: 'env_vars_blocked',
+        installation_name: installationName,
+        blocked_vars: blocked,
+        blocked_count: blocked.length
+      }, `Blocked ${blocked.length} dangerous env var(s) for security: ${blocked.join(', ')}`);
+    }
+
+    return sanitized;
   }
 
   /**
@@ -1271,8 +1304,8 @@ export class ProcessManager extends EventEmitter {
       '-E', 'NPM_CONFIG_PREFIX=/home/npx/.npm-global', // npm global prefix
       '-E', 'NPM_CONFIG_UPDATE_NOTIFIER=false', // Disable update notifier
       '-E', 'NO_UPDATE_NOTIFIER=1',            // Disable update notifier (alternative)
-      // Inject user-provided environment variables
-      ...Object.entries(config.env).flatMap(([key, value]) => ['-E', `${key}=${value}`]),
+      // Inject user-provided environment variables (sanitized)
+      ...this.sanitizeEnvVars(config.env, config.installation_name),
       '--disable_clone_newnet',                // Allow network access (required for npm downloads)
       '--disable_clone_newcgroup',             // Disable cgroup namespace (causes clone() errors on some kernels)
       '--disable_no_new_privs',                // May be needed for some packages
