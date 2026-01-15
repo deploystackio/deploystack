@@ -15,13 +15,21 @@ import PaginationControls from '@/components/ui/pagination/PaginationControls.vu
 import { Package, CircleCheck, CircleMinus, CircleAlert, Circle } from 'lucide-vue-next'
 import { getEnv } from '@/utils/env'
 
+interface StatusSummary {
+  total_instances: number
+  online: number
+  offline: number
+  error: number
+  provisioning: number
+}
+
 interface McpInstallation {
   installation_id: string
   server_id: string
   installation_name: string
   server_name: string
   server_slug: string
-  status: string
+  status_summary: StatusSummary
   created_at: string
   last_used_at: string | null
 }
@@ -107,48 +115,6 @@ const handlePageSizeChange = async (newPageSize: number) => {
   await loadInstallations()
 }
 
-// Get status icon component and classes
-const getStatusIcon = (status: string) => {
-  switch (status) {
-    case 'online':
-      return {
-        icon: CircleCheck,
-        class: 'size-3 fill-green-500 text-green-500 dark:fill-green-400 dark:text-green-400'
-      }
-    case 'offline':
-      return {
-        icon: CircleMinus,
-        class: 'size-3 text-muted-foreground'
-      }
-    case 'error':
-    case 'permanently_failed':
-      return {
-        icon: CircleAlert,
-        class: 'size-3 fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400'
-      }
-    case 'requires_reauth':
-      return {
-        icon: CircleAlert,
-        class: 'size-3 fill-yellow-500 text-yellow-500 dark:fill-yellow-400 dark:text-yellow-400'
-      }
-    case 'provisioning':
-    case 'connecting':
-    case 'discovering_tools':
-    case 'syncing_tools':
-    case 'restarting':
-    case 'command_received':
-      return {
-        icon: Circle,
-        class: 'size-3 fill-blue-500 text-blue-500 dark:fill-blue-400 dark:text-blue-400'
-      }
-    default:
-      return {
-        icon: Circle,
-        class: 'size-3 text-muted-foreground'
-      }
-  }
-}
-
 // Format date for display
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
@@ -231,14 +197,30 @@ onMounted(async () => {
                 </router-link>
               </TableCell>
               <TableCell>
-                <div
-                  class="inline-flex items-center justify-center rounded-full border px-1.5 py-0.5 text-xs font-medium text-muted-foreground gap-1"
-                >
-                  <component
-                    :is="getStatusIcon(installation.status).icon"
-                    :class="getStatusIcon(installation.status).class"
-                  />
-                  <span>{{ installation.status }}</span>
+                <div v-if="installation.status_summary.total_instances === 0" class="text-muted-foreground text-xs">
+                  No instances
+                </div>
+                <div v-else class="flex flex-col gap-1">
+                  <!-- Show online count if > 0 -->
+                  <div v-if="installation.status_summary.online > 0" class="inline-flex items-center gap-1 text-xs">
+                    <CircleCheck class="size-3 fill-green-500 text-green-500 dark:fill-green-400 dark:text-green-400" />
+                    <span>{{ installation.status_summary.online }} online</span>
+                  </div>
+                  <!-- Show offline count if > 0 -->
+                  <div v-if="installation.status_summary.offline > 0" class="inline-flex items-center gap-1 text-xs">
+                    <CircleMinus class="size-3 text-muted-foreground" />
+                    <span>{{ installation.status_summary.offline }} offline</span>
+                  </div>
+                  <!-- Show error count if > 0 -->
+                  <div v-if="installation.status_summary.error > 0" class="inline-flex items-center gap-1 text-xs">
+                    <CircleAlert class="size-3 fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400" />
+                    <span>{{ installation.status_summary.error }} error</span>
+                  </div>
+                  <!-- Show provisioning count if > 0 -->
+                  <div v-if="installation.status_summary.provisioning > 0" class="inline-flex items-center gap-1 text-xs">
+                    <Circle class="size-3 fill-blue-500 text-blue-500 dark:fill-blue-400 dark:text-blue-400" />
+                    <span>{{ installation.status_summary.provisioning }} provisioning</span>
+                  </div>
                 </div>
               </TableCell>
               <TableCell>{{ formatDate(installation.created_at) }}</TableCell>

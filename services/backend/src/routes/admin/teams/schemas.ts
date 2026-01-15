@@ -226,6 +226,18 @@ export function validatePaginationParams(query: PaginationQuery): { limit: numbe
 }
 
 // ===== MCP INSTALLATIONS SCHEMAS =====
+const STATUS_SUMMARY_SCHEMA = {
+  type: 'object',
+  properties: {
+    total_instances: { type: 'integer', description: 'Total number of user instances for this installation' },
+    online: { type: 'integer', description: 'Number of instances with online status' },
+    offline: { type: 'integer', description: 'Number of instances with offline status' },
+    error: { type: 'integer', description: 'Number of instances with error or permanently_failed status' },
+    provisioning: { type: 'integer', description: 'Number of instances in provisioning states (provisioning, connecting, discovering_tools, etc.)' }
+  },
+  required: ['total_instances', 'online', 'offline', 'error', 'provisioning']
+} as const;
+
 export const MCP_INSTALLATION_SCHEMA = {
   type: 'object',
   properties: {
@@ -234,11 +246,11 @@ export const MCP_INSTALLATION_SCHEMA = {
     installation_name: { type: 'string', description: 'User-defined installation name' },
     server_name: { type: 'string', description: 'MCP server name' },
     server_slug: { type: 'string', description: 'MCP server slug' },
-    status: { type: 'string', description: 'Installation status (provisioning|online|offline|error|...)' },
+    status_summary: STATUS_SUMMARY_SCHEMA,
     created_at: { type: 'string', description: 'ISO8601 timestamp' },
     last_used_at: { type: 'string', nullable: true, description: 'ISO8601 timestamp or null' }
   },
-  required: ['installation_id', 'server_id', 'installation_name', 'server_name', 'server_slug', 'status', 'created_at']
+  required: ['installation_id', 'server_id', 'installation_name', 'server_name', 'server_slug', 'status_summary', 'created_at']
 } as const;
 
 export const MCP_INSTALLATIONS_RESPONSE_SCHEMA = {
@@ -261,12 +273,21 @@ export const MCP_INSTALLATIONS_RESPONSE_SCHEMA = {
 } as const;
 
 // TypeScript interfaces for MCP installations
+export interface StatusSummary {
+  total_instances: number;
+  online: number;
+  offline: number;
+  error: number;
+  provisioning: number;
+}
+
 export interface McpInstallation {
   installation_id: string;
   server_id: string;
   installation_name: string;
   server_name: string;
   server_slug: string;
+  status_summary: StatusSummary;
   created_at: string;
   last_used_at: string | null;
 }

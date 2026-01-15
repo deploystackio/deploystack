@@ -25071,9 +25071,31 @@ paths:
                             server_slug:
                               type: string
                               description: MCP server slug
-                            status:
-                              type: string
-                              description: Installation status (provisioning|online|offline|error|...)
+                            status_summary:
+                              type: object
+                              properties:
+                                total_instances:
+                                  type: integer
+                                  description: Total number of user instances for this installation
+                                online:
+                                  type: integer
+                                  description: Number of instances with online status
+                                offline:
+                                  type: integer
+                                  description: Number of instances with offline status
+                                error:
+                                  type: integer
+                                  description: Number of instances with error or permanently_failed status
+                                provisioning:
+                                  type: integer
+                                  description: Number of instances in provisioning states (provisioning,
+                                    connecting, discovering_tools, etc.)
+                              required:
+                                - total_instances
+                                - online
+                                - offline
+                                - error
+                                - provisioning
                             created_at:
                               type: string
                               description: ISO8601 timestamp
@@ -25087,7 +25109,7 @@ paths:
                             - installation_name
                             - server_name
                             - server_slug
-                            - status
+                            - status_summary
                             - created_at
                       pagination:
                         type: object

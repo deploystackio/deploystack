@@ -76,11 +76,11 @@ export default async function getTeamMcpInstallationsAdminRoute(server: FastifyI
         return reply.status(404).type('application/json').send(jsonString);
       }
 
-      // 3. Query installations with server data
+      // 3. Query installations with server data and instance statuses
       const db = getDb();
       const schema = getSchema();
 
-      const installations = await db
+      const installationsWithInstances = await db
         .select({
           installation_id: schema.mcpServerInstallations.id,
           server_id: schema.mcpServerInstallations.server_id,
@@ -88,32 +88,77 @@ export default async function getTeamMcpInstallationsAdminRoute(server: FastifyI
           server_name: schema.mcpServers.name,
           server_slug: schema.mcpServers.slug,
           created_at: schema.mcpServerInstallations.created_at,
-          last_used_at: schema.mcpServerInstallations.last_used_at
+          last_used_at: schema.mcpServerInstallations.last_used_at,
+          instance_status: schema.mcpServerInstances.status
         })
         .from(schema.mcpServerInstallations)
         .leftJoin(
           schema.mcpServers,
           eq(schema.mcpServerInstallations.server_id, schema.mcpServers.id)
         )
+        .leftJoin(
+          schema.mcpServerInstances,
+          eq(schema.mcpServerInstances.installation_id, schema.mcpServerInstallations.id)
+        )
         .where(eq(schema.mcpServerInstallations.team_id, teamId))
         .orderBy(desc(schema.mcpServerInstallations.created_at));
 
-      // 4. Serialize installations
+      // 4. Aggregate status by installation
+      const installationMap = new Map<string, any>();
+      for (const row of installationsWithInstances) {
+        if (!installationMap.has(row.installation_id)) {
+          installationMap.set(row.installation_id, {
+            installation_id: row.installation_id,
+            server_id: row.server_id,
+            installation_name: row.installation_name,
+            server_name: row.server_name ?? 'Unknown Server',
+            server_slug: row.server_slug ?? 'unknown',
+            created_at: row.created_at,
+            last_used_at: row.last_used_at,
+            status_summary: {
+              total_instances: 0,
+              online: 0,
+              offline: 0,
+              error: 0,
+              provisioning: 0
+            }
+          });
+        }
+
+        const inst = installationMap.get(row.installation_id);
+        if (row.instance_status) {
+          inst.status_summary.total_instances++;
+          if (row.instance_status === 'online') {
+            inst.status_summary.online++;
+          } else if (row.instance_status === 'offline') {
+            inst.status_summary.offline++;
+          } else if (['error', 'permanently_failed'].includes(row.instance_status)) {
+            inst.status_summary.error++;
+          } else if (['provisioning', 'connecting', 'discovering_tools', 'syncing_tools', 'restarting', 'command_received', 'awaiting_user_config'].includes(row.instance_status)) {
+            inst.status_summary.provisioning++;
+          }
+        }
+      }
+
+      const installations = Array.from(installationMap.values());
+
+      // 5. Serialize installations
       const serializedInstallations = installations.map(inst => ({
         installation_id: inst.installation_id,
         server_id: inst.server_id,
         installation_name: inst.installation_name,
-        server_name: inst.server_name ?? 'Unknown Server',
-        server_slug: inst.server_slug ?? 'unknown',
+        server_name: inst.server_name,
+        server_slug: inst.server_slug,
+        status_summary: inst.status_summary,
         created_at: inst.created_at.toISOString(),
         last_used_at: inst.last_used_at ? inst.last_used_at.toISOString() : null
       }));
 
-      // 5. Apply pagination
+      // 6. Apply pagination
       const total = serializedInstallations.length;
       const paginatedInstallations = serializedInstallations.slice(offset, offset + limit);
 
-      // 6. Log operation
+      // 7. Log operation
       server.log.info({
         operation: 'get_team_mcp_installations_admin',
         teamId,
@@ -122,7 +167,7 @@ export default async function getTeamMcpInstallationsAdminRoute(server: FastifyI
         pagination: { limit, offset }
       }, 'Team MCP installations retrieved successfully');
 
-      // 7. Build success response
+      // 8. Build success response
       const successResponse: McpInstallationsResponse = {
         success: true,
         data: {
