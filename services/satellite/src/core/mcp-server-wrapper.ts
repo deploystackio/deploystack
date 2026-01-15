@@ -14,6 +14,7 @@ import { ProcessManager } from '../process/manager';
 import { ToolSearchService } from '../services/tool-search-service';
 import { DynamicConfigManager } from '../services/dynamic-config-manager';
 import { OAuthTokenService } from '../services/oauth-token-service';
+import { SsePingService } from '../services/sse-ping-service';
 import type { EventBus } from '../services/event-bus';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -57,6 +58,7 @@ export class McpServerWrapper {
   private dynamicConfigManager?: DynamicConfigManager;
   private oauthTokenService?: OAuthTokenService;
   private eventBus?: EventBus;
+  private ssePingService?: SsePingService;
   private transports = new Map<string, { transport: StreamableHTTPServerTransport; server: Server }>();
   private registeredTools = new Set<string>();
 
@@ -119,6 +121,17 @@ export class McpServerWrapper {
     this.logger.debug({
       operation: 'event_bus_set'
     }, 'EventBus set for request log emission');
+  }
+
+  /**
+   * Set SSE ping service for keep-alive (Proxy timeout prevention)
+   */
+  setSsePingService(ssePingService: SsePingService): void {
+    this.ssePingService = ssePingService;
+
+    this.logger.debug({
+      operation: 'sse_ping_service_set'
+    }, 'SSE ping service set for keep-alive');
   }
 
   /**
@@ -1547,7 +1560,12 @@ export class McpServerWrapper {
         reply.code(400).send('Invalid or missing session ID');
         return;
       }
-      
+
+      // Register connection for SSE ping keep-alive (prevents proxy timeout)
+      if (this.ssePingService) {
+        this.ssePingService.registerConnection(sessionId, reply.raw);
+      }
+
       const session = this.transports.get(sessionId)!;
       await session.transport.handleRequest(request.raw, reply.raw);
     });

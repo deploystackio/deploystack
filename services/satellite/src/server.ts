@@ -22,6 +22,7 @@ import { EventBus } from './services/event-bus';
 import { McpActivityTracker } from './services/mcp-activity-tracker';
 import { ToolSearchService } from './services/tool-search-service';
 import { OAuthTokenService } from './services/oauth-token-service';
+import { SsePingService } from './services/sse-ping-service';
 
 /**
  * Validate registration token format and availability
@@ -298,6 +299,12 @@ export async function createServer() {
   // Initialize MCP Server Wrapper with official SDK (replaces custom transport handlers)
   const mcpServerWrapper = new McpServerWrapper(server.log);
   mcpServerWrapper.setDependencies(toolDiscoveryManager, processManager, toolSearchService, dynamicConfigManager);
+
+  // Initialize SSE ping service for keep-alive (prevents proxy timeout on SSE connections)
+  const ssePingService = new SsePingService(server.log);
+  ssePingService.start();
+  mcpServerWrapper.setSsePingService(ssePingService);
+  server.decorate('ssePingService', ssePingService);
 
   // Set up configuration change handler for tool discovery
   dynamicConfigManager.setConfigurationChangeHandler(async (config, changes) => {
@@ -1208,8 +1215,14 @@ export async function createServer() {
         await eventBus.stop();
       }
 
+      // Stop SSE ping service
+      const ssePingService = (server as any).ssePingService as SsePingService | undefined;
+      if (ssePingService) {
+        server.log.info({ operation: 'shutdown_sse_ping' }, 'Stopping SSE ping service...');
+        ssePingService.stop();
+      }
+
       // Stop command polling service
-      
       const commandPollingService = (server as any).commandPollingService as CommandPollingService | undefined;
       if (commandPollingService) {
         server.log.info({ operation: 'shutdown_polling' }, 'Stopping command polling service...');
