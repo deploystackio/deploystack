@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { AlertTriangle, Shield } from 'lucide-vue-next'
+import { AlertTriangle, Shield, CheckCircle } from 'lucide-vue-next'
 import { OAuthService, type AuthorizeDetails } from '@/services/oauthService'
 import { TeamService, type Team } from '@/services/teamService'
 
@@ -25,6 +25,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from '@/components/ui/empty'
+
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -39,6 +47,7 @@ const teams = ref<Team[]>([])
 const selectedTeamId = ref<string>('')
 const processing = ref(false)
 const action = ref<'approve' | 'deny' | null>(null)
+const success = ref(false)
 
 // Error handling helper
 const getErrorMessage = (err: unknown): string => {
@@ -134,6 +143,11 @@ const handleAuthorization = async (authAction: 'approve' | 'deny') => {
     if (result.success && result.redirect_url) {
       // Redirect to the MCP client callback URL
       window.location.href = result.redirect_url
+
+      // Show success state immediately since backend confirmed authorization succeeded
+      // (MCP clients use custom protocols like vscode:// that don't navigate away from the page)
+      processing.value = false
+      success.value = true
     } else {
       throw new Error('Invalid response from server')
     }
@@ -178,6 +192,21 @@ const returnToDashboard = () => {
           <div v-if="loading" class="text-center py-8">
             <Spinner class="mx-auto mb-4" />
             <p class="text-gray-600">{{ t('oauth.authorize.loading.message') }}</p>
+          </div>
+
+          <!-- Success State -->
+          <div v-else-if="success" class="py-4">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <CheckCircle class="text-green-600" />
+                </EmptyMedia>
+                <EmptyTitle>{{ t('oauth.authorize.success.title') }}</EmptyTitle>
+                <EmptyDescription>
+                  {{ t('oauth.authorize.success.description') }}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           </div>
 
           <!-- Error State (no details loaded) -->

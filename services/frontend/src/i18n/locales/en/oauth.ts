@@ -19,6 +19,10 @@ export default {
     loading: {
       message: 'Loading authorization details...'
     },
+    success: {
+      title: 'Authorization Successful',
+      description: 'You can now continue in your MCP client. This window can be closed.'
+    },
     errors: {
       title: 'Authorization Error',
       missingRequestId: 'Missing request ID parameter',
