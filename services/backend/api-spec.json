@@ -34620,6 +34620,367 @@
         }
       }
     },
+    "/api/admin/mcp/servers/{serverId}/teams/search": {
+      "get": {
+        "summary": "Search teams using MCP server (Global Admin)",
+        "tags": [
+          "Admin - MCP Servers"
+        ],
+        "description": "Search and filter teams that have installed a specific MCP server. Supports filtering by team name and slug (partial, case-insensitive). Results are paginated with limit (1-100, default: 20) and offset (default: 0) parameters.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "description": "Filter by team name or slug (partial match, case-insensitive)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of items to return (1-100, default: 20)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "description": "Number of items to skip (≥0, default: 0)"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true,
+            "description": "MCP Server ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Filtered list of teams using this MCP server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates operation success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "server_info": {
+                          "type": "object",
+                          "properties": {
+                            "server_id": {
+                              "type": "string",
+                              "description": "MCP server unique identifier"
+                            },
+                            "server_name": {
+                              "type": "string",
+                              "description": "MCP server name"
+                            },
+                            "server_slug": {
+                              "type": "string",
+                              "description": "MCP server slug"
+                            }
+                          },
+                          "required": [
+                            "server_id",
+                            "server_name",
+                            "server_slug"
+                          ]
+                        },
+                        "teams": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "team_id": {
+                                "type": "string",
+                                "description": "Team unique identifier"
+                              },
+                              "team_name": {
+                                "type": "string",
+                                "description": "Team name"
+                              },
+                              "team_slug": {
+                                "type": "string",
+                                "description": "Team URL slug"
+                              },
+                              "installations": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "installation_id": {
+                                      "type": "string",
+                                      "description": "Installation unique identifier"
+                                    },
+                                    "installation_name": {
+                                      "type": "string",
+                                      "description": "Installation name"
+                                    },
+                                    "created_at": {
+                                      "type": "string",
+                                      "description": "ISO8601 timestamp"
+                                    },
+                                    "last_used_at": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "ISO8601 timestamp or null"
+                                    }
+                                  },
+                                  "required": [
+                                    "installation_id",
+                                    "installation_name",
+                                    "created_at"
+                                  ]
+                                },
+                                "description": "All installations of this server by the team"
+                              },
+                              "installation_count": {
+                                "type": "integer",
+                                "description": "Number of installations of this server"
+                              },
+                              "status_summary": {
+                                "type": "object",
+                                "properties": {
+                                  "total_instances": {
+                                    "type": "integer",
+                                    "description": "Total number of user instances"
+                                  },
+                                  "online": {
+                                    "type": "integer",
+                                    "description": "Number of instances with online status"
+                                  },
+                                  "offline": {
+                                    "type": "integer",
+                                    "description": "Number of instances with offline status"
+                                  },
+                                  "error": {
+                                    "type": "integer",
+                                    "description": "Number of instances with error or permanently_failed status"
+                                  },
+                                  "provisioning": {
+                                    "type": "integer",
+                                    "description": "Number of instances in provisioning states"
+                                  }
+                                },
+                                "required": [
+                                  "total_instances",
+                                  "online",
+                                  "offline",
+                                  "error",
+                                  "provisioning"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "team_id",
+                              "team_name",
+                              "team_slug",
+                              "installations",
+                              "installation_count",
+                              "status_summary"
+                            ]
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "number",
+                              "description": "Total number of teams"
+                            },
+                            "limit": {
+                              "type": "number",
+                              "description": "Number of teams per page"
+                            },
+                            "offset": {
+                              "type": "number",
+                              "description": "Number of teams skipped"
+                            },
+                            "has_more": {
+                              "type": "boolean",
+                              "description": "Whether there are more teams beyond this page"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "limit",
+                            "offset",
+                            "has_more"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "server_info",
+                        "teams",
+                        "pagination"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Filtered list of teams using this MCP server"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid pagination parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Global admin required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Global admin required"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "MCP server not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "MCP server not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates operation failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/teams": {
       "get": {
         "summary": "List all teams (Global Admin) with pagination",

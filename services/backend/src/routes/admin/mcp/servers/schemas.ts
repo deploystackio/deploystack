@@ -99,6 +99,27 @@ export const PAGINATION_QUERY_SCHEMA = {
   additionalProperties: false
 } as const;
 
+export const SEARCH_TEAMS_BY_SERVER_QUERY_SCHEMA = {
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      description: 'Filter by team name or slug (partial match, case-insensitive)'
+    },
+    limit: {
+      type: 'string',
+      pattern: '^\\d+$',
+      description: 'Maximum number of items to return (1-100, default: 20)'
+    },
+    offset: {
+      type: 'string',
+      pattern: '^\\d+$',
+      description: 'Number of items to skip (≥0, default: 0)'
+    }
+  },
+  additionalProperties: false
+} as const;
+
 export const ERROR_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
@@ -110,6 +131,12 @@ export const ERROR_RESPONSE_SCHEMA = {
 
 // TypeScript interfaces
 export interface PaginationQuery {
+  limit?: string;
+  offset?: string;
+}
+
+export interface SearchTeamsByServerQuery {
+  name?: string;
   limit?: string;
   offset?: string;
 }
