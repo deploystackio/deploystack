@@ -355,8 +355,15 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'mcp-server-catalog/view/:id',
-        name: 'AdminMcpServerCatalogView',
-        component: () => import('../views/admin/mcp-server-catalog/view/[id].vue'),
+        redirect: (to) => ({
+          name: 'AdminMcpCatalogViewGeneral',
+          params: { id: to.params.id }
+        }),
+      },
+      {
+        path: 'mcp-server-catalog/view/:id/general',
+        name: 'AdminMcpCatalogViewGeneral',
+        component: () => import('../views/admin/mcp-server-catalog/view/[id]/general.vue'),
       },
       {
         path: 'mcp-server-catalog/edit/:id',
