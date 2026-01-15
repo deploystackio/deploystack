@@ -1227,11 +1227,23 @@ export class McpServerWrapper {
         status_message: message
       }, `Emitted status change to backend: ${status}`);
     }
+
+    // Attempt immediate recovery for connection errors (not auth errors which need user intervention)
+    if (status === 'offline' || status === 'error') {
+      this.handleServerRecovery(serverName, serverSlug, config).catch(err => {
+        this.logger.debug({
+          operation: 'immediate_recovery_attempt_failed',
+          server_slug: serverSlug,
+          error: err instanceof Error ? err.message : String(err)
+        }, 'Immediate recovery attempt failed - will retry on next tool call or backend health check');
+      });
+    }
   }
 
   /**
    * Handle server recovery - trigger tool re-discovery
-   * Called when tool succeeds but server was previously offline/error
+   * Called when tool succeeds but server was previously offline/error,
+   * OR immediately after tool failure (immediate recovery attempt)
    */
   private async handleServerRecovery(
     serverName: string,

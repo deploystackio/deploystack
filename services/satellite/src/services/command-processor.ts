@@ -5,6 +5,7 @@ import { ProcessManager } from '../process/manager';
 import { RuntimeState } from '../process/runtime-state';
 import { StdioToolDiscoveryManager } from './stdio-tool-discovery-manager';
 import { UnifiedToolDiscoveryManager } from './unified-tool-discovery-manager';
+import { RemoteToolDiscoveryManager } from './remote-tool-discovery-manager';
 import { MCPServerConfig } from '../process/types';
 import { maskUrlForLogging } from '../utils/log-masker';
 import type { EventBus } from './event-bus';
@@ -27,6 +28,7 @@ export class CommandProcessor {
   private runtimeState: RuntimeState | null;
   private stdioDiscoveryManager: StdioToolDiscoveryManager | null;
   private unifiedToolDiscoveryManager: UnifiedToolDiscoveryManager | null = null;
+  private remoteToolDiscoveryManager: RemoteToolDiscoveryManager | null = null;
   private eventBus: EventBus | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private tokenIntrospectionService: any | null = null;
@@ -64,6 +66,13 @@ export class CommandProcessor {
    */
   setUnifiedToolDiscoveryManager(manager: UnifiedToolDiscoveryManager): void {
     this.unifiedToolDiscoveryManager = manager;
+  }
+
+  /**
+   * Set remote tool discovery manager for recovery handling
+   */
+  setRemoteToolDiscoveryManager(manager: RemoteToolDiscoveryManager): void {
+    this.remoteToolDiscoveryManager = manager;
   }
 
   /**
@@ -260,6 +269,11 @@ export class CommandProcessor {
       return await this.handleUpdateToolStatus(command);
     }
 
+    // Check if this is an mcp_recovery event from backend health check
+    if (payload.event === 'mcp_recovery') {
+      return await this.handleMcpRecovery(command);
+    }
+
     // Default behavior: trigger configuration refresh
     this.logger.info({
       operation: 'command_configure',
@@ -402,6 +416,191 @@ export class CommandProcessor {
         command_id: command.id,
         status: 'failed',
         error: errorMessage
+      };
+    }
+  }
+
+  /**
+   * Handle mcp_recovery event - trigger tool re-discovery for recovered HTTP/SSE server
+   * Called when backend detects an HTTP MCP server has recovered via health check
+   */
+  private async handleMcpRecovery(command: SatelliteCommand): Promise<CommandResult> {
+    const { installation_id, team_id } = command.payload;
+
+    this.logger.info({
+      operation: 'mcp_recovery_received',
+      command_id: command.id,
+      installation_id,
+      team_id
+    }, `Processing MCP recovery command for installation ${installation_id}`);
+
+    // Validate required fields
+    if (!installation_id) {
+      const errorMsg = 'Missing installation_id in mcp_recovery payload';
+      this.logger.error({
+        operation: 'mcp_recovery_validation_failed',
+        command_id: command.id
+      }, errorMsg);
+
+      return {
+        command_id: command.id,
+        status: 'failed',
+        error: errorMsg
+      };
+    }
+
+    // Find server config by installation_id
+    const currentConfig = this.configManager.getCurrentConfiguration();
+    let serverName: string | null = null;
+    let serverConfig: typeof currentConfig.servers[string] | null = null;
+
+    for (const [name, config] of Object.entries(currentConfig.servers)) {
+      if (config.installation_id === installation_id) {
+        serverName = name;
+        serverConfig = config;
+        break;
+      }
+    }
+
+    if (!serverName || !serverConfig) {
+      this.logger.warn({
+        operation: 'mcp_recovery_server_not_found',
+        command_id: command.id,
+        installation_id
+      }, `Server config not found for installation ${installation_id} - may not be deployed to this satellite`);
+
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          message: 'Server not found on this satellite',
+          installation_id
+        }
+      };
+    }
+
+    // Only handle HTTP/SSE servers (not stdio - they're handled via process lifecycle)
+    if (serverConfig.transport_type === 'stdio') {
+      this.logger.debug({
+        operation: 'mcp_recovery_skipped_stdio',
+        command_id: command.id,
+        installation_id,
+        server_name: serverName
+      }, 'Skipping recovery for stdio server - handled via process lifecycle');
+
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          message: 'stdio servers do not require recovery re-discovery',
+          installation_id,
+          server_name: serverName
+        }
+      };
+    }
+
+    // Check if RemoteToolDiscoveryManager is available
+    if (!this.remoteToolDiscoveryManager) {
+      const errorMsg = 'RemoteToolDiscoveryManager not available for recovery handling';
+      this.logger.error({
+        operation: 'mcp_recovery_no_manager',
+        command_id: command.id
+      }, errorMsg);
+
+      return {
+        command_id: command.id,
+        status: 'failed',
+        error: errorMsg
+      };
+    }
+
+    // Emit 'connecting' status to backend
+    const validatedTeamId = team_id || serverConfig.team_id || 'unknown';
+    this.emitStatusChange(
+      installation_id,
+      validatedTeamId,
+      serverConfig.user_id || 'unknown',
+      'connecting',
+      'Server recovered, satellite initiating tool re-discovery'
+    );
+
+    try {
+      // Emit 'discovering_tools' status
+      this.emitStatusChange(
+        installation_id,
+        validatedTeamId,
+        serverConfig.user_id || 'unknown',
+        'discovering_tools',
+        'Re-discovering tools after server recovery'
+      );
+
+      // Trigger tool re-discovery
+      const startTime = Date.now();
+      const tools = await this.remoteToolDiscoveryManager.discoverServerTools(serverName);
+      const discoveryTimeMs = Date.now() - startTime;
+
+      // Emit 'online' status on success
+      this.emitStatusChange(
+        installation_id,
+        validatedTeamId,
+        serverConfig.user_id || 'unknown',
+        'online',
+        `Server recovered with ${tools.length} tools`
+      );
+
+      this.logger.info({
+        operation: 'mcp_recovery_success',
+        command_id: command.id,
+        installation_id,
+        server_name: serverName,
+        tools_discovered: tools.length,
+        discovery_time_ms: discoveryTimeMs
+      }, `MCP recovery successful: ${serverName} with ${tools.length} tools (${discoveryTimeMs}ms)`);
+
+      return {
+        command_id: command.id,
+        status: 'completed',
+        result: {
+          installation_id,
+          server_name: serverName,
+          tools_discovered: tools.length,
+          discovery_time_ms: discoveryTimeMs
+        }
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Determine appropriate error status
+      const { status, message } = RemoteToolDiscoveryManager.getStatusFromError(errorMessage);
+
+      // Emit error status to backend
+      this.emitStatusChange(
+        installation_id,
+        validatedTeamId,
+        serverConfig.user_id || 'unknown',
+        status,
+        message
+      );
+
+      this.logger.error({
+        operation: 'mcp_recovery_failed',
+        command_id: command.id,
+        installation_id,
+        server_name: serverName,
+        error: errorMessage,
+        resulting_status: status
+      }, `MCP recovery failed for ${serverName}: ${errorMessage}`);
+
+      return {
+        command_id: command.id,
+        status: 'failed',
+        error: errorMessage,
+        result: {
+          installation_id,
+          server_name: serverName,
+          resulting_status: status
+        }
       };
     }
   }

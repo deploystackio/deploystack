@@ -536,6 +536,9 @@ export async function createServer() {
   // Set UnifiedToolDiscoveryManager for disabled tools tracking
   commandProcessor.setUnifiedToolDiscoveryManager(toolDiscoveryManager);
 
+  // Set RemoteToolDiscoveryManager for mcp_recovery command handling
+  commandProcessor.setRemoteToolDiscoveryManager(remoteToolDiscoveryManager);
+
   // Wire up backend status tracking callbacks for CommandProcessor and ProcessManager
   commandProcessor.setBackendStatusCallback(backendStatusCallback);
   processManager.setBackendStatusCallback(backendStatusCallback);
