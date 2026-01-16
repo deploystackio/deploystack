@@ -20,6 +20,27 @@ const isLoading = ref(true)
 const isSearching = ref(false)
 const error = ref<string | null>(null)
 
+// Stats state
+const stats = ref<{
+  user_statistics: {
+    total_users: number
+    users_by_auth_type: {
+      email: number
+      github: number
+    }
+    global_admins: number
+  }
+  team_statistics: {
+    default_teams: number
+    non_default_teams: number
+  }
+  user_count_by_role: Array<{
+    role_id: string
+    count: number
+  }>
+} | null>(null)
+const isLoadingStats = ref(true)
+
 // Search and filter state
 const searchQuery = ref('')
 const searchType = ref<'username' | 'email'>('username')
@@ -181,10 +202,23 @@ const handleFilterValuesChange = (values: Record<string, string>) => {
   filterValues.value = values
 }
 
-// Load users on component mount
+// Fetch user statistics
+const fetchStats = async (): Promise<void> => {
+  try {
+    isLoadingStats.value = true
+    stats.value = await UserService.getUserStats()
+  } catch (err) {
+    console.error('Failed to fetch user stats:', err)
+    // Silently fail - stats are nice-to-have
+  } finally {
+    isLoadingStats.value = false
+  }
+}
+
+// Load users and stats on component mount
 onMounted(async () => {
   setBreadcrumbs([{ label: t('adminUsers.title') }])
-  await fetchUsers()
+  await Promise.all([fetchUsers(), fetchStats()])
 })
 </script>
 
@@ -199,7 +233,59 @@ onMounted(async () => {
       </div>
 
       <!-- Users Table Component -->
-      <div v-else class="space-y-4">
+      <div v-if="!error" class="space-y-4">
+        <!-- Stats Metrics -->
+        <div v-if="stats" class="border rounded-lg p-6">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <!-- Total Users Metric -->
+            <div class="flex flex-col gap-1">
+              <span class="text-sm text-muted-foreground font-medium">
+                Total Users
+              </span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-xl font-normal">
+                  {{ isLoadingStats ? '...' : stats.user_statistics.total_users }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Total Teams Metric -->
+            <div class="flex flex-col gap-1 border-l pl-8">
+              <span class="text-sm text-muted-foreground font-medium">
+                Total Teams
+              </span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-xl font-normal">
+                  {{ isLoadingStats ? '...' : (stats.team_statistics.default_teams + stats.team_statistics.non_default_teams) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- GitHub Users Metric -->
+            <div class="flex flex-col gap-1 border-l pl-8">
+              <span class="text-sm text-muted-foreground font-medium">
+                GitHub Users
+              </span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-xl font-normal">
+                  {{ isLoadingStats ? '...' : stats.user_statistics.users_by_auth_type.github }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Email Users Metric -->
+            <div class="flex flex-col gap-1 border-l pl-8">
+              <span class="text-sm text-muted-foreground font-medium">
+                Email Users
+              </span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-xl font-normal">
+                  {{ isLoadingStats ? '...' : stats.user_statistics.users_by_auth_type.email }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
         <UserTableColumns
           :is-loading="isLoading"
           :users="users"

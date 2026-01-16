@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { eq, and, count, or } from 'drizzle-orm';
+import { eq, and, count, or, sql } from 'drizzle-orm';
 import { getDb, getSchema } from '../db/index';
 import { generateId } from 'lucia';
 import { GlobalSettings } from '../global-settings/helpers';
@@ -720,6 +720,36 @@ export class TeamService {
       );
 
     return result[0].count;
+  }
+
+  /**
+   * Get count of default teams
+   */
+  static async getDefaultTeamCount(): Promise<number> {
+    const { db, schema } = this.getDbAndSchema();
+    const result = await (db as any)
+      .select({
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(schema.teams)
+      .where(eq(schema.teams.is_default, true));
+
+    return parseInt(result[0].count);
+  }
+
+  /**
+   * Get count of non-default teams
+   */
+  static async getNonDefaultTeamCount(): Promise<number> {
+    const { db, schema } = this.getDbAndSchema();
+    const result = await (db as any)
+      .select({
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(schema.teams)
+      .where(eq(schema.teams.is_default, false));
+
+    return parseInt(result[0].count);
   }
 
   /**

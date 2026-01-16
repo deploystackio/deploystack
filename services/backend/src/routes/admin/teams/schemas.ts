@@ -51,10 +51,12 @@ export const TEAM_RESPONSE_SCHEMA = {
     mcp_server_limit: { type: 'integer', description: 'Total MCP server limit' },
     member_limit: { type: 'integer', description: 'Team member limit' },
     allow_remote_mcp: { type: 'boolean', description: 'Allow remote MCP servers' },
+    mcp_servers_count: { type: 'integer', description: 'Number of MCP servers installed in this team' },
+    members_count: { type: 'integer', description: 'Number of members in this team' },
     created_at: { type: 'string', description: 'ISO8601 timestamp' },
     updated_at: { type: 'string', description: 'ISO8601 timestamp' }
   },
-  required: ['id', 'name', 'slug', 'owner_id', 'is_default', 'non_http_mcp_limit', 'mcp_server_limit', 'member_limit', 'allow_remote_mcp', 'created_at', 'updated_at']
+  required: ['id', 'name', 'slug', 'owner_id', 'is_default', 'non_http_mcp_limit', 'mcp_server_limit', 'member_limit', 'allow_remote_mcp', 'mcp_servers_count', 'members_count', 'created_at', 'updated_at']
 } as const;
 
 export const SUCCESS_RESPONSE_SCHEMA = {
@@ -168,6 +170,8 @@ export interface TeamResponse {
   mcp_server_limit: number;
   member_limit: number;
   allow_remote_mcp: boolean;
+  mcp_servers_count: number;
+  members_count: number;
   created_at: string;
   updated_at: string;
 }

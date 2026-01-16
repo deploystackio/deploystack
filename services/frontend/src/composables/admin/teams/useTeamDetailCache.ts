@@ -3,7 +3,8 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useEventBus } from '@/composables/useEventBus'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
-import { TeamService, type Team } from '@/services/teamService'
+import { TeamService } from '@/services/teamService'
+import type { Team } from '@/views/admin/teams/types'
 
 export function useTeamDetailCache() {
   const route = useRoute()

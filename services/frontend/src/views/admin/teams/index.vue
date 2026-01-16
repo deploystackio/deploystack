@@ -170,7 +170,8 @@ onMounted(async () => {
             <TableHeader>
               <TableRow>
                 <TableHead>{{ t('adminTeams.table.columns.name') }}</TableHead>
-                <TableHead>{{ t('adminTeams.table.columns.slug') }}</TableHead>
+                <TableHead>{{ t('adminTeams.table.columns.mcpServers') }}</TableHead>
+                <TableHead>{{ t('adminTeams.table.columns.members') }}</TableHead>
                 <TableHead>{{ t('adminTeams.table.columns.type') }}</TableHead>
                 <TableHead>{{ t('adminTeams.table.columns.createdAt') }}</TableHead>
                 <TableHead class="w-[100px]">{{ t('adminTeams.table.columns.actions') }}</TableHead>
@@ -179,7 +180,8 @@ onMounted(async () => {
             <TableBody>
               <TableRow v-for="i in 5" :key="i">
                 <TableCell><Skeleton class="h-4 w-32" /></TableCell>
-                <TableCell><Skeleton class="h-4 w-24" /></TableCell>
+                <TableCell><Skeleton class="h-4 w-8" /></TableCell>
+                <TableCell><Skeleton class="h-4 w-8" /></TableCell>
                 <TableCell><Skeleton class="h-5 w-16" /></TableCell>
                 <TableCell><Skeleton class="h-4 w-20" /></TableCell>
                 <TableCell><Skeleton class="h-8 w-16" /></TableCell>

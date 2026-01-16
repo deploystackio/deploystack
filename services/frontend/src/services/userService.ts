@@ -552,4 +552,44 @@ export class UserService {
       throw error;
     }
   }
+
+  /**
+   * Get admin user statistics
+   */
+  static async getUserStats(): Promise<{
+    user_statistics: {
+      total_users: number;
+      users_by_auth_type: {
+        email: number;
+        github: number;
+      };
+      global_admins: number;
+    };
+    team_statistics: {
+      default_teams: number;
+      non_default_teams: number;
+    };
+    user_count_by_role: Array<{
+      role_id: string;
+      count: number;
+    }>;
+  }> {
+    try {
+      const apiUrl = this.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/admin/users/stats`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch user stats: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.data;
+    } catch (error) {
+      console.error('Get user stats error:', error);
+      throw error;
+    }
+  }
 }

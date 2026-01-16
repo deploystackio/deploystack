@@ -1,6 +1,7 @@
 import { type FastifyInstance } from 'fastify';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
-import { TeamService } from '../../../services/teamService';
+import { getDb, getSchema } from '../../../db';
+import { eq, sql, like } from 'drizzle-orm';
 import {
   LIST_TEAMS_RESPONSE_SCHEMA,
   ERROR_RESPONSE_SCHEMA,
@@ -49,11 +50,73 @@ export default async function searchTeamsAdminRoute(server: FastifyInstance) {
       const query = request.query as SearchTeamsQuery;
       const { limit, offset } = validatePaginationParams(query);
 
-      // Get all teams
-      const allTeams = await TeamService.getAllTeams();
+      // Get database and schema
+      const db = getDb();
+      const schema = getSchema();
+
+      // Build query with counts
+      type TeamWithCounts = {
+        id: string;
+        name: string;
+        slug: string;
+        description: string | null;
+        owner_id: string;
+        is_default: boolean;
+        non_http_mcp_limit: number;
+        mcp_server_limit: number;
+        member_limit: number;
+        allow_remote_mcp: boolean;
+        created_at: Date;
+        updated_at: Date;
+        members_count: number;
+        mcp_servers_count: number;
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let teamsQuery = (db as any)
+        .select({
+          id: schema.teams.id,
+          name: schema.teams.name,
+          slug: schema.teams.slug,
+          description: schema.teams.description,
+          owner_id: schema.teams.owner_id,
+          is_default: schema.teams.is_default,
+          non_http_mcp_limit: schema.teams.non_http_mcp_limit,
+          mcp_server_limit: schema.teams.mcp_server_limit,
+          member_limit: schema.teams.member_limit,
+          allow_remote_mcp: schema.teams.allow_remote_mcp,
+          created_at: schema.teams.created_at,
+          updated_at: schema.teams.updated_at,
+          members_count: sql<number>`COUNT(DISTINCT ${schema.teamMemberships.id})::int`,
+          mcp_servers_count: sql<number>`COUNT(DISTINCT ${schema.mcpServerInstallations.id})::int`
+        })
+        .from(schema.teams)
+        .leftJoin(schema.teamMemberships, eq(schema.teams.id, schema.teamMemberships.team_id))
+        .leftJoin(schema.mcpServerInstallations, eq(schema.teams.id, schema.mcpServerInstallations.team_id));
+
+      // Apply name filter at database level
+      if (query.name) {
+        teamsQuery = teamsQuery.where(like(schema.teams.name, `%${query.name}%`));
+      }
+
+      // Complete query with GROUP BY
+      const teamsWithCounts: TeamWithCounts[] = await teamsQuery.groupBy(
+        schema.teams.id,
+        schema.teams.name,
+        schema.teams.slug,
+        schema.teams.description,
+        schema.teams.owner_id,
+        schema.teams.is_default,
+        schema.teams.non_http_mcp_limit,
+        schema.teams.mcp_server_limit,
+        schema.teams.member_limit,
+        schema.teams.allow_remote_mcp,
+        schema.teams.created_at,
+        schema.teams.updated_at
+      );
 
       // Serialize teams
-      let serializedTeams = allTeams.map(team => ({
+      const serializedTeams = teamsWithCounts.map((team) => ({
         id: team.id,
         name: team.name,
         slug: team.slug,
@@ -64,16 +127,11 @@ export default async function searchTeamsAdminRoute(server: FastifyInstance) {
         mcp_server_limit: team.mcp_server_limit,
         member_limit: team.member_limit,
         allow_remote_mcp: team.allow_remote_mcp,
+        mcp_servers_count: team.mcp_servers_count,
+        members_count: team.members_count,
         created_at: team.created_at.toISOString(),
         updated_at: team.updated_at.toISOString()
       }));
-
-      // Apply name filter
-      if (query.name) {
-        serializedTeams = serializedTeams.filter(team =>
-          team.name.toLowerCase().includes(query.name!.toLowerCase())
-        );
-      }
 
       // Apply pagination
       const total = serializedTeams.length;

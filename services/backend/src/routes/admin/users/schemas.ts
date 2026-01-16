@@ -42,6 +42,42 @@ export const USER_STATS_RESPONSE_SCHEMA = {
     data: {
       type: 'object',
       properties: {
+        user_statistics: {
+          type: 'object',
+          properties: {
+            total_users: {
+              type: 'number',
+              description: 'Total number of users'
+            },
+            users_by_auth_type: {
+              type: 'object',
+              properties: {
+                email: { type: 'number', description: 'Users registered via email' },
+                github: { type: 'number', description: 'Users registered via GitHub' }
+              },
+              description: 'User count grouped by authentication type'
+            },
+            global_admins: {
+              type: 'number',
+              description: 'Number of users with global_admin role'
+            }
+          },
+          required: ['total_users', 'users_by_auth_type', 'global_admins']
+        },
+        team_statistics: {
+          type: 'object',
+          properties: {
+            default_teams: {
+              type: 'number',
+              description: 'Number of default teams'
+            },
+            non_default_teams: {
+              type: 'number',
+              description: 'Number of non-default teams'
+            }
+          },
+          required: ['default_teams', 'non_default_teams']
+        },
         user_count_by_role: {
           type: 'array',
           items: {
@@ -55,7 +91,7 @@ export const USER_STATS_RESPONSE_SCHEMA = {
           description: 'User count grouped by role'
         }
       },
-      required: ['user_count_by_role']
+      required: ['user_statistics', 'team_statistics', 'user_count_by_role']
     }
   },
   required: ['success', 'data']
@@ -65,6 +101,18 @@ export const USER_STATS_RESPONSE_SCHEMA = {
 export interface UserStatsResponse {
   success: boolean;
   data: {
+    user_statistics: {
+      total_users: number;
+      users_by_auth_type: {
+        email: number;
+        github: number;
+      };
+      global_admins: number;
+    };
+    team_statistics: {
+      default_teams: number;
+      non_default_teams: number;
+    };
     user_count_by_role: Array<{
       role_id: string;
       count: number;

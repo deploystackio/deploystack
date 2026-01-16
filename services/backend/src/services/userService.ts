@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getDb, getSchema } from '../db';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { RoleService } from './roleService';
 
 export interface User {
@@ -260,7 +260,7 @@ export class UserService {
     const counts = await (db as any)
       .select({
         role_id: authUserTable.role_id,
-        count: 'COUNT(*)',
+        count: sql<number>`COUNT(*)`,
       })
       .from(authUserTable)
       .groupBy(authUserTable.role_id);
@@ -271,6 +271,62 @@ export class UserService {
     });
 
     return result;
+  }
+
+  /**
+   * Get total user count
+   */
+  async getTotalUserCount(): Promise<number> {
+    const { db, schema } = this.getDbAndSchema();
+    const authUserTable = schema.authUser;
+
+    const result = await (db as any)
+      .select({
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(authUserTable);
+
+    return parseInt(result[0].count);
+  }
+
+  /**
+   * Get user count by authentication type
+   */
+  async getUserCountByAuthType(): Promise<Record<string, number>> {
+    const { db, schema } = this.getDbAndSchema();
+    const authUserTable = schema.authUser;
+
+    const counts = await (db as any)
+      .select({
+        auth_type: authUserTable.auth_type,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(authUserTable)
+      .groupBy(authUserTable.auth_type);
+
+    const result: Record<string, number> = {};
+    counts.forEach((row: any) => {
+      result[row.auth_type] = parseInt(row.count);
+    });
+
+    return result;
+  }
+
+  /**
+   * Get global admin count
+   */
+  async getGlobalAdminCount(): Promise<number> {
+    const { db, schema } = this.getDbAndSchema();
+    const authUserTable = schema.authUser;
+
+    const result = await (db as any)
+      .select({
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(authUserTable)
+      .where(eq(authUserTable.role_id, 'global_admin'));
+
+    return parseInt(result[0].count);
   }
 
   /**

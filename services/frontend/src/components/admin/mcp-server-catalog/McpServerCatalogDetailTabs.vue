@@ -15,12 +15,14 @@ const router = useRouter()
 
 // Navigation menu items
 const menuItems = computed(() => [
-  { id: 'general', label: 'General', path: `/admin/mcp-server-catalog/view/${props.serverId}/general` }
+  { id: 'general', label: 'General', path: `/admin/mcp-server-catalog/view/${props.serverId}/general` },
+  { id: 'installations', label: 'Installations', path: `/admin/mcp-server-catalog/view/${props.serverId}/installations` }
 ])
 
 // Map route names to section IDs
 const routeToSectionMap: Record<string, string> = {
   'AdminMcpCatalogViewGeneral': 'general',
+  'AdminMcpCatalogViewInstallations': 'installations',
 }
 
 // Get current section from route name

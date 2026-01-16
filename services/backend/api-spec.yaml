@@ -24829,6 +24829,12 @@ paths:
                             allow_remote_mcp:
                               type: boolean
                               description: Allow remote MCP servers
+                            mcp_servers_count:
+                              type: integer
+                              description: Number of MCP servers installed in this team
+                            members_count:
+                              type: integer
+                              description: Number of members in this team
                             created_at:
                               type: string
                               description: ISO8601 timestamp
@@ -24845,6 +24851,8 @@ paths:
                             - mcp_server_limit
                             - member_limit
                             - allow_remote_mcp
+                            - mcp_servers_count
+                            - members_count
                             - created_at
                             - updated_at
                       pagination:
@@ -25028,6 +25036,12 @@ paths:
                             allow_remote_mcp:
                               type: boolean
                               description: Allow remote MCP servers
+                            mcp_servers_count:
+                              type: integer
+                              description: Number of MCP servers installed in this team
+                            members_count:
+                              type: integer
+                              description: Number of members in this team
                             created_at:
                               type: string
                               description: ISO8601 timestamp
@@ -25044,6 +25058,8 @@ paths:
                             - mcp_server_limit
                             - member_limit
                             - allow_remote_mcp
+                            - mcp_servers_count
+                            - members_count
                             - created_at
                             - updated_at
                       pagination:
@@ -25208,6 +25224,12 @@ paths:
                       allow_remote_mcp:
                         type: boolean
                         description: Allow remote MCP servers
+                      mcp_servers_count:
+                        type: integer
+                        description: Number of MCP servers installed in this team
+                      members_count:
+                        type: integer
+                        description: Number of members in this team
                       created_at:
                         type: string
                         description: ISO8601 timestamp
@@ -25224,6 +25246,8 @@ paths:
                       - mcp_server_limit
                       - member_limit
                       - allow_remote_mcp
+                      - mcp_servers_count
+                      - members_count
                       - created_at
                       - updated_at
                 required:
@@ -25400,6 +25424,12 @@ paths:
                       allow_remote_mcp:
                         type: boolean
                         description: Allow remote MCP servers
+                      mcp_servers_count:
+                        type: integer
+                        description: Number of MCP servers installed in this team
+                      members_count:
+                        type: integer
+                        description: Number of members in this team
                       created_at:
                         type: string
                         description: ISO8601 timestamp
@@ -25416,6 +25446,8 @@ paths:
                       - mcp_server_limit
                       - member_limit
                       - allow_remote_mcp
+                      - mcp_servers_count
+                      - members_count
                       - created_at
                       - updated_at
                 required:
@@ -26175,8 +26207,9 @@ paths:
       summary: Get user statistics (Global Admin)
       tags:
         - Admin - Users
-      description: Allows global administrators to retrieve user statistics including
-        count by role.
+      description: Allows global administrators to retrieve comprehensive user and
+        team statistics including counts by role, authentication type, and team
+        types.
       security:
         - cookieAuth: []
       responses:
@@ -26193,6 +26226,41 @@ paths:
                   data:
                     type: object
                     properties:
+                      user_statistics:
+                        type: object
+                        properties:
+                          total_users:
+                            type: number
+                            description: Total number of users
+                          users_by_auth_type:
+                            type: object
+                            properties:
+                              email:
+                                type: number
+                                description: Users registered via email
+                              github:
+                                type: number
+                                description: Users registered via GitHub
+                            description: User count grouped by authentication type
+                          global_admins:
+                            type: number
+                            description: Number of users with global_admin role
+                        required:
+                          - total_users
+                          - users_by_auth_type
+                          - global_admins
+                      team_statistics:
+                        type: object
+                        properties:
+                          default_teams:
+                            type: number
+                            description: Number of default teams
+                          non_default_teams:
+                            type: number
+                            description: Number of non-default teams
+                        required:
+                          - default_teams
+                          - non_default_teams
                       user_count_by_role:
                         type: array
                         items:
@@ -26209,6 +26277,8 @@ paths:
                             - count
                         description: User count grouped by role
                     required:
+                      - user_statistics
+                      - team_statistics
                       - user_count_by_role
                 required:
                   - success

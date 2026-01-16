@@ -9,6 +9,8 @@ export interface Team {
   mcp_server_limit: number
   member_limit: number
   allow_remote_mcp: boolean
+  mcp_servers_count: number
+  members_count: number
   created_at: string
   updated_at: string
 }

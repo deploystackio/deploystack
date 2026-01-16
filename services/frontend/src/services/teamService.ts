@@ -4,7 +4,8 @@ import type {
   UpdateTeamAdminRequest,
   PaginationParams,
   PaginatedTeamsResponse,
-  TeamSearchParams
+  TeamSearchParams,
+  Team as AdminTeam
 } from '@/views/admin/teams/types'
 
 // Zod schemas for validation
@@ -394,7 +395,7 @@ export class TeamService {
   /**
    * Get team by ID as global admin
    */
-  static async getTeamAsAdmin(teamId: string): Promise<Team> {
+  static async getTeamAsAdmin(teamId: string): Promise<AdminTeam> {
     try {
       const apiUrl = this.getApiUrl()
 
@@ -435,7 +436,7 @@ export class TeamService {
   /**
    * Update team as global admin
    */
-  static async updateTeamAsAdmin(teamId: string, teamData: UpdateTeamAdminRequest): Promise<Team> {
+  static async updateTeamAsAdmin(teamId: string, teamData: UpdateTeamAdminRequest): Promise<AdminTeam> {
     try {
       const apiUrl = this.getApiUrl()
 

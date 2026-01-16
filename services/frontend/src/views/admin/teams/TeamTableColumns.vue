@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { RouterLink } from 'vue-router'
 import {
   Table,
   TableBody,
@@ -42,7 +43,8 @@ const formatDate = (dateString: string) => {
       <TableHeader>
         <TableRow>
           <TableHead>{{ t('adminTeams.table.columns.name') }}</TableHead>
-          <TableHead>{{ t('adminTeams.table.columns.slug') }}</TableHead>
+          <TableHead>{{ t('adminTeams.table.columns.mcpServers') }}</TableHead>
+          <TableHead>{{ t('adminTeams.table.columns.members') }}</TableHead>
           <TableHead>{{ t('adminTeams.table.columns.type') }}</TableHead>
           <TableHead>{{ t('adminTeams.table.columns.createdAt') }}</TableHead>
           <TableHead class="w-[100px]">{{ t('adminTeams.table.columns.actions') }}</TableHead>
@@ -51,7 +53,7 @@ const formatDate = (dateString: string) => {
       <TableBody>
         <!-- Empty State -->
         <TableRow v-if="sortedTeams.length === 0">
-          <TableCell :colspan="5" class="h-24 text-center">
+          <TableCell :colspan="6" class="h-24 text-center">
             {{ t('adminTeams.table.noResults') }}
           </TableCell>
         </TableRow>
@@ -60,14 +62,32 @@ const formatDate = (dateString: string) => {
         <TableRow v-for="team in sortedTeams" :key="team.id">
           <!-- Name -->
           <TableCell class="font-medium">
-            {{ team.name }}
+            <RouterLink
+              :to="`/admin/teams/${team.id}/general`"
+              class="hover:underline text-primary"
+            >
+              {{ team.name }}
+            </RouterLink>
           </TableCell>
 
-          <!-- Slug -->
+          <!-- MCP Servers Count -->
           <TableCell>
-            <div class="font-mono text-sm">
-              {{ team.slug }}
-            </div>
+            <RouterLink
+              :to="`/admin/teams/${team.id}/mcp-server`"
+              class="text-sm hover:underline text-primary"
+            >
+              {{ team.mcp_servers_count }}
+            </RouterLink>
+          </TableCell>
+
+          <!-- Members Count -->
+          <TableCell>
+            <RouterLink
+              :to="`/admin/teams/${team.id}/members`"
+              class="text-sm hover:underline text-primary"
+            >
+              {{ team.members_count }}
+            </RouterLink>
           </TableCell>
 
           <!-- Type (Default/Custom) -->

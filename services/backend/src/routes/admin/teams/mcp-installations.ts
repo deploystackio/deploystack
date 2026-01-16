@@ -104,6 +104,7 @@ export default async function getTeamMcpInstallationsAdminRoute(server: FastifyI
         .orderBy(desc(schema.mcpServerInstallations.created_at));
 
       // 4. Aggregate status by installation
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const installationMap = new Map<string, any>();
       for (const row of installationsWithInstances) {
         if (!installationMap.has(row.installation_id)) {

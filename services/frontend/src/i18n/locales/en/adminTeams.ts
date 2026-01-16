@@ -11,6 +11,8 @@ export default {
       typeCustom: 'Custom',
       columns: {
         name: 'Name',
+        mcpServers: 'MCP Servers',
+        members: 'Members',
         slug: 'Slug',
         description: 'Description',
         type: 'Type',

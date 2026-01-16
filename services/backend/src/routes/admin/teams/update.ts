@@ -1,6 +1,8 @@
 import { type FastifyInstance } from 'fastify';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { TeamService } from '../../../services/teamService';
+import { getDb, getSchema } from '../../../db';
+import { eq, sql } from 'drizzle-orm';
 import {
   UPDATE_TEAM_ADMIN_SCHEMA,
   SUCCESS_RESPONSE_SCHEMA,
@@ -138,6 +140,31 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
         return reply.status(500).type('application/json').send(jsonString);
       }
 
+      // Get database and schema
+      const db = getDb();
+      const schema = getSchema();
+
+      // Get counts for the updated team
+      type TeamCounts = {
+        members_count: number;
+        mcp_servers_count: number;
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const teamWithCounts: TeamCounts[] = await (db as any)
+        .select({
+          members_count: sql<number>`COUNT(DISTINCT ${schema.teamMemberships.id})::int`,
+          mcp_servers_count: sql<number>`COUNT(DISTINCT ${schema.mcpServerInstallations.id})::int`
+        })
+        .from(schema.teams)
+        .leftJoin(schema.teamMemberships, eq(schema.teams.id, schema.teamMemberships.team_id))
+        .leftJoin(schema.mcpServerInstallations, eq(schema.teams.id, schema.mcpServerInstallations.team_id))
+        .where(eq(schema.teams.id, id))
+        .groupBy(schema.teams.id)
+        .limit(1);
+
+      const counts = teamWithCounts[0] || { members_count: 0, mcp_servers_count: 0 };
+
       // Build success response
       const successResponse: SuccessResponse = {
         success: true,
@@ -153,6 +180,8 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
           mcp_server_limit: updatedTeam.mcp_server_limit,
           member_limit: updatedTeam.member_limit,
           allow_remote_mcp: updatedTeam.allow_remote_mcp,
+          mcp_servers_count: counts.mcp_servers_count,
+          members_count: counts.members_count,
           created_at: updatedTeam.created_at.toISOString(),
           updated_at: updatedTeam.updated_at.toISOString()
         }

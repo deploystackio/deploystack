@@ -366,6 +366,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/admin/mcp-server-catalog/view/[id]/general.vue'),
       },
       {
+        path: 'mcp-server-catalog/view/:id/installations',
+        name: 'AdminMcpCatalogViewInstallations',
+        component: () => import('../views/admin/mcp-server-catalog/view/[id]/installations.vue'),
+      },
+      {
         path: 'mcp-server-catalog/edit/:id',
         name: 'AdminMcpServerCatalogEdit',
         component: () => import('../views/admin/mcp-server-catalog/edit/[id].vue'),

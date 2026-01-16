@@ -55,6 +55,42 @@ export interface PaginatedResponse<T> {
   pagination: PaginationMeta
 }
 
+export interface InstallationDetail {
+  installation_id: string
+  installation_name: string
+  created_at: string
+  last_used_at: string | null
+}
+
+export interface StatusSummary {
+  total_instances: number
+  online: number
+  offline: number
+  error: number
+  provisioning: number
+}
+
+export interface TeamWithInstallations {
+  team_id: string
+  team_name: string
+  team_slug: string
+  installations: InstallationDetail[]
+  installation_count: number
+  status_summary: StatusSummary
+}
+
+export interface ServerInfo {
+  server_id: string
+  server_name: string
+  server_slug: string
+}
+
+export interface TeamsByServerResponse {
+  server_info: ServerInfo
+  teams: TeamWithInstallations[]
+  pagination: PaginationMeta
+}
+
 export class McpCatalogService {
   private static baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
 
@@ -631,6 +667,80 @@ export class McpCatalogService {
 
     const data = await response.json()
     return data.data?.languages || []
+  }
+
+  /**
+   * Get teams that have installed a specific MCP server (admin only)
+   */
+  static async getTeamsByServer(
+    serverId: string,
+    pagination?: PaginationParams
+  ): Promise<TeamsByServerResponse> {
+    const url = new URL(`${this.baseUrl}/api/admin/mcp/servers/${serverId}/teams`)
+
+    if (pagination) {
+      if (pagination.limit !== undefined) {
+        url.searchParams.append('limit', String(pagination.limit))
+      }
+      if (pagination.offset !== undefined) {
+        url.searchParams.append('offset', String(pagination.offset))
+      }
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to fetch teams: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
+  }
+
+  /**
+   * Search teams by MCP server with name filter (admin only)
+   */
+  static async searchTeamsByServer(
+    serverId: string,
+    searchParams: {
+      name: string;
+      limit?: number;
+      offset?: number;
+    }
+  ): Promise<TeamsByServerResponse> {
+    const url = new URL(`${this.baseUrl}/api/admin/mcp/servers/${serverId}/teams/search`)
+
+    url.searchParams.append('name', searchParams.name)
+
+    if (searchParams.limit !== undefined) {
+      url.searchParams.append('limit', String(searchParams.limit))
+    }
+    if (searchParams.offset !== undefined) {
+      url.searchParams.append('offset', String(searchParams.offset))
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to search teams: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
   }
 }
 

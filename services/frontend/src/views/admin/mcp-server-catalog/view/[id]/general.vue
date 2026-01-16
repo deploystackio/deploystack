@@ -1,56 +1,48 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Button } from '@/components/ui/button'
-import { ButtonGroup } from '@/components/ui/button-group'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DsCard } from '@/components/ui/ds-card'
 import CategoryDisplay from '@/components/mcp-server/CategoryDisplay.vue'
 import { Github, GitBranch, Globe, ExternalLink, Package, Calendar, Tag, Terminal, Users, User, Lock, Unlock, Link } from 'lucide-vue-next'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import { McpServerCatalogDetailPageHeading, McpServerCatalogDetailTabs } from '@/components/admin/mcp-server-catalog'
+import { McpServerCatalogDetailHeader, McpServerCatalogDetailTabs } from '@/components/admin/mcp-server-catalog'
+import { useMcpCatalogServerCache } from '@/composables/admin/mcp-catalog'
 import { McpCatalogService } from '@/services/mcpCatalogService'
-import type { McpServer } from '../../types'
-import McpServerDeleteDialog from '@/components/mcp-server/McpServerDeleteDialog.vue'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 
-const server = ref<McpServer | null>(null)
-const isLoading = ref(true)
-const isDeleting = ref(false)
-const error = ref<string | null>(null)
-const showDeleteDialog = ref(false)
-
-const serverId = route.params.id as string
-
-// Fetch server details from API
-async function fetchServer(id: string): Promise<McpServer> {
-  return await McpCatalogService.getServerById(id)
-}
+const {
+  server,
+  isLoading,
+  error,
+  serverId,
+  loadAndSetServer,
+  initializeCache,
+  setupWatchers,
+  cleanupWatchers
+} = useMcpCatalogServerCache()
 
 // Load server on component mount
 onMounted(async () => {
-  try {
-    isLoading.value = true
-    server.value = await fetchServer(serverId)
-    error.value = null
+  initializeCache()
+  await loadAndSetServer()
+  setupWatchers()
 
-    // Check for success query parameter
-    if (route.query.updated === 'true') {
-      toast.success(t('mcpCatalog.messages.updateSuccess'))
-      router.replace({ query: {} })
-    }
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An unknown error occurred'
-    server.value = null
-  } finally {
-    isLoading.value = false
+  // Check for success query parameter
+  if (route.query.updated === 'true') {
+    toast.success(t('mcpCatalog.messages.updateSuccess'))
+    router.replace({ query: {} })
   }
+})
+
+onUnmounted(() => {
+  cleanupWatchers()
 })
 
 // Computed properties for display
@@ -272,36 +264,6 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString()
 }
 
-// Delete server
-const deleteServer = async () => {
-  try {
-    isDeleting.value = true
-    const serverName = server.value?.name || 'Unknown Server'
-    await McpCatalogService.deleteGlobalServer(serverId)
-
-    router.push({
-      path: '/admin/mcp-server-catalog',
-      query: { deletionQueued: serverName }
-    })
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to delete server'
-    console.error('Error deleting server:', err)
-  } finally {
-    isDeleting.value = false
-    showDeleteDialog.value = false
-  }
-}
-
-// Navigate to edit page
-const handleEditServer = () => {
-  router.push(`/admin/mcp-server-catalog/edit/${serverId}`)
-}
-
-// Navigate to install page
-const handleInstallServer = () => {
-  router.push(`/mcp-server/install/${serverId}`)
-}
-
 // Get repository icon based on platform
 const getRepositoryIcon = (platform: string | undefined) => {
   switch (platform) {
@@ -332,41 +294,25 @@ const getRepositoryLabel = (platform: string | undefined) => {
 
 <template>
   <NavbarLayout>
-    <McpServerCatalogDetailPageHeading :server="server" :is-loading="isLoading">
-      <template #actions>
-        <div v-if="server" class="flex items-center gap-2">
-          <ButtonGroup>
-            <Button variant="outline" @click="handleInstallServer">
-              Install
-            </Button>
-            <Button variant="outline" @click="handleEditServer">
-              Edit
-            </Button>
-          </ButtonGroup>
-          <span class="text-neutral-300">|</span>
-          <Button variant="outline" :disabled="isDeleting" @click="showDeleteDialog = true" class="text-red-600 hover:text-red-600">
-            Delete
-          </Button>
-        </div>
-      </template>
-    </McpServerCatalogDetailPageHeading>
+    <McpServerCatalogDetailHeader :server="server" :is-loading="isLoading" :server-id="serverId" />
 
     <div class="space-y-6 mt-6">
-      <!-- Loading State -->
-      <div v-if="isLoading" class="space-y-4">
-        <Skeleton class="h-32 w-full rounded-lg" />
-        <Skeleton class="h-32 w-full rounded-lg" />
-        <Skeleton class="h-32 w-full rounded-lg" />
-      </div>
+      <!-- Tabs - Always visible when server is loaded -->
+      <McpServerCatalogDetailTabs v-if="server" :server="server" :server-id="serverId">
+        <!-- Error State -->
+        <div v-if="error" class="text-red-500">
+          {{ t('mcpCatalog.edit.errorLoading', { error }) }}
+        </div>
 
-      <!-- Error State -->
-      <div v-else-if="error" class="text-red-500">
-        {{ t('mcpCatalog.edit.errorLoading', { error }) }}
-      </div>
+        <!-- Loading State for Content -->
+        <div v-else-if="isLoading" class="space-y-4">
+          <Skeleton class="h-32 w-full rounded-lg" />
+          <Skeleton class="h-32 w-full rounded-lg" />
+          <Skeleton class="h-32 w-full rounded-lg" />
+        </div>
 
-      <!-- Tabs with Content (sidebar + content area) -->
-      <McpServerCatalogDetailTabs v-else-if="server" :server="server" :server-id="serverId">
-        <div class="space-y-6">
+        <!-- Content -->
+        <div v-else class="space-y-6">
           <!-- Server Information Card -->
           <DsCard title="Server Information">
             <p class="text-sm text-muted-foreground mb-6">
@@ -1125,14 +1071,6 @@ const getRepositoryLabel = (platform: string | undefined) => {
           </DsCard>
         </div>
       </McpServerCatalogDetailTabs>
-
-      <!-- Delete Confirmation Dialog -->
-      <McpServerDeleteDialog
-        v-model:open="showDeleteDialog"
-        :server-name="server?.name || ''"
-        :is-deleting="isDeleting"
-        @confirm="deleteServer"
-      />
     </div>
   </NavbarLayout>
 </template>

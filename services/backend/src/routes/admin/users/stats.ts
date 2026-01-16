@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { UserService } from '../../../services/userService';
+import { TeamService } from '../../../services/teamService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import {
   ERROR_RESPONSE_SCHEMA,
@@ -17,7 +18,7 @@ export default async function getUserStatsAdminRoute(server: FastifyInstance) {
     schema: {
       tags: ['Admin - Users'],
       summary: 'Get user statistics (Global Admin)',
-      description: 'Allows global administrators to retrieve user statistics including count by role.',
+      description: 'Allows global administrators to retrieve comprehensive user and team statistics including counts by role, authentication type, and team types.',
       security: [{ cookieAuth: [] }],
 
       response: {
@@ -41,9 +42,24 @@ export default async function getUserStatsAdminRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     try {
-      const userCountByRole = await userService.getUserCountByRole();
+      // Gather all statistics in parallel
+      const [
+        userCountByRole,
+        totalUsers,
+        usersByAuthType,
+        globalAdminCount,
+        defaultTeamCount,
+        nonDefaultTeamCount
+      ] = await Promise.all([
+        userService.getUserCountByRole(),
+        userService.getTotalUserCount(),
+        userService.getUserCountByAuthType(),
+        userService.getGlobalAdminCount(),
+        TeamService.getDefaultTeamCount(),
+        TeamService.getNonDefaultTeamCount()
+      ]);
 
-      // Convert Record<string, number> to array format
+      // Convert Record<string, number> to array format for user_count_by_role
       const roleCountArray = Object.entries(userCountByRole).map(([role_id, count]) => ({
         role_id,
         count
@@ -53,6 +69,18 @@ export default async function getUserStatsAdminRoute(server: FastifyInstance) {
       const statsResponse: UserStatsResponse = {
         success: true,
         data: {
+          user_statistics: {
+            total_users: totalUsers,
+            users_by_auth_type: {
+              email: usersByAuthType['email_signup'] || 0,
+              github: usersByAuthType['github'] || 0
+            },
+            global_admins: globalAdminCount
+          },
+          team_statistics: {
+            default_teams: defaultTeamCount,
+            non_default_teams: nonDefaultTeamCount
+          },
           user_count_by_role: roleCountArray
         }
       };
