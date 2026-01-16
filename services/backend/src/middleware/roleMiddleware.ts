@@ -447,15 +447,15 @@ export function requireTeamPermission(
  * Utility function to check team permissions without middleware (for use in route handlers)
  */
 export async function checkUserTeamPermission(
-  userId: string, 
-  teamId: string, 
+  userId: string,
+  teamId: string,
   permission: string
 ): Promise<boolean> {
   try {
     // Check if user is global admin
     const roleService = new RoleService();
     const userRole = await roleService.getUserRole(userId);
-    
+
     if (userRole?.id === 'global_admin') {
       const globalPermissions = ROLE_DEFINITIONS.global_admin;
       return (globalPermissions as unknown as any[]).includes(permission);
@@ -469,7 +469,7 @@ export async function checkUserTeamPermission(
 
     const teamRole = teamMembership.role;
     const rolePermissions = ROLE_DEFINITIONS[teamRole as keyof typeof ROLE_DEFINITIONS];
-    
+
     return rolePermissions ? (rolePermissions as unknown as any[]).includes(permission) : false;
   } catch {
     return false;

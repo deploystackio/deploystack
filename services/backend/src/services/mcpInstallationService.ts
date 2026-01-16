@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { getSchema } from '../db/index';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
@@ -115,7 +115,7 @@ export class McpInstallationService {
     return installations;
   }
 
-  async getTeamInstallations(teamId: string, userId: string): Promise<McpInstallation[]> {
+  async getTeamInstallations(teamId: string, userId: string, includeStats: boolean = false): Promise<McpInstallation[]> {
 
     // Optimized query: Select minimal columns + user's instance status
     const installations = await this.db
@@ -155,8 +155,8 @@ export class McpInstallationService {
       .where(eq(this.mcpServerInstallations.team_id, teamId))
       .orderBy(desc(this.mcpServerInstallations.created_at));
 
-    // Return simple mapped array without heavy processing (no env masking, no args decryption)
-    return installations.map(row => ({
+    // Map to result structure
+    const results = installations.map(row => ({
       id: row.id,
       installation_name: row.installation_name,
       installation_type: row.installation_type as 'global' | 'team',
@@ -176,6 +176,73 @@ export class McpInstallationService {
         runtime: row.server_runtime,
       } : undefined
     } as any)); // Type assertion needed due to minimal response structure
+
+    // If stats requested, aggregate instance status counts
+    if (includeStats && results.length > 0) {
+      const installationIds = results.map(r => r.id);
+
+      // Query all instances for these installations
+      const allInstances = await this.db
+        .select({
+          installation_id: this.mcpServerInstances.installation_id,
+          status: this.mcpServerInstances.status,
+        })
+        .from(this.mcpServerInstances)
+        .where(inArray(this.mcpServerInstances.installation_id, installationIds));
+
+      // Aggregate by installation_id
+      const statsMap = new Map<string, {
+        total_instances: number;
+        online: number;
+        offline: number;
+        error: number;
+        provisioning: number;
+      }>();
+
+      for (const instance of allInstances) {
+        if (!statsMap.has(instance.installation_id)) {
+          statsMap.set(instance.installation_id, {
+            total_instances: 0,
+            online: 0,
+            offline: 0,
+            error: 0,
+            provisioning: 0,
+          });
+        }
+
+        const stats = statsMap.get(instance.installation_id)!;
+        stats.total_instances++;
+
+        // Categorize by status
+        if (instance.status === 'online') {
+          stats.online++;
+        } else if (instance.status === 'offline') {
+          stats.offline++;
+        } else if (['error', 'permanently_failed', 'requires_reauth'].includes(instance.status || '')) {
+          stats.error++;
+        } else if ([
+          'provisioning',
+          'command_received',
+          'connecting',
+          'discovering_tools',
+          'syncing_tools',
+          'restarting',
+          'awaiting_user_config'
+        ].includes(instance.status || '')) {
+          stats.provisioning++;
+        }
+      }
+
+      // Merge stats into results
+      for (const result of results) {
+        const stats = statsMap.get(result.id);
+        if (stats) {
+          (result as any).status_summary = stats;
+        }
+      }
+    }
+
+    return results;
   }
 
   async getInstallationById(installationId: string, teamId: string): Promise<McpInstallation | null> {

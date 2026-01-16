@@ -95,6 +95,21 @@ export const FLOW_ID_PARAM_SCHEMA = {
 } as const;
 
 // =============================================================================
+// QUERY PARAMETER SCHEMAS
+// =============================================================================
+
+export const INSTALLATION_LIST_QUERY_SCHEMA = {
+  type: 'object',
+  properties: {
+    include_stats: {
+      type: 'boolean',
+      description: 'Include instance statistics aggregated by status (requires mcp.installations.stats.view permission)'
+    }
+  },
+  additionalProperties: false
+} as const;
+
+// =============================================================================
 // REQUEST BODY SCHEMAS
 // =============================================================================
 
@@ -451,30 +466,57 @@ export const INSTANCE_SCHEMA = {
   required: ['id', 'user_id', 'user_slug', 'status', 'status_updated_at']
 } as const;
 
+export const STATUS_SUMMARY_SCHEMA = {
+  type: 'object',
+  properties: {
+    total_instances: {
+      type: 'number',
+      description: 'Total number of instances across all team members'
+    },
+    online: {
+      type: 'number',
+      description: 'Number of instances with status "online"'
+    },
+    offline: {
+      type: 'number',
+      description: 'Number of instances with status "offline"'
+    },
+    error: {
+      type: 'number',
+      description: 'Number of instances with error statuses (error, permanently_failed, requires_reauth)'
+    },
+    provisioning: {
+      type: 'number',
+      description: 'Number of instances in provisioning states (provisioning, connecting, discovering_tools, syncing_tools, restarting, command_received, awaiting_user_config)'
+    }
+  },
+  required: ['total_instances', 'online', 'offline', 'error', 'provisioning']
+} as const;
+
 export const INSTALLATION_ENTITY_SCHEMA = {
   type: 'object',
   properties: {
-    id: { 
+    id: {
       type: 'string',
       description: 'Unique installation ID'
     },
-    team_id: { 
+    team_id: {
       type: 'string',
       description: 'Team ID that owns this installation'
     },
-    server_id: { 
+    server_id: {
       type: 'string',
       description: 'MCP server ID that was installed'
     },
-    created_by: { 
+    created_by: {
       type: 'string',
       description: 'User ID who created this installation'
     },
-    installation_name: { 
+    installation_name: {
       type: 'string',
       description: 'Custom name for this installation'
     },
-    installation_type: { 
+    installation_type: {
       type: 'string',
       enum: ['global', 'team'],
       description: 'Installation type'
@@ -502,12 +544,12 @@ export const INSTALLATION_ENTITY_SCHEMA = {
       format: 'date-time',
       description: 'Installation creation timestamp'
     },
-    updated_at: { 
+    updated_at: {
       type: 'string',
       format: 'date-time',
       description: 'Last update timestamp'
     },
-    last_used_at: { 
+    last_used_at: {
       type: 'string',
       format: 'date-time',
       nullable: true,
@@ -521,6 +563,10 @@ export const INSTALLATION_ENTITY_SCHEMA = {
       type: 'array',
       items: INSTANCE_SCHEMA,
       description: 'Per-user instances (optional)'
+    },
+    status_summary: {
+      ...STATUS_SUMMARY_SCHEMA,
+      description: 'Aggregated instance statistics by status (optional, requires mcp.installations.stats.view permission)'
     }
   },
   required: ['id', 'team_id', 'server_id', 'created_by', 'installation_name', 'installation_type', 'created_at', 'updated_at', 'last_used_at']
@@ -773,6 +819,14 @@ export interface InstanceResponse {
   updated_at: string;
 }
 
+export interface StatusSummary {
+  total_instances: number;
+  online: number;
+  offline: number;
+  error: number;
+  provisioning: number;
+}
+
 export interface InstallationData {
   id: string;
   team_id: string;
@@ -825,6 +879,7 @@ export interface RawInstallationListItem {
     category_id: string | null;
     runtime: string;
   };
+  status_summary?: StatusSummary;
 }
 
 // Minimal response interface for list views (optimized)
@@ -845,6 +900,7 @@ export interface InstallationListItemResponse {
     category_id: string | null;
     runtime: string;
   };
+  status_summary?: StatusSummary;
 }
 
 export interface InstallationSuccessResponse {
@@ -966,7 +1022,8 @@ export function formatInstallationListResponse(installations: RawInstallationLis
     status_message: installation.status_message,
     status_updated_at: installation.status_updated_at?.toISOString(),
     last_health_check_at: installation.last_health_check_at?.toISOString() || null,
-    server: installation.server
+    server: installation.server,
+    status_summary: installation.status_summary
   }));
 }
 
