@@ -256,8 +256,27 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/teams/manage/:id',
-    name: 'TeamManage',
-    component: () => import('../views/teams/manage/[id].vue'),
+    redirect: (to) => ({
+      path: `/teams/manage/${to.params.id}/general`,
+      query: to.query
+    }),
+  },
+  {
+    path: '/teams/manage/:id/general',
+    name: 'TeamManageGeneral',
+    component: () => import('../views/teams/manage/[id]/general.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/teams/manage/:id/members',
+    name: 'TeamManageMembers',
+    component: () => import('../views/teams/manage/[id]/members.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/teams/manage/:id/usage',
+    name: 'TeamManageUsage',
+    component: () => import('../views/teams/manage/[id]/usage.vue'),
     meta: { requiresSetup: true },
   },
   {
