@@ -274,6 +274,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/teams/manage/:id/mcp-servers',
+    name: 'TeamManageMcpServers',
+    component: () => import('../views/teams/manage/[id]/mcp-servers.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/teams/manage/:id/usage',
     name: 'TeamManageUsage',
     component: () => import('../views/teams/manage/[id]/usage.vue'),

@@ -17,6 +17,7 @@ const router = useRouter()
 const menuItems = computed(() => [
   { id: 'general', label: 'General', path: `/teams/manage/${props.teamId}/general` },
   { id: 'members', label: 'Members', path: `/teams/manage/${props.teamId}/members` },
+  { id: 'mcp-servers', label: 'MCP Server', path: `/teams/manage/${props.teamId}/mcp-servers` },
   { id: 'usage', label: 'Usage', path: `/teams/manage/${props.teamId}/usage` }
 ])
 
@@ -24,6 +25,7 @@ const menuItems = computed(() => [
 const routeToSectionMap: Record<string, string> = {
   'TeamManageGeneral': 'general',
   'TeamManageMembers': 'members',
+  'TeamManageMcpServers': 'mcp-servers',
   'TeamManageUsage': 'usage',
 }
 

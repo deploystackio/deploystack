@@ -47,6 +47,25 @@ export interface TeamUsageLimits {
   non_http_mcp_limit: number;
 }
 
+export interface TeamMcpInstallation {
+  id: string
+  installation_name: string
+  installation_type: 'global' | 'team'
+  team_id: string
+  created_at: string
+  last_used_at: string | null
+  status: 'online' | 'offline' | 'error' | 'provisioning'
+  status_message: string | null
+  status_updated_at: string
+  last_health_check_at: string | null
+  server: {
+    id: string
+    icon_url: string | null
+    category_id: string
+    runtime: string
+  }
+}
+
 export interface TeamUsageData {
   is_default_team: boolean;
   total_installed_mcp_servers: number;
@@ -610,6 +629,47 @@ export class TeamService {
       }
     } catch (error) {
       console.error('Error searching teams as admin:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get MCP installations for a team
+   */
+  static async getTeamMcpInstallations(teamId: string): Promise<TeamMcpInstallation[]> {
+    try {
+      const apiUrl = this.getApiUrl()
+
+      const response = await fetch(`${apiUrl}/api/teams/${teamId}/mcp/installations`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized - please log in')
+        }
+        if (response.status === 403) {
+          throw new Error('You do not have permission to view this team\'s MCP servers')
+        }
+        if (response.status === 404) {
+          throw new Error('Team not found')
+        }
+        throw new Error(`Failed to fetch MCP servers: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success && Array.isArray(data.data)) {
+        return data.data
+      } else {
+        throw new Error('Invalid response format')
+      }
+    } catch (error) {
+      console.error('Error fetching team MCP installations:', error)
       throw error
     }
   }
