@@ -71,6 +71,7 @@ onUnmounted(() => {
         v-if="installation"
         :installation="installation"
         :installation-id="installationId"
+        :user-team-role="userTeamRole"
       />
 
       <div v-if="error" class="text-red-500">

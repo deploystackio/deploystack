@@ -8,6 +8,7 @@ import type { McpInstallation } from '@/types/mcp-installations'
 interface Props {
   installation: McpInstallation
   installationId: string
+  userTeamRole?: 'team_admin' | 'team_user' | null
 }
 
 const props = defineProps<Props>()
@@ -20,6 +21,7 @@ const routeToTabMap: Record<string, string> = {
   'McpServerInstallationGeneral': 'general',
   'McpServerInstallationTools': 'tools',
   'McpServerInstallationRequests': 'requests',
+  'McpServerInstallationLogs': 'logs',
   'McpServerInstallationConfig': 'config',
   'McpServerInstallationDangerZone': 'danger-zone',
 }
@@ -29,6 +31,7 @@ const tabToRouteMap: Record<string, string> = {
   'general': 'McpServerInstallationGeneral',
   'tools': 'McpServerInstallationTools',
   'requests': 'McpServerInstallationRequests',
+  'logs': 'McpServerInstallationLogs',
   'config': 'McpServerInstallationConfig',
   'danger-zone': 'McpServerInstallationDangerZone',
 }
@@ -53,6 +56,7 @@ const activeTab = computed({
     <DsTabsItem value="general" label="General" />
     <DsTabsItem value="tools" :label="t('mcpInstallations.details.tools.title')" />
     <DsTabsItem value="requests" label="Requests" />
+    <DsTabsItem v-if="userTeamRole === 'team_admin'" value="logs" label="Logs" />
     <DsTabsItem value="config" label="Configuration" />
     <DsTabsItem value="danger-zone" label="Danger Zone" />
   </DsTabs>

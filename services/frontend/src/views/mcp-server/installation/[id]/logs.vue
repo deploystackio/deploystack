@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Skeleton } from '@/components/ui/skeleton'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import { DangerZone, InstallationTabs, InstallationPageHeading } from '@/components/mcp-server/installation'
+import { LogsTab, InstallationTabs, InstallationPageHeading } from '@/components/mcp-server/installation'
 import { useMcpInstallationCache, useStatusStream } from '@/composables/mcp-server/installation'
 import { getEnv } from '@/utils/env'
 
@@ -22,13 +22,27 @@ const {
   cleanupWatchers
 } = useMcpInstallationCache()
 
-const canEditInstallation = computed(() => {
-  return userTeamRole.value === 'team_admin'
-})
-
 const { statusData, connect, disconnect } = useStatusStream()
 
 let currentStreamUrl: string | null = null
+const refreshKey = ref(0)
+
+const handleRefresh = async () => {
+  // Reload installation data
+  await loadAndSetInstallation()
+
+  // Reconnect status stream if we have installation data
+  if (installation.value?.team_id && installation.value?.id) {
+    const baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
+    const url = `${baseUrl}/api/teams/${installation.value.team_id}/mcp/installations/${installation.value.id}/status/stream`
+    disconnect()
+    currentStreamUrl = url
+    connect(url)
+  }
+
+  // Force component refresh by incrementing key
+  refreshKey.value++
+}
 
 onMounted(async () => {
   initializeCache()
@@ -56,7 +70,7 @@ onUnmounted(() => {
 
 <template>
   <NavbarLayout>
-    <InstallationPageHeading :installation="installation" :status-data="statusData" />
+    <InstallationPageHeading :installation="installation" :status-data="statusData" @refresh="handleRefresh" />
 
     <div class="space-y-6 mt-6">
       <!-- Tabs - Always visible when installation is loaded -->
@@ -79,13 +93,13 @@ onUnmounted(() => {
         <Skeleton class="h-32 w-full rounded-lg" />
       </div>
 
-      <!-- Danger Zone Content -->
-      <DangerZone
+      <!-- Logs Content -->
+      <LogsTab
         v-else-if="installation && currentTeam"
+        :key="refreshKey"
         :installation="installation"
         :team-id="currentTeam.id"
-        :can-edit="canEditInstallation"
-        :user-role="userTeamRole"
+        :user-team-role="userTeamRole"
       />
     </div>
   </NavbarLayout>

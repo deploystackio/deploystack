@@ -82,6 +82,7 @@ onUnmounted(() => {
         v-if="installation"
         :installation="installation"
         :installation-id="installationId"
+        :user-team-role="userTeamRole"
       />
 
       <!-- Error State -->

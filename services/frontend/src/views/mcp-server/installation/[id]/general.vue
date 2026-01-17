@@ -11,6 +11,7 @@ const { t } = useI18n()
 
 const {
   installation,
+  userTeamRole,
   isLoading,
   error,
   installationId,
@@ -78,6 +79,7 @@ onUnmounted(() => {
         v-if="installation"
         :installation="installation"
         :installation-id="installationId"
+        :user-team-role="userTeamRole"
       />
 
       <!-- Error State -->
