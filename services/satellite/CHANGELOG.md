@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.18.0 (2026-01-17)
+
+* feat(all): add MCP server status summary to admin team installations view ([7efa7c3a519bb28f71c558b42a35e19540cd7392](https://github.com/deploystackio/deploystack/commit/7efa7c3a519bb28f71c558b42a35e19540cd7392))
+* feat(all): enhance admin features with MCP catalog installations and team statistics ([d1e04208b728e580010ebdc374b8e67f08ba61bf](https://github.com/deploystackio/deploystack/commit/d1e04208b728e580010ebdc374b8e67f08ba61bf))
+* feat(all): implement OAuth2 authorization flow and user feedback system ([dedacf74aa1da000bf4b13933dae17fc3a1846a9](https://github.com/deploystackio/deploystack/commit/dedacf74aa1da000bf4b13933dae17fc3a1846a9))
+* feat(satellite): add env var sanitization to prevent code injection attacks ([1b4458d624afe378e362d059c77e557c20a3d96f](https://github.com/deploystackio/deploystack/commit/1b4458d624afe378e362d059c77e557c20a3d96f))
+* feat(satellite): add nsjail log parsing and level inference ([fa840b5c41ff50b75f13c164b2fc96443c585171](https://github.com/deploystackio/deploystack/commit/fa840b5c41ff50b75f13c164b2fc96443c585171))
+* feat(satellite): add SSE ping service for connection keep-alive ([71a68d2ab3d9137362f729152b1bfe0e2b69d77a](https://github.com/deploystackio/deploystack/commit/71a68d2ab3d9137362f729152b1bfe0e2b69d77a))
+* feat(satellite): implement immediate recovery for connection errors ([8da0e8382cb971ec241d835635141c5be176f650](https://github.com/deploystackio/deploystack/commit/8da0e8382cb971ec241d835635141c5be176f650))
+* chore(all): bump @types/nodemailer from 7.0.4 to 7.0.5 ([2027efc3fd22d0815dd4556c6d65c831f424fdf2](https://github.com/deploystackio/deploystack/commit/2027efc3fd22d0815dd4556c6d65c831f424fdf2))
+* chore(all): bump pino from 10.1.0 to 10.1.1 ([ca5f240b7343a62adaeb72ba93f13b9f00fdfac4](https://github.com/deploystackio/deploystack/commit/ca5f240b7343a62adaeb72ba93f13b9f00fdfac4))
+* chore(all): bump supertest from 7.1.4 to 7.2.2 ([22aa6b34c4e36c638aadbb78bcc0c1ec0d6d99e8](https://github.com/deploystackio/deploystack/commit/22aa6b34c4e36c638aadbb78bcc0c1ec0d6d99e8))
+* chore(all): bump typescript-eslint from 8.52.0 to 8.53.0 ([a2cd44b3be292586391c3b3b7bdd3e3573a792a0](https://github.com/deploystackio/deploystack/commit/a2cd44b3be292586391c3b3b7bdd3e3573a792a0))
+* chore(all): bump vite from 7.3.0 to 7.3.1 ([3118f3472a6b1f5ae2d2f5f5c06c8049355175e8](https://github.com/deploystackio/deploystack/commit/3118f3472a6b1f5ae2d2f5f5c06c8049355175e8))
+* chore(all): bump vue-tsc from 3.2.1 to 3.2.2 ([ab7cd2981b5e014f23ab60ffed5fec2936bfaa31](https://github.com/deploystackio/deploystack/commit/ab7cd2981b5e014f23ab60ffed5fec2936bfaa31))
+* chore(all): bump webpack from 5.103.0 to 5.104.1 ([dc39724170dad1d801c9867506251560a34f004f](https://github.com/deploystackio/deploystack/commit/dc39724170dad1d801c9867506251560a34f004f))
+* chore(all): remove empty code change entries ([524546cd960de5c9b9d620f2ef993a3e2159dcab](https://github.com/deploystackio/deploystack/commit/524546cd960de5c9b9d620f2ef993a3e2159dcab))
+* docs(all): expand audience sections for platform teams and developers ([b8edbf147f3e2b78001f95167948403228a1bd03](https://github.com/deploystackio/deploystack/commit/b8edbf147f3e2b78001f95167948403228a1bd03))
+
 ## 0.17.0 (2026-01-01)
 
 ## 0.17.0 (2026-01-01)
