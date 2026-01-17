@@ -1,6 +1,7 @@
 import { registerSettingsComponent, getAllRegisteredComponents } from '@/composables/useSettingsComponentRegistry'
 import GitHubAppSettings from './GitHubAppSettings.vue'
 import SmtpSettings from './SmtpSettings.vue'
+import TeamSettings from './TeamSettings.vue'
 
 /**
  * Register all custom settings components
@@ -19,6 +20,14 @@ export function registerSettingsComponents() {
   registerSettingsComponent('smtp', {
     component: SmtpSettings,
     description: 'SMTP configuration with email testing',
+    author: 'DeployStack Team',
+    version: '1.0.0'
+  })
+
+  // Register Team Settings Component
+  registerSettingsComponent('team', {
+    component: TeamSettings,
+    description: 'Team management and limit configuration',
     author: 'DeployStack Team',
     version: '1.0.0'
   })
