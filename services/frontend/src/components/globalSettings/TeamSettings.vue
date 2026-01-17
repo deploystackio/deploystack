@@ -26,6 +26,7 @@ const {
 const isSavingCard1 = ref(false)
 const isSavingCard2 = ref(false)
 const isSavingCard3 = ref(false)
+const isSavingCard4 = ref(false)
 
 // Get setting by key
 function getSetting(key: string) {
@@ -34,7 +35,7 @@ function getSetting(key: string) {
 
 // Save specific settings by keys
 async function saveSpecificSettings(keys: string[], cardNumber: number): Promise<boolean> {
-  const loadingRef = cardNumber === 1 ? isSavingCard1 : cardNumber === 2 ? isSavingCard2 : isSavingCard3
+  const loadingRef = cardNumber === 1 ? isSavingCard1 : cardNumber === 2 ? isSavingCard2 : cardNumber === 3 ? isSavingCard3 : isSavingCard4
   loadingRef.value = true
 
   try {
@@ -94,9 +95,17 @@ async function handleSaveCard2() {
   }
 }
 
-// Handle form submission for Card 3
+// Handle form submission for Card 3 (GitHub MCP Integration)
 async function handleSaveCard3() {
-  const success = await saveSpecificSettings(['team.allow_remote_mcp'], 3)
+  const success = await saveSpecificSettings(['team.allow_github_mcp', 'team.allow_private_github_repos', 'team.github_mcp_limit'], 3)
+  if (success) {
+    emit('settings-updated', props.settings)
+  }
+}
+
+// Handle form submission for Card 4 (Remote MCP Options)
+async function handleSaveCard4() {
+  const success = await saveSpecificSettings(['team.allow_remote_mcp'], 4)
   if (success) {
     emit('settings-updated', props.settings)
   }
@@ -227,7 +236,87 @@ async function handleSaveCard3() {
       </template>
     </DsCard>
 
-    <!-- Card 3: Remote MCP Options -->
+    <!-- Card 3: GitHub MCP Integration -->
+    <DsCard title="GitHub MCP Integration">
+      <p class="text-sm text-muted-foreground mb-6">
+        Configure GitHub repository access for MCP server installations.
+      </p>
+
+      <div class="space-y-6">
+        <!-- Allow GitHub MCP Servers Checkbox -->
+        <div class="flex items-start gap-3">
+          <Checkbox
+            id="allow-github-mcp"
+            :checked="Boolean(formValues['team.allow_github_mcp'])"
+            @update:checked="(value: boolean) => updateField('team.allow_github_mcp', value)"
+          />
+          <div class="grid gap-1">
+            <label
+              for="allow-github-mcp"
+              class="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              {{ getSetting('team.allow_github_mcp')?.name || 'Allow GitHub MCP Servers' }}
+            </label>
+            <p class="text-muted-foreground text-sm">
+              {{ getSetting('team.allow_github_mcp')?.description }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Allow Private GitHub Repositories Checkbox -->
+        <div class="flex items-start gap-3">
+          <Checkbox
+            id="allow-private-github-repos"
+            :checked="Boolean(formValues['team.allow_private_github_repos'])"
+            @update:checked="(value: boolean) => updateField('team.allow_private_github_repos', value)"
+          />
+          <div class="grid gap-1">
+            <label
+              for="allow-private-github-repos"
+              class="cursor-pointer text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              {{ getSetting('team.allow_private_github_repos')?.name || 'Allow Private GitHub Repositories' }}
+            </label>
+            <p class="text-muted-foreground text-sm">
+              {{ getSetting('team.allow_private_github_repos')?.description }}
+            </p>
+          </div>
+        </div>
+
+        <!-- GitHub MCP Server Limit -->
+        <div class="space-y-2">
+          <Label for="github-mcp-limit">
+            {{ getSetting('team.github_mcp_limit')?.name || 'GitHub MCP Server Limit' }}
+          </Label>
+          <Input
+            id="github-mcp-limit"
+            type="number"
+            :model-value="String(formValues['team.github_mcp_limit'] || '')"
+            @update:model-value="(value) => updateField('team.github_mcp_limit', Number(value))"
+            placeholder="0"
+            :class="{ 'border-destructive': getFieldError('team.github_mcp_limit') }"
+          />
+          <p v-if="getFieldError('team.github_mcp_limit')" class="text-sm text-destructive">
+            {{ getFieldError('team.github_mcp_limit') }}
+          </p>
+          <p class="text-xs text-muted-foreground">
+            {{ getSetting('team.github_mcp_limit')?.description }}
+          </p>
+        </div>
+      </div>
+
+      <template #footer-actions>
+        <Button
+          :disabled="isSavingCard3"
+          @click="handleSaveCard3"
+        >
+          <Spinner v-if="isSavingCard3" class="mr-2" />
+          Save Changes
+        </Button>
+      </template>
+    </DsCard>
+
+    <!-- Card 4: Remote MCP Options -->
     <DsCard title="Remote MCP Options">
       <p class="text-sm text-muted-foreground mb-6">
         Control whether teams can install MCP servers from external sources.
@@ -257,10 +346,10 @@ async function handleSaveCard3() {
 
       <template #footer-actions>
         <Button
-          :disabled="isSavingCard3"
-          @click="handleSaveCard3"
+          :disabled="isSavingCard4"
+          @click="handleSaveCard4"
         >
-          <Spinner v-if="isSavingCard3" class="mr-2" />
+          <Spinner v-if="isSavingCard4" class="mr-2" />
           Save Changes
         </Button>
       </template>

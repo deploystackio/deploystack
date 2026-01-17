@@ -53,6 +53,33 @@ export const teamSettings: GlobalSettingsModule = {
       description: 'Maximum total number of MCP server installations per team. Applied when a new team is created. Includes all transport types (HTTP, SSE, stdio).',
       encrypted: false,
       required: false
+    },
+    {
+      key: 'team.allow_github_mcp',
+      name: 'Allow GitHub MCP Servers',
+      defaultValue: false,
+      type: 'boolean',
+      description: 'Allow teams to install MCP servers directly from GitHub repositories',
+      encrypted: false,
+      required: false
+    },
+    {
+      key: 'team.allow_private_github_repos',
+      name: 'Allow Private GitHub Repositories',
+      defaultValue: false,
+      type: 'boolean',
+      description: 'Allow teams to install MCP servers from private GitHub repositories',
+      encrypted: false,
+      required: false
+    },
+    {
+      key: 'team.github_mcp_limit',
+      name: 'GitHub MCP Server Limit',
+      defaultValue: 1,
+      type: 'number',
+      description: 'Maximum number of MCP servers that can be installed from GitHub repositories per team',
+      encrypted: false,
+      required: false
     }
   ]
 };
