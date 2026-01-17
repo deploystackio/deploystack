@@ -5,13 +5,14 @@ import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
 
 /**
- * Instance with user information (includes user_slug from authUser table)
+ * Instance with user information (includes user_slug and user_email from authUser table)
  */
 export interface InstanceWithUser {
   id: string;
   installation_id: string;
   user_id: string;
   user_slug: string;
+  user_email: string;
   status: string;
   status_message: string | null;
   status_updated_at: Date | null;
@@ -248,6 +249,7 @@ export class McpInstanceService {
         installation_id: mcpServerInstances.installation_id,
         user_id: mcpServerInstances.user_id,
         user_slug: authUser.username,
+        user_email: authUser.email,
         status: mcpServerInstances.status,
         status_message: mcpServerInstances.status_message,
         status_updated_at: mcpServerInstances.status_updated_at,

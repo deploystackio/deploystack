@@ -432,6 +432,11 @@ export const INSTANCE_SCHEMA = {
       type: 'string',
       description: 'User slug (username) for display'
     },
+    user_email: {
+      type: 'string',
+      format: 'email',
+      description: 'User email address'
+    },
     status: {
       type: 'string',
       description: 'Current instance status'
@@ -463,7 +468,7 @@ export const INSTANCE_SCHEMA = {
       description: 'Last update timestamp'
     }
   },
-  required: ['id', 'user_id', 'user_slug', 'status', 'status_updated_at']
+  required: ['id', 'user_id', 'user_slug', 'user_email', 'status', 'status_updated_at']
 } as const;
 
 export const STATUS_SUMMARY_SCHEMA = {
@@ -799,6 +804,7 @@ export interface InstanceData {
   id: string;
   user_id: string;
   user_slug: string;
+  user_email: string;
   status: string;
   status_message: string | null;
   status_updated_at: Date | null;
@@ -811,6 +817,7 @@ export interface InstanceResponse {
   id: string;
   user_id: string;
   user_slug: string;
+  user_email: string;
   status: string;
   status_message: string | null;
   status_updated_at: string;
@@ -1035,6 +1042,7 @@ export function formatInstancesResponse(instances: InstanceData[]): InstanceResp
     id: inst.id,
     user_id: inst.user_id,
     user_slug: inst.user_slug,
+    user_email: inst.user_email,
     status: inst.status,
     status_message: inst.status_message,
     status_updated_at: inst.status_updated_at?.toISOString() || new Date().toISOString(),

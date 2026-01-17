@@ -13049,6 +13049,236 @@
         }
       }
     },
+    "/api/teams/{teamId}/mcp/installations/{installationId}/instances": {
+      "get": {
+        "summary": "Get instances for an installation",
+        "tags": [
+          "MCP Installations"
+        ],
+        "description": "Retrieves per-user instances for a specific MCP installation. team_admin sees all instances with user details (username, email). team_user sees only their own instance. Requires mcp.installations.instances.view permission.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true,
+            "description": "Team ID that owns the installation"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "installationId",
+            "required": true,
+            "description": "Installation ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Instances retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "description": "Indicates if the operation was successful"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Unique instance ID"
+                          },
+                          "user_id": {
+                            "type": "string",
+                            "description": "User ID who owns this instance"
+                          },
+                          "user_slug": {
+                            "type": "string",
+                            "description": "User slug (username) for display"
+                          },
+                          "user_email": {
+                            "type": "string",
+                            "format": "email",
+                            "description": "User email address"
+                          },
+                          "status": {
+                            "type": "string",
+                            "description": "Current instance status"
+                          },
+                          "status_message": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Optional status message"
+                          },
+                          "status_updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "When status was last updated"
+                          },
+                          "last_health_check_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true,
+                            "description": "Last health check timestamp"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Instance creation timestamp"
+                          },
+                          "updated_at": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "Last update timestamp"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "user_id",
+                          "user_slug",
+                          "user_email",
+                          "status",
+                          "status_updated_at"
+                        ]
+                      },
+                      "description": "Array of instances. team_admin sees all instances; team_user sees only their own."
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Instances retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized - Authentication required"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions or not a team member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions or not a team member"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Installation does not exist or does not belong to specified team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Installation does not exist or does not belong to specified team"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Indicates failure"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "Error message detailing what went wrong"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/teams/{teamId}/mcp/installations/{installationId}/logs": {
       "get": {
         "summary": "Get installation logs",
@@ -23345,6 +23575,11 @@
                                 "type": "string",
                                 "description": "User slug (username) for display"
                               },
+                              "user_email": {
+                                "type": "string",
+                                "format": "email",
+                                "description": "User email address"
+                              },
                               "status": {
                                 "type": "string",
                                 "description": "Current instance status"
@@ -23380,11 +23615,45 @@
                               "id",
                               "user_id",
                               "user_slug",
+                              "user_email",
                               "status",
                               "status_updated_at"
                             ]
                           },
                           "description": "Per-user instances (optional)"
+                        },
+                        "status_summary": {
+                          "type": "object",
+                          "properties": {
+                            "total_instances": {
+                              "type": "number",
+                              "description": "Total number of instances across all team members"
+                            },
+                            "online": {
+                              "type": "number",
+                              "description": "Number of instances with status \"online\""
+                            },
+                            "offline": {
+                              "type": "number",
+                              "description": "Number of instances with status \"offline\""
+                            },
+                            "error": {
+                              "type": "number",
+                              "description": "Number of instances with error statuses (error, permanently_failed, requires_reauth)"
+                            },
+                            "provisioning": {
+                              "type": "number",
+                              "description": "Number of instances in provisioning states (provisioning, connecting, discovering_tools, syncing_tools, restarting, command_received, awaiting_user_config)"
+                            }
+                          },
+                          "required": [
+                            "total_instances",
+                            "online",
+                            "offline",
+                            "error",
+                            "provisioning"
+                          ],
+                          "description": "Aggregated instance statistics by status (optional, requires mcp.installations.stats.view permission)"
                         }
                       },
                       "required": [
@@ -23572,8 +23841,17 @@
         "tags": [
           "MCP Installations"
         ],
-        "description": "Retrieves all MCP server installations for the specified team.",
+        "description": "Retrieves all MCP server installations for the specified team. Optionally include instance statistics with ?include_stats=true (requires mcp.installations.stats.view permission).",
         "parameters": [
+          {
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "name": "include_stats",
+            "required": false,
+            "description": "Include instance statistics aggregated by status (requires mcp.installations.stats.view permission)"
+          },
           {
             "schema": {
               "type": "string",
@@ -23816,6 +24094,11 @@
                                   "type": "string",
                                   "description": "User slug (username) for display"
                                 },
+                                "user_email": {
+                                  "type": "string",
+                                  "format": "email",
+                                  "description": "User email address"
+                                },
                                 "status": {
                                   "type": "string",
                                   "description": "Current instance status"
@@ -23851,11 +24134,45 @@
                                 "id",
                                 "user_id",
                                 "user_slug",
+                                "user_email",
                                 "status",
                                 "status_updated_at"
                               ]
                             },
                             "description": "Per-user instances (optional)"
+                          },
+                          "status_summary": {
+                            "type": "object",
+                            "properties": {
+                              "total_instances": {
+                                "type": "number",
+                                "description": "Total number of instances across all team members"
+                              },
+                              "online": {
+                                "type": "number",
+                                "description": "Number of instances with status \"online\""
+                              },
+                              "offline": {
+                                "type": "number",
+                                "description": "Number of instances with status \"offline\""
+                              },
+                              "error": {
+                                "type": "number",
+                                "description": "Number of instances with error statuses (error, permanently_failed, requires_reauth)"
+                              },
+                              "provisioning": {
+                                "type": "number",
+                                "description": "Number of instances in provisioning states (provisioning, connecting, discovering_tools, syncing_tools, restarting, command_received, awaiting_user_config)"
+                              }
+                            },
+                            "required": [
+                              "total_instances",
+                              "online",
+                              "offline",
+                              "error",
+                              "provisioning"
+                            ],
+                            "description": "Aggregated instance statistics by status (optional, requires mcp.installations.stats.view permission)"
                           }
                         },
                         "required": [
@@ -24306,6 +24623,11 @@
                                 "type": "string",
                                 "description": "User slug (username) for display"
                               },
+                              "user_email": {
+                                "type": "string",
+                                "format": "email",
+                                "description": "User email address"
+                              },
                               "status": {
                                 "type": "string",
                                 "description": "Current instance status"
@@ -24341,11 +24663,45 @@
                               "id",
                               "user_id",
                               "user_slug",
+                              "user_email",
                               "status",
                               "status_updated_at"
                             ]
                           },
                           "description": "Per-user instances (optional)"
+                        },
+                        "status_summary": {
+                          "type": "object",
+                          "properties": {
+                            "total_instances": {
+                              "type": "number",
+                              "description": "Total number of instances across all team members"
+                            },
+                            "online": {
+                              "type": "number",
+                              "description": "Number of instances with status \"online\""
+                            },
+                            "offline": {
+                              "type": "number",
+                              "description": "Number of instances with status \"offline\""
+                            },
+                            "error": {
+                              "type": "number",
+                              "description": "Number of instances with error statuses (error, permanently_failed, requires_reauth)"
+                            },
+                            "provisioning": {
+                              "type": "number",
+                              "description": "Number of instances in provisioning states (provisioning, connecting, discovering_tools, syncing_tools, restarting, command_received, awaiting_user_config)"
+                            }
+                          },
+                          "required": [
+                            "total_instances",
+                            "online",
+                            "offline",
+                            "error",
+                            "provisioning"
+                          ],
+                          "description": "Aggregated instance statistics by status (optional, requires mcp.installations.stats.view permission)"
                         }
                       },
                       "required": [
@@ -24789,6 +25145,11 @@
                                 "type": "string",
                                 "description": "User slug (username) for display"
                               },
+                              "user_email": {
+                                "type": "string",
+                                "format": "email",
+                                "description": "User email address"
+                              },
                               "status": {
                                 "type": "string",
                                 "description": "Current instance status"
@@ -24824,11 +25185,45 @@
                               "id",
                               "user_id",
                               "user_slug",
+                              "user_email",
                               "status",
                               "status_updated_at"
                             ]
                           },
                           "description": "Per-user instances (optional)"
+                        },
+                        "status_summary": {
+                          "type": "object",
+                          "properties": {
+                            "total_instances": {
+                              "type": "number",
+                              "description": "Total number of instances across all team members"
+                            },
+                            "online": {
+                              "type": "number",
+                              "description": "Number of instances with status \"online\""
+                            },
+                            "offline": {
+                              "type": "number",
+                              "description": "Number of instances with status \"offline\""
+                            },
+                            "error": {
+                              "type": "number",
+                              "description": "Number of instances with error statuses (error, permanently_failed, requires_reauth)"
+                            },
+                            "provisioning": {
+                              "type": "number",
+                              "description": "Number of instances in provisioning states (provisioning, connecting, discovering_tools, syncing_tools, restarting, command_received, awaiting_user_config)"
+                            }
+                          },
+                          "required": [
+                            "total_instances",
+                            "online",
+                            "offline",
+                            "error",
+                            "provisioning"
+                          ],
+                          "description": "Aggregated instance statistics by status (optional, requires mcp.installations.stats.view permission)"
                         }
                       },
                       "required": [
@@ -25478,6 +25873,11 @@
                                 "type": "string",
                                 "description": "User slug (username) for display"
                               },
+                              "user_email": {
+                                "type": "string",
+                                "format": "email",
+                                "description": "User email address"
+                              },
                               "status": {
                                 "type": "string",
                                 "description": "Current instance status"
@@ -25513,11 +25913,45 @@
                               "id",
                               "user_id",
                               "user_slug",
+                              "user_email",
                               "status",
                               "status_updated_at"
                             ]
                           },
                           "description": "Per-user instances (optional)"
+                        },
+                        "status_summary": {
+                          "type": "object",
+                          "properties": {
+                            "total_instances": {
+                              "type": "number",
+                              "description": "Total number of instances across all team members"
+                            },
+                            "online": {
+                              "type": "number",
+                              "description": "Number of instances with status \"online\""
+                            },
+                            "offline": {
+                              "type": "number",
+                              "description": "Number of instances with status \"offline\""
+                            },
+                            "error": {
+                              "type": "number",
+                              "description": "Number of instances with error statuses (error, permanently_failed, requires_reauth)"
+                            },
+                            "provisioning": {
+                              "type": "number",
+                              "description": "Number of instances in provisioning states (provisioning, connecting, discovering_tools, syncing_tools, restarting, command_received, awaiting_user_config)"
+                            }
+                          },
+                          "required": [
+                            "total_instances",
+                            "online",
+                            "offline",
+                            "error",
+                            "provisioning"
+                          ],
+                          "description": "Aggregated instance statistics by status (optional, requires mcp.installations.stats.view permission)"
                         }
                       },
                       "required": [
@@ -25960,6 +26394,11 @@
                                 "type": "string",
                                 "description": "User slug (username) for display"
                               },
+                              "user_email": {
+                                "type": "string",
+                                "format": "email",
+                                "description": "User email address"
+                              },
                               "status": {
                                 "type": "string",
                                 "description": "Current instance status"
@@ -25995,11 +26434,45 @@
                               "id",
                               "user_id",
                               "user_slug",
+                              "user_email",
                               "status",
                               "status_updated_at"
                             ]
                           },
                           "description": "Per-user instances (optional)"
+                        },
+                        "status_summary": {
+                          "type": "object",
+                          "properties": {
+                            "total_instances": {
+                              "type": "number",
+                              "description": "Total number of instances across all team members"
+                            },
+                            "online": {
+                              "type": "number",
+                              "description": "Number of instances with status \"online\""
+                            },
+                            "offline": {
+                              "type": "number",
+                              "description": "Number of instances with status \"offline\""
+                            },
+                            "error": {
+                              "type": "number",
+                              "description": "Number of instances with error statuses (error, permanently_failed, requires_reauth)"
+                            },
+                            "provisioning": {
+                              "type": "number",
+                              "description": "Number of instances in provisioning states (provisioning, connecting, discovering_tools, syncing_tools, restarting, command_received, awaiting_user_config)"
+                            }
+                          },
+                          "required": [
+                            "total_instances",
+                            "online",
+                            "offline",
+                            "error",
+                            "provisioning"
+                          ],
+                          "description": "Aggregated instance statistics by status (optional, requires mcp.installations.stats.view permission)"
                         }
                       },
                       "required": [
@@ -26442,6 +26915,11 @@
                                 "type": "string",
                                 "description": "User slug (username) for display"
                               },
+                              "user_email": {
+                                "type": "string",
+                                "format": "email",
+                                "description": "User email address"
+                              },
                               "status": {
                                 "type": "string",
                                 "description": "Current instance status"
@@ -26477,11 +26955,45 @@
                               "id",
                               "user_id",
                               "user_slug",
+                              "user_email",
                               "status",
                               "status_updated_at"
                             ]
                           },
                           "description": "Per-user instances (optional)"
+                        },
+                        "status_summary": {
+                          "type": "object",
+                          "properties": {
+                            "total_instances": {
+                              "type": "number",
+                              "description": "Total number of instances across all team members"
+                            },
+                            "online": {
+                              "type": "number",
+                              "description": "Number of instances with status \"online\""
+                            },
+                            "offline": {
+                              "type": "number",
+                              "description": "Number of instances with status \"offline\""
+                            },
+                            "error": {
+                              "type": "number",
+                              "description": "Number of instances with error statuses (error, permanently_failed, requires_reauth)"
+                            },
+                            "provisioning": {
+                              "type": "number",
+                              "description": "Number of instances in provisioning states (provisioning, connecting, discovering_tools, syncing_tools, restarting, command_received, awaiting_user_config)"
+                            }
+                          },
+                          "required": [
+                            "total_instances",
+                            "online",
+                            "offline",
+                            "error",
+                            "provisioning"
+                          ],
+                          "description": "Aggregated instance statistics by status (optional, requires mcp.installations.stats.view permission)"
                         }
                       },
                       "required": [
@@ -26924,6 +27436,11 @@
                                 "type": "string",
                                 "description": "User slug (username) for display"
                               },
+                              "user_email": {
+                                "type": "string",
+                                "format": "email",
+                                "description": "User email address"
+                              },
                               "status": {
                                 "type": "string",
                                 "description": "Current instance status"
@@ -26959,11 +27476,45 @@
                               "id",
                               "user_id",
                               "user_slug",
+                              "user_email",
                               "status",
                               "status_updated_at"
                             ]
                           },
                           "description": "Per-user instances (optional)"
+                        },
+                        "status_summary": {
+                          "type": "object",
+                          "properties": {
+                            "total_instances": {
+                              "type": "number",
+                              "description": "Total number of instances across all team members"
+                            },
+                            "online": {
+                              "type": "number",
+                              "description": "Number of instances with status \"online\""
+                            },
+                            "offline": {
+                              "type": "number",
+                              "description": "Number of instances with status \"offline\""
+                            },
+                            "error": {
+                              "type": "number",
+                              "description": "Number of instances with error statuses (error, permanently_failed, requires_reauth)"
+                            },
+                            "provisioning": {
+                              "type": "number",
+                              "description": "Number of instances in provisioning states (provisioning, connecting, discovering_tools, syncing_tools, restarting, command_received, awaiting_user_config)"
+                            }
+                          },
+                          "required": [
+                            "total_instances",
+                            "online",
+                            "offline",
+                            "error",
+                            "provisioning"
+                          ],
+                          "description": "Aggregated instance statistics by status (optional, requires mcp.installations.stats.view permission)"
                         }
                       },
                       "required": [
