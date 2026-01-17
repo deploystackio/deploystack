@@ -27,6 +27,39 @@ interface BufferedLogEntry {
   timestamp: string;
 }
 
+/**
+ * nsjail log pattern: [I|W|E|F][timestamp] message
+ * Example: [I][2026-01-17T21:02:01+0100] Mode: STANDALONE_ONCE
+ */
+const NSJAIL_LOG_REGEX = /^\[([IWEF])\]\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}\]\s*(.*)$/;
+
+/**
+ * Parse nsjail log line to extract level and message
+ * Returns null if line is not an nsjail log
+ */
+function parseNsjailLog(line: string): { level: string; message: string } | null {
+  const match = line.match(NSJAIL_LOG_REGEX);
+  if (!match) return null;
+  return { level: match[1], message: match[2] };
+}
+
+/**
+ * Infer log level from MCP server log message content
+ */
+function inferMcpLogLevel(message: string): 'info' | 'warn' | 'error' | 'debug' {
+  const lower = message.toLowerCase();
+  if (lower.includes('error') || lower.includes('fatal') || lower.includes('exception') || lower.includes('failed')) {
+    return 'error';
+  }
+  if (lower.includes('warn')) {
+    return 'warn';
+  }
+  if (lower.includes('debug') || lower.includes('trace')) {
+    return 'debug';
+  }
+  return 'info';
+}
+
 export class ProcessManager extends EventEmitter {
   private processes = new Map<string, ProcessInfo>();
   private processIdsByName = new Map<string, string>();
@@ -1062,13 +1095,36 @@ export class ProcessManager extends EventEmitter {
         // Split by newlines in case there are multiple log lines
         const lines = stderrOutput.split('\n');
         for (const line of lines) {
-          if (line.trim()) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) continue;
+
+          // Check if this is an nsjail log
+          const nsjailLog = parseNsjailLog(trimmedLine);
+
+          if (nsjailLog) {
+            // nsjail log detected - filter out INFO level (infrastructure noise)
+            if (nsjailLog.level === 'I') {
+              // Skip nsjail INFO logs (Mount, Uid map, Jail parameters, etc.)
+              continue;
+            }
+            // Keep nsjail WARNING/ERROR/FATAL logs with correct level mapping
+            const level: 'warn' | 'error' = nsjailLog.level === 'W' ? 'warn' : 'error';
             this.bufferLogEntry({
               installation_id: config.installation_id,
               team_id: config.team_id,
               user_id: config.user_id,
-              level: 'error', // stderr typically contains errors/warnings
-              message: line.trim(),
+              level,
+              message: nsjailLog.message,
+              timestamp: new Date().toISOString()
+            });
+          } else {
+            // MCP server log - infer level from content
+            this.bufferLogEntry({
+              installation_id: config.installation_id,
+              team_id: config.team_id,
+              user_id: config.user_id,
+              level: inferMcpLogLevel(trimmedLine),
+              message: trimmedLine,
               timestamp: new Date().toISOString()
             });
           }
