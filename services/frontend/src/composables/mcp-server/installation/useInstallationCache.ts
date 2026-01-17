@@ -28,6 +28,7 @@ export function useMcpInstallationCache() {
   const installationId = route.params.id as string
   const storageKeyName = `mcp_installation_name_${installationId}`
   const storageKeyIcon = `mcp_installation_icon_${installationId}`
+  const storageKeyRole = `mcp_installation_user_role_${installationId}`
 
   async function loadInstallation(installationId: string): Promise<InstallationLoadResult | null> {
     try {
@@ -100,6 +101,9 @@ export function useMcpInstallationCache() {
           })
         }
 
+        // Cache the user role for instant loading on tab switches
+        eventBus.setState(storageKeyRole, result.userRole)
+
         setBreadcrumbs([
           { label: t('mcpInstallations.title'), href: '/mcp-server' },
           { label: result.installation.installation_name }
@@ -113,6 +117,7 @@ export function useMcpInstallationCache() {
         // Clear cached data if installation not found
         eventBus.clearState(storageKeyName)
         eventBus.clearState(storageKeyIcon)
+        eventBus.clearState(storageKeyRole)
       }
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'An unknown error occurred'
@@ -123,6 +128,7 @@ export function useMcpInstallationCache() {
       // Clear cached data on error
       eventBus.clearState(storageKeyName)
       eventBus.clearState(storageKeyIcon)
+      eventBus.clearState(storageKeyRole)
     } finally {
       isLoading.value = false
     }
@@ -137,12 +143,17 @@ export function useMcpInstallationCache() {
     // Load cached installation data immediately to prevent flicker
     const cachedName = eventBus.getState<string>(storageKeyName)
     const cachedIcon = eventBus.getState<{ icon_url: string; name: string }>(storageKeyIcon)
+    const cachedRole = eventBus.getState<'team_admin' | 'team_user'>(storageKeyRole)
 
     if (cachedName && !installation.value) {
       installation.value = {
         installation_name: cachedName,
         server: cachedIcon || undefined
       } as McpInstallation
+    }
+
+    if (cachedRole) {
+      userTeamRole.value = cachedRole
     }
   }
 
@@ -155,8 +166,10 @@ export function useMcpInstallationCache() {
           // Clear old installation's cached data
           const oldStorageKeyName = `mcp_installation_name_${oldId}`
           const oldStorageKeyIcon = `mcp_installation_icon_${oldId}`
+          const oldStorageKeyRole = `mcp_installation_user_role_${oldId}`
           eventBus.clearState(oldStorageKeyName)
           eventBus.clearState(oldStorageKeyIcon)
+          eventBus.clearState(oldStorageKeyRole)
 
           // Reset installation to null to trigger loading state
           installation.value = null

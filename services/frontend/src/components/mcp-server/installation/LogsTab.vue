@@ -121,7 +121,6 @@ function getLevelTextClass(level: McpLog['level']): string {
 
 // Connect to SSE stream
 function connectStream() {
-  const options: { level?: FilterType; limit?: number } = {}
   // Note: We filter client-side for better UX, so we don't pass level filter to stream
   const url = McpLogsService.getStreamUrl(props.teamId, props.installation.id, { limit: 100 })
   connect(url)
