@@ -1,6 +1,6 @@
 {
   "name": "@deploystack/backend",
-  "version": "0.58.0",
+  "version": "0.59.0",
   "scripts": {
     "dev": "nodemon",
     "build": "tsc && webpack --mode=production",
