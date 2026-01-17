@@ -159,12 +159,12 @@ export default async function getInstallationLogsRoute(server: FastifyInstance) 
 		Params: TeamAndInstallationParams;
 		Querystring: LogsQueryParams;
 	}>('/teams/:teamId/mcp/installations/:installationId/logs', {
-		preValidation: requireTeamPermission('mcp.installations.view'),
+		preValidation: requireTeamPermission('mcp.installations.logs.view'),
 		schema: {
 			tags: ['MCP Installations'],
 			summary: 'Get installation logs',
 			description:
-				'Retrieves logs for a specific MCP installation with pagination and optional level filtering. Requires mcp.installations.view permission. Logs are returned newest first.',
+				'Retrieves logs for a specific MCP installation with pagination and optional level filtering. Requires mcp.installations.logs.view permission. Logs are returned newest first.',
 			security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 
 			// Fastify validation schemas

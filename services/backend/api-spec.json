@@ -13300,7 +13300,7 @@
         "tags": [
           "MCP Installations"
         ],
-        "description": "Retrieves logs for a specific MCP installation with pagination and optional level filtering. Requires mcp.installations.view permission. Logs are returned newest first.",
+        "description": "Retrieves logs for a specific MCP installation with pagination and optional level filtering. Requires mcp.installations.logs.view permission. Logs are returned newest first.",
         "parameters": [
           {
             "schema": {

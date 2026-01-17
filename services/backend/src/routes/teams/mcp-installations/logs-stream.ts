@@ -76,7 +76,7 @@ export default async function getInstallationLogsStreamRoute(server: FastifyInst
 		Querystring: LogsQueryParams;
 	}>('/teams/:teamId/mcp/installations/:installationId/logs/stream', {
 		sse: true,
-		preValidation: requireTeamPermission('mcp.installations.view'),
+		preValidation: requireTeamPermission('mcp.installations.logs.view'),
 		schema: {
 			tags: ['MCP Installations'],
 			summary: 'Stream installation server logs (SSE)',
