@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.59.0 (2026-01-17)
+
+* chore(all): bump @types/nodemailer from 7.0.4 to 7.0.5 ([2027efc3fd22d0815dd4556c6d65c831f424fdf2](https://github.com/deploystackio/deploystack/commit/2027efc3fd22d0815dd4556c6d65c831f424fdf2))
+* chore(all): bump pino from 10.1.0 to 10.1.1 ([ca5f240b7343a62adaeb72ba93f13b9f00fdfac4](https://github.com/deploystackio/deploystack/commit/ca5f240b7343a62adaeb72ba93f13b9f00fdfac4))
+* chore(all): bump supertest from 7.1.4 to 7.2.2 ([22aa6b34c4e36c638aadbb78bcc0c1ec0d6d99e8](https://github.com/deploystackio/deploystack/commit/22aa6b34c4e36c638aadbb78bcc0c1ec0d6d99e8))
+* chore(all): bump typescript-eslint from 8.52.0 to 8.53.0 ([a2cd44b3be292586391c3b3b7bdd3e3573a792a0](https://github.com/deploystackio/deploystack/commit/a2cd44b3be292586391c3b3b7bdd3e3573a792a0))
+* chore(all): bump vite from 7.3.0 to 7.3.1 ([3118f3472a6b1f5ae2d2f5f5c06c8049355175e8](https://github.com/deploystackio/deploystack/commit/3118f3472a6b1f5ae2d2f5f5c06c8049355175e8))
+* chore(all): bump vue-tsc from 3.2.1 to 3.2.2 ([ab7cd2981b5e014f23ab60ffed5fec2936bfaa31](https://github.com/deploystackio/deploystack/commit/ab7cd2981b5e014f23ab60ffed5fec2936bfaa31))
+* chore(all): remove empty code change entries ([524546cd960de5c9b9d620f2ef993a3e2159dcab](https://github.com/deploystackio/deploystack/commit/524546cd960de5c9b9d620f2ef993a3e2159dcab))
+* feat(all): add MCP server status summary to admin team installations view ([7efa7c3a519bb28f71c558b42a35e19540cd7392](https://github.com/deploystackio/deploystack/commit/7efa7c3a519bb28f71c558b42a35e19540cd7392))
+* feat(all): enhance admin features with MCP catalog installations and team statistics ([d1e04208b728e580010ebdc374b8e67f08ba61bf](https://github.com/deploystackio/deploystack/commit/d1e04208b728e580010ebdc374b8e67f08ba61bf))
+* feat(backend): add endpoint to retrieve instances for MCP installations ([69a5f6f16d5e857c2921741fb3bb52883566a879](https://github.com/deploystackio/deploystack/commit/69a5f6f16d5e857c2921741fb3bb52883566a879))
+* feat(backend): add endpoint to retrieve teams by MCP server with pagination ([7fac949b83c26ed959d2693fbc63a1b828e854b9](https://github.com/deploystackio/deploystack/commit/7fac949b83c26ed959d2693fbc63a1b828e854b9))
+* feat(backend): add search endpoint for teams by MCP server with pagination ([915381cfb1807a82beebccb09728f0e3126b536d](https://github.com/deploystackio/deploystack/commit/915381cfb1807a82beebccb09728f0e3126b536d))
+* feat(backend): add support for instance statistics in MCP installations ([12e67c945e9a96ba671c44f67a8371fd2002f1c7](https://github.com/deploystackio/deploystack/commit/12e67c945e9a96ba671c44f67a8371fd2002f1c7))
+* feat(backend): update MCP installation logs permissions and descriptions ([d79678382dc13f6dde1f77f1260930b1a6bba101](https://github.com/deploystackio/deploystack/commit/d79678382dc13f6dde1f77f1260930b1a6bba101))
+* docs(all): expand audience sections for platform teams and developers ([b8edbf147f3e2b78001f95167948403228a1bd03](https://github.com/deploystackio/deploystack/commit/b8edbf147f3e2b78001f95167948403228a1bd03))
+
 ## 0.58.0 (2026-01-10)
 
 * feat(all): implement OAuth2 authorization flow and user feedback system ([dedacf74aa1da000bf4b13933dae17fc3a1846a9](https://github.com/deploystackio/deploystack/commit/dedacf74aa1da000bf4b13933dae17fc3a1846a9))
