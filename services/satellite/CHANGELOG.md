@@ -2,6 +2,8 @@
 
 ## 0.18.0 (2026-01-17)
 
+## 0.18.0 (2026-01-17)
+
 * feat(all): add MCP server status summary to admin team installations view ([7efa7c3a519bb28f71c558b42a35e19540cd7392](https://github.com/deploystackio/deploystack/commit/7efa7c3a519bb28f71c558b42a35e19540cd7392))
 * feat(all): enhance admin features with MCP catalog installations and team statistics ([d1e04208b728e580010ebdc374b8e67f08ba61bf](https://github.com/deploystackio/deploystack/commit/d1e04208b728e580010ebdc374b8e67f08ba61bf))
 * feat(all): implement OAuth2 authorization flow and user feedback system ([dedacf74aa1da000bf4b13933dae17fc3a1846a9](https://github.com/deploystackio/deploystack/commit/dedacf74aa1da000bf4b13933dae17fc3a1846a9))
