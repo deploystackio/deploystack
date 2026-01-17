@@ -845,6 +845,45 @@ export default {
         switchedToApi: 'Switched to API view',
         apiDescription: 'Using REST endpoint'
       }
+    },
+
+    logs: {
+      title: 'Logs',
+      description: 'View MCP server logs',
+      loading: 'Loading logs...',
+      table: {
+        columns: {
+          level: 'Level',
+          time: 'Time',
+          message: 'Message'
+        }
+      },
+      filter: {
+        all: 'All Levels',
+        info: 'Info',
+        warn: 'Warnings',
+        error: 'Errors',
+        debug: 'Debug'
+      },
+      connection: {
+        live: 'Live',
+        disconnected: 'Disconnected',
+        reconnecting: 'Reconnecting...'
+      },
+      emptyState: {
+        title: 'No Logs Yet',
+        description: 'Server logs will appear here when the MCP server generates log entries.'
+      },
+      error: {
+        title: 'Error Loading Logs',
+        description: 'Failed to load logs: {error}'
+      },
+      viewMode: {
+        switchedToLive: 'Switched to Live view',
+        liveDescription: 'Real-time updates enabled',
+        switchedToApi: 'Switched to API view',
+        apiDescription: 'Using REST endpoint'
+      }
     }
   }
 }
