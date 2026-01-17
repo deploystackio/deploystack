@@ -128,6 +128,42 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
         }
       }
 
+      // Validate allow_github_mcp if provided
+      if (updateData.allow_github_mcp !== undefined) {
+        if (typeof updateData.allow_github_mcp !== 'boolean') {
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: 'allow_github_mcp must be a boolean value'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
+      // Validate allow_private_github_repos if provided
+      if (updateData.allow_private_github_repos !== undefined) {
+        if (typeof updateData.allow_private_github_repos !== 'boolean') {
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: 'allow_private_github_repos must be a boolean value'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
+      // Validate github_mcp_limit if provided
+      if (updateData.github_mcp_limit !== undefined) {
+        if (!Number.isInteger(updateData.github_mcp_limit) || updateData.github_mcp_limit < 0) {
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: 'github_mcp_limit must be a non-negative integer'
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
       // Update the team
       const updatedTeam = await TeamService.updateTeam(id, updateData);
 
@@ -180,6 +216,9 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
           mcp_server_limit: updatedTeam.mcp_server_limit,
           member_limit: updatedTeam.member_limit,
           allow_remote_mcp: updatedTeam.allow_remote_mcp,
+          allow_github_mcp: updatedTeam.allow_github_mcp,
+          allow_private_github_repos: updatedTeam.allow_private_github_repos,
+          github_mcp_limit: updatedTeam.github_mcp_limit,
           mcp_servers_count: counts.mcp_servers_count,
           members_count: counts.members_count,
           created_at: updatedTeam.created_at.toISOString(),

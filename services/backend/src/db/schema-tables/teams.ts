@@ -16,6 +16,9 @@ export const teams = pgTable('teams', {
   mcp_server_limit: integer('mcp_server_limit').notNull().default(5),
   member_limit: integer('member_limit').notNull().default(3),
   allow_remote_mcp: boolean('allow_remote_mcp').notNull().default(false),
+  allow_github_mcp: boolean('allow_github_mcp').notNull().default(false),
+  allow_private_github_repos: boolean('allow_private_github_repos').notNull().default(false),
+  github_mcp_limit: integer('github_mcp_limit').notNull().default(1),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

@@ -7034,9 +7034,21 @@ paths:
                           non_http_mcp_limit:
                             type: number
                             description: Maximum non-HTTP MCP servers allowed for the team
+                          allow_github_mcp:
+                            type: boolean
+                            description: Allow team to install MCP servers from GitHub repositories
+                          allow_private_github_repos:
+                            type: boolean
+                            description: Allow team to install MCP servers from private GitHub repositories
+                          github_mcp_limit:
+                            type: number
+                            description: Maximum number of MCP servers from GitHub repositories
                         required:
                           - mcp_server_limit
                           - non_http_mcp_limit
+                          - allow_github_mcp
+                          - allow_private_github_repos
+                          - github_mcp_limit
                     required:
                       - is_default_team
                       - total_installed_mcp_servers
@@ -25285,6 +25297,15 @@ paths:
                             allow_remote_mcp:
                               type: boolean
                               description: Allow remote MCP servers
+                            allow_github_mcp:
+                              type: boolean
+                              description: Allow GitHub MCP servers
+                            allow_private_github_repos:
+                              type: boolean
+                              description: Allow private GitHub repositories
+                            github_mcp_limit:
+                              type: integer
+                              description: GitHub MCP server limit
                             mcp_servers_count:
                               type: integer
                               description: Number of MCP servers installed in this team
@@ -25307,6 +25328,9 @@ paths:
                             - mcp_server_limit
                             - member_limit
                             - allow_remote_mcp
+                            - allow_github_mcp
+                            - allow_private_github_repos
+                            - github_mcp_limit
                             - mcp_servers_count
                             - members_count
                             - created_at
@@ -25492,6 +25516,15 @@ paths:
                             allow_remote_mcp:
                               type: boolean
                               description: Allow remote MCP servers
+                            allow_github_mcp:
+                              type: boolean
+                              description: Allow GitHub MCP servers
+                            allow_private_github_repos:
+                              type: boolean
+                              description: Allow private GitHub repositories
+                            github_mcp_limit:
+                              type: integer
+                              description: GitHub MCP server limit
                             mcp_servers_count:
                               type: integer
                               description: Number of MCP servers installed in this team
@@ -25514,6 +25547,9 @@ paths:
                             - mcp_server_limit
                             - member_limit
                             - allow_remote_mcp
+                            - allow_github_mcp
+                            - allow_private_github_repos
+                            - github_mcp_limit
                             - mcp_servers_count
                             - members_count
                             - created_at
@@ -25680,6 +25716,15 @@ paths:
                       allow_remote_mcp:
                         type: boolean
                         description: Allow remote MCP servers
+                      allow_github_mcp:
+                        type: boolean
+                        description: Allow GitHub MCP servers
+                      allow_private_github_repos:
+                        type: boolean
+                        description: Allow private GitHub repositories
+                      github_mcp_limit:
+                        type: integer
+                        description: GitHub MCP server limit
                       mcp_servers_count:
                         type: integer
                         description: Number of MCP servers installed in this team
@@ -25702,6 +25747,9 @@ paths:
                       - mcp_server_limit
                       - member_limit
                       - allow_remote_mcp
+                      - allow_github_mcp
+                      - allow_private_github_repos
+                      - github_mcp_limit
                       - mcp_servers_count
                       - members_count
                       - created_at
@@ -25822,6 +25870,17 @@ paths:
                   type: boolean
                   description: Allow team to install MCP servers from remote sources not in the
                     catalog
+                allow_github_mcp:
+                  type: boolean
+                  description: Allow team to install MCP servers directly from GitHub repositories
+                allow_private_github_repos:
+                  type: boolean
+                  description: Allow team to install MCP servers from private GitHub repositories
+                github_mcp_limit:
+                  type: integer
+                  minimum: 0
+                  description: Maximum number of MCP servers that can be installed from GitHub
+                    repositories
               additionalProperties: false
       parameters:
         - schema:
@@ -25880,6 +25939,15 @@ paths:
                       allow_remote_mcp:
                         type: boolean
                         description: Allow remote MCP servers
+                      allow_github_mcp:
+                        type: boolean
+                        description: Allow GitHub MCP servers
+                      allow_private_github_repos:
+                        type: boolean
+                        description: Allow private GitHub repositories
+                      github_mcp_limit:
+                        type: integer
+                        description: GitHub MCP server limit
                       mcp_servers_count:
                         type: integer
                         description: Number of MCP servers installed in this team
@@ -25902,6 +25970,9 @@ paths:
                       - mcp_server_limit
                       - member_limit
                       - allow_remote_mcp
+                      - allow_github_mcp
+                      - allow_private_github_repos
+                      - github_mcp_limit
                       - mcp_servers_count
                       - members_count
                       - created_at

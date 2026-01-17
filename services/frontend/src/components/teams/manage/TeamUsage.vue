@@ -8,7 +8,10 @@ import {
   Server,
   RefreshCw,
   HardDrive,
-  Globe
+  Globe,
+  Github,
+  Lock,
+  Hash
 } from 'lucide-vue-next'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TeamService, type Team, type TeamUsageData } from '@/services/teamService'
@@ -186,6 +189,58 @@ onMounted(() => {
                 <span class="font-medium">{{ usageData.http_mcp_servers }}</span>
                 <p class="text-xs text-muted-foreground">
                   {{ t('teams.manage.usage.httpDescription') }}
+                </p>
+              </div>
+            </dd>
+          </div>
+
+          <!-- Allow GitHub MCP Servers -->
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-900 flex items-center gap-2">
+              <Github class="h-4 w-4 text-muted-foreground" />
+              Allow GitHub MCP Servers
+            </dt>
+            <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+              <div class="space-y-1">
+                <span class="font-medium" :class="usageData.limits.allow_github_mcp ? 'text-green-600' : 'text-gray-500'">
+                  {{ usageData.limits.allow_github_mcp ? 'Enabled' : 'Disabled' }}
+                </span>
+                <p class="text-xs text-muted-foreground">
+                  Install MCP servers directly from GitHub repositories
+                </p>
+              </div>
+            </dd>
+          </div>
+
+          <!-- Allow Private GitHub Repositories -->
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-900 flex items-center gap-2">
+              <Lock class="h-4 w-4 text-muted-foreground" />
+              Allow Private GitHub Repositories
+            </dt>
+            <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+              <div class="space-y-1">
+                <span class="font-medium" :class="usageData.limits.allow_private_github_repos ? 'text-green-600' : 'text-gray-500'">
+                  {{ usageData.limits.allow_private_github_repos ? 'Enabled' : 'Disabled' }}
+                </span>
+                <p class="text-xs text-muted-foreground">
+                  Install MCP servers from private GitHub repositories
+                </p>
+              </div>
+            </dd>
+          </div>
+
+          <!-- GitHub MCP Server Limit -->
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-900 flex items-center gap-2">
+              <Hash class="h-4 w-4 text-muted-foreground" />
+              GitHub MCP Server Limit
+            </dt>
+            <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+              <div class="space-y-1">
+                <span class="font-medium">{{ usageData.limits.github_mcp_limit }}</span>
+                <p class="text-xs text-muted-foreground">
+                  Maximum number of MCP servers from GitHub repositories
                 </p>
               </div>
             </dd>

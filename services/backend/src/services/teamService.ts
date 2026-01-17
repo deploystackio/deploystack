@@ -18,6 +18,9 @@ export interface Team {
   mcp_server_limit: number;
   member_limit: number;
   allow_remote_mcp: boolean;
+  allow_github_mcp: boolean;
+  allow_private_github_repos: boolean;
+  github_mcp_limit: number;
   created_at: Date;
   updated_at: Date;
 }
@@ -40,6 +43,9 @@ export interface CreateTeamData {
   mcp_server_limit?: number;
   member_limit?: number;
   allow_remote_mcp?: boolean;
+  allow_github_mcp?: boolean;
+  allow_private_github_repos?: boolean;
+  github_mcp_limit?: number;
 }
 
 export interface UpdateTeamData {
@@ -50,6 +56,9 @@ export interface UpdateTeamData {
   mcp_server_limit?: number;
   member_limit?: number;
   allow_remote_mcp?: boolean;
+  allow_github_mcp?: boolean;
+  allow_private_github_repos?: boolean;
+  github_mcp_limit?: number;
 }
 
 export interface TeamMemberWithUser {
@@ -154,6 +163,18 @@ export class TeamService {
       ? data.allow_remote_mcp
       : await GlobalSettings.getBoolean('team.allow_remote_mcp', false);
 
+    const allowGithubMcp = data.allow_github_mcp !== undefined
+      ? data.allow_github_mcp
+      : await GlobalSettings.getBoolean('team.allow_github_mcp', false);
+
+    const allowPrivateGithubRepos = data.allow_private_github_repos !== undefined
+      ? data.allow_private_github_repos
+      : await GlobalSettings.getBoolean('team.allow_private_github_repos', false);
+
+    const githubMcpLimit = data.github_mcp_limit !== undefined
+      ? data.github_mcp_limit
+      : await GlobalSettings.getNumber('team.github_mcp_limit', 1);
+
     // Create the team
     const teamData = {
       id: teamId,
@@ -166,6 +187,9 @@ export class TeamService {
       mcp_server_limit: mcpServerLimit,
       member_limit: memberLimit,
       allow_remote_mcp: allowRemoteMcp,
+      allow_github_mcp: allowGithubMcp,
+      allow_private_github_repos: allowPrivateGithubRepos,
+      github_mcp_limit: githubMcpLimit,
       created_at: now,
       updated_at: now,
     };
@@ -289,6 +313,9 @@ export class TeamService {
     if (data.mcp_server_limit !== undefined) updateData.mcp_server_limit = data.mcp_server_limit;
     if (data.member_limit !== undefined) updateData.member_limit = data.member_limit;
     if (data.allow_remote_mcp !== undefined) updateData.allow_remote_mcp = data.allow_remote_mcp;
+    if (data.allow_github_mcp !== undefined) updateData.allow_github_mcp = data.allow_github_mcp;
+    if (data.allow_private_github_repos !== undefined) updateData.allow_private_github_repos = data.allow_private_github_repos;
+    if (data.github_mcp_limit !== undefined) updateData.github_mcp_limit = data.github_mcp_limit;
 
     await (db as any)
       .update(schema.teams)

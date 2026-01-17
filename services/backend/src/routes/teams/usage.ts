@@ -42,9 +42,21 @@ const TEAM_USAGE_DATA_SCHEMA = {
         non_http_mcp_limit: {
           type: 'number',
           description: 'Maximum non-HTTP MCP servers allowed for the team'
+        },
+        allow_github_mcp: {
+          type: 'boolean',
+          description: 'Allow team to install MCP servers from GitHub repositories'
+        },
+        allow_private_github_repos: {
+          type: 'boolean',
+          description: 'Allow team to install MCP servers from private GitHub repositories'
+        },
+        github_mcp_limit: {
+          type: 'number',
+          description: 'Maximum number of MCP servers from GitHub repositories'
         }
       },
-      required: ['mcp_server_limit', 'non_http_mcp_limit']
+      required: ['mcp_server_limit', 'non_http_mcp_limit', 'allow_github_mcp', 'allow_private_github_repos', 'github_mcp_limit']
     }
   },
   required: ['is_default_team', 'total_installed_mcp_servers', 'non_http_mcp_servers', 'http_mcp_servers', 'limits']
@@ -70,6 +82,9 @@ interface TeamIdParams {
 interface TeamUsageLimits {
   mcp_server_limit: number;
   non_http_mcp_limit: number;
+  allow_github_mcp: boolean;
+  allow_private_github_repos: boolean;
+  github_mcp_limit: number;
 }
 
 interface TeamUsageData {
@@ -167,6 +182,9 @@ export default async function getTeamUsageRoute(server: FastifyInstance) {
         .select({
           mcp_server_limit: teams.mcp_server_limit,
           non_http_mcp_limit: teams.non_http_mcp_limit,
+          allow_github_mcp: teams.allow_github_mcp,
+          allow_private_github_repos: teams.allow_private_github_repos,
+          github_mcp_limit: teams.github_mcp_limit,
           is_default: teams.is_default,
           owner_id: teams.owner_id
         })
@@ -176,7 +194,10 @@ export default async function getTeamUsageRoute(server: FastifyInstance) {
 
       const limits: TeamUsageLimits = {
         mcp_server_limit: teamData[0]?.mcp_server_limit ?? 5,
-        non_http_mcp_limit: teamData[0]?.non_http_mcp_limit ?? 1
+        non_http_mcp_limit: teamData[0]?.non_http_mcp_limit ?? 1,
+        allow_github_mcp: teamData[0]?.allow_github_mcp ?? false,
+        allow_private_github_repos: teamData[0]?.allow_private_github_repos ?? false,
+        github_mcp_limit: teamData[0]?.github_mcp_limit ?? 1
       };
 
       // Check if this is the calling user's default team

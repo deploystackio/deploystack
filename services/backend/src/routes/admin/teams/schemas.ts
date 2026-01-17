@@ -33,6 +33,19 @@ export const UPDATE_TEAM_ADMIN_SCHEMA = {
     allow_remote_mcp: {
       type: 'boolean',
       description: 'Allow team to install MCP servers from remote sources not in the catalog'
+    },
+    allow_github_mcp: {
+      type: 'boolean',
+      description: 'Allow team to install MCP servers directly from GitHub repositories'
+    },
+    allow_private_github_repos: {
+      type: 'boolean',
+      description: 'Allow team to install MCP servers from private GitHub repositories'
+    },
+    github_mcp_limit: {
+      type: 'integer',
+      minimum: 0,
+      description: 'Maximum number of MCP servers that can be installed from GitHub repositories'
     }
   },
   additionalProperties: false
@@ -51,12 +64,15 @@ export const TEAM_RESPONSE_SCHEMA = {
     mcp_server_limit: { type: 'integer', description: 'Total MCP server limit' },
     member_limit: { type: 'integer', description: 'Team member limit' },
     allow_remote_mcp: { type: 'boolean', description: 'Allow remote MCP servers' },
+    allow_github_mcp: { type: 'boolean', description: 'Allow GitHub MCP servers' },
+    allow_private_github_repos: { type: 'boolean', description: 'Allow private GitHub repositories' },
+    github_mcp_limit: { type: 'integer', description: 'GitHub MCP server limit' },
     mcp_servers_count: { type: 'integer', description: 'Number of MCP servers installed in this team' },
     members_count: { type: 'integer', description: 'Number of members in this team' },
     created_at: { type: 'string', description: 'ISO8601 timestamp' },
     updated_at: { type: 'string', description: 'ISO8601 timestamp' }
   },
-  required: ['id', 'name', 'slug', 'owner_id', 'is_default', 'non_http_mcp_limit', 'mcp_server_limit', 'member_limit', 'allow_remote_mcp', 'mcp_servers_count', 'members_count', 'created_at', 'updated_at']
+  required: ['id', 'name', 'slug', 'owner_id', 'is_default', 'non_http_mcp_limit', 'mcp_server_limit', 'member_limit', 'allow_remote_mcp', 'allow_github_mcp', 'allow_private_github_repos', 'github_mcp_limit', 'mcp_servers_count', 'members_count', 'created_at', 'updated_at']
 } as const;
 
 export const SUCCESS_RESPONSE_SCHEMA = {
@@ -157,6 +173,9 @@ export interface UpdateTeamAdminRequest {
   mcp_server_limit?: number;
   member_limit?: number;
   allow_remote_mcp?: boolean;
+  allow_github_mcp?: boolean;
+  allow_private_github_repos?: boolean;
+  github_mcp_limit?: number;
 }
 
 export interface TeamResponse {
@@ -170,6 +189,9 @@ export interface TeamResponse {
   mcp_server_limit: number;
   member_limit: number;
   allow_remote_mcp: boolean;
+  allow_github_mcp: boolean;
+  allow_private_github_repos: boolean;
+  github_mcp_limit: number;
   mcp_servers_count: number;
   members_count: number;
   created_at: string;

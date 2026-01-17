@@ -127,6 +127,13 @@
       "when": 1767040330459,
       "tag": "0017_spooky_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1768655703946,
+      "tag": "0018_green_zeigeist",
+      "breakpoints": true
     }
   ]
 }

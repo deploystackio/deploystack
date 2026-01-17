@@ -5,6 +5,7 @@ import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Spinner } from '@/components/ui/spinner'
 import { DsCard } from '@/components/ui/ds-card'
 import { TeamService } from '@/services/teamService'
@@ -24,6 +25,9 @@ const { t } = useI18n()
 const mcpServerLimit = ref(props.team.mcp_server_limit)
 const nonHttpMcpLimit = ref(props.team.non_http_mcp_limit)
 const memberLimit = ref(props.team.member_limit)
+const allowGithubMcp = ref(props.team.allow_github_mcp)
+const allowPrivateGithubRepos = ref(props.team.allow_private_github_repos)
+const githubMcpLimit = ref(props.team.github_mcp_limit)
 const isSaving = ref(false)
 const errors = ref<Record<string, string>>({})
 
@@ -32,13 +36,19 @@ watch(() => props.team, (newTeam) => {
   mcpServerLimit.value = newTeam.mcp_server_limit
   nonHttpMcpLimit.value = newTeam.non_http_mcp_limit
   memberLimit.value = newTeam.member_limit
+  allowGithubMcp.value = newTeam.allow_github_mcp
+  allowPrivateGithubRepos.value = newTeam.allow_private_github_repos
+  githubMcpLimit.value = newTeam.github_mcp_limit
 }, { deep: true })
 
 // Check if form has changes
 const hasChanges = () => {
   return mcpServerLimit.value !== props.team.mcp_server_limit ||
          nonHttpMcpLimit.value !== props.team.non_http_mcp_limit ||
-         memberLimit.value !== props.team.member_limit
+         memberLimit.value !== props.team.member_limit ||
+         allowGithubMcp.value !== props.team.allow_github_mcp ||
+         allowPrivateGithubRepos.value !== props.team.allow_private_github_repos ||
+         githubMcpLimit.value !== props.team.github_mcp_limit
 }
 
 // Save limits
@@ -58,6 +68,10 @@ const saveLimits = async () => {
     errors.value.member_limit = 'Member limit must be at least 1'
     return
   }
+  if (githubMcpLimit.value < 0) {
+    errors.value.github_mcp_limit = 'GitHub MCP limit must be at least 0'
+    return
+  }
 
   // Skip if unchanged
   if (!hasChanges()) {
@@ -66,7 +80,14 @@ const saveLimits = async () => {
 
   try {
     isSaving.value = true
-    const updates: { mcp_server_limit?: number; non_http_mcp_limit?: number; member_limit?: number } = {}
+    const updates: {
+      mcp_server_limit?: number
+      non_http_mcp_limit?: number
+      member_limit?: number
+      allow_github_mcp?: boolean
+      allow_private_github_repos?: boolean
+      github_mcp_limit?: number
+    } = {}
 
     if (mcpServerLimit.value !== props.team.mcp_server_limit) {
       updates.mcp_server_limit = mcpServerLimit.value
@@ -76,6 +97,15 @@ const saveLimits = async () => {
     }
     if (memberLimit.value !== props.team.member_limit) {
       updates.member_limit = memberLimit.value
+    }
+    if (allowGithubMcp.value !== props.team.allow_github_mcp) {
+      updates.allow_github_mcp = allowGithubMcp.value
+    }
+    if (allowPrivateGithubRepos.value !== props.team.allow_private_github_repos) {
+      updates.allow_private_github_repos = allowPrivateGithubRepos.value
+    }
+    if (githubMcpLimit.value !== props.team.github_mcp_limit) {
+      updates.github_mcp_limit = githubMcpLimit.value
     }
 
     const updatedTeam = await TeamService.updateTeamAsAdmin(props.team.id, updates)
@@ -157,6 +187,63 @@ const saveLimits = async () => {
         </p>
         <p v-if="errors.member_limit" class="text-sm text-red-500">
           {{ errors.member_limit }}
+        </p>
+      </div>
+
+      <!-- Allow GitHub MCP Servers -->
+      <div class="space-y-2">
+        <div class="flex items-center space-x-2">
+          <Checkbox
+            id="allow_github_mcp"
+            :checked="allowGithubMcp"
+            :disabled="isSaving"
+            @update:checked="(value) => allowGithubMcp = value"
+          />
+          <Label for="allow_github_mcp" class="cursor-pointer">
+            Allow GitHub MCP Servers
+          </Label>
+        </div>
+        <p class="text-sm text-muted-foreground">
+          Allow this team to install MCP servers directly from GitHub repositories
+        </p>
+      </div>
+
+      <!-- Allow Private GitHub Repositories -->
+      <div class="space-y-2">
+        <div class="flex items-center space-x-2">
+          <Checkbox
+            id="allow_private_github_repos"
+            :checked="allowPrivateGithubRepos"
+            :disabled="isSaving"
+            @update:checked="(value) => allowPrivateGithubRepos = value"
+          />
+          <Label for="allow_private_github_repos" class="cursor-pointer">
+            Allow Private GitHub Repositories
+          </Label>
+        </div>
+        <p class="text-sm text-muted-foreground">
+          Allow this team to install MCP servers from private GitHub repositories
+        </p>
+      </div>
+
+      <!-- GitHub MCP Server Limit -->
+      <div class="space-y-2">
+        <Label for="github_mcp_limit">
+          GitHub MCP Server Limit
+        </Label>
+        <Input
+          id="github_mcp_limit"
+          v-model.number="githubMcpLimit"
+          type="number"
+          min="0"
+          :disabled="isSaving"
+          :class="{ 'border-red-500': errors.github_mcp_limit }"
+        />
+        <p class="text-sm text-muted-foreground">
+          Maximum number of MCP servers that can be installed from GitHub repositories
+        </p>
+        <p v-if="errors.github_mcp_limit" class="text-sm text-red-500">
+          {{ errors.github_mcp_limit }}
         </p>
       </div>
     </div>

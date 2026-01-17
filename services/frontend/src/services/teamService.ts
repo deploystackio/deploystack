@@ -45,6 +45,9 @@ export type CreateTeamInput = z.infer<typeof CreateTeamSchema>
 export interface TeamUsageLimits {
   mcp_server_limit: number;
   non_http_mcp_limit: number;
+  allow_github_mcp: boolean;
+  allow_private_github_repos: boolean;
+  github_mcp_limit: number;
 }
 
 export interface TeamMcpInstallation {

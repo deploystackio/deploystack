@@ -68,6 +68,9 @@ export default async function getTeamAdminRoute(server: FastifyInstance) {
         mcp_server_limit: number;
         member_limit: number;
         allow_remote_mcp: boolean;
+        allow_github_mcp: boolean;
+        allow_private_github_repos: boolean;
+        github_mcp_limit: number;
         created_at: Date;
         updated_at: Date;
         members_count: number;
@@ -85,6 +88,9 @@ export default async function getTeamAdminRoute(server: FastifyInstance) {
           mcp_server_limit: schema.teams.mcp_server_limit,
           member_limit: schema.teams.member_limit,
           allow_remote_mcp: schema.teams.allow_remote_mcp,
+          allow_github_mcp: schema.teams.allow_github_mcp,
+          allow_private_github_repos: schema.teams.allow_private_github_repos,
+          github_mcp_limit: schema.teams.github_mcp_limit,
           created_at: schema.teams.created_at,
           updated_at: schema.teams.updated_at,
           members_count: sql<number>`COUNT(DISTINCT ${schema.teamMemberships.id})::int`,
@@ -105,6 +111,9 @@ export default async function getTeamAdminRoute(server: FastifyInstance) {
           schema.teams.mcp_server_limit,
           schema.teams.member_limit,
           schema.teams.allow_remote_mcp,
+          schema.teams.allow_github_mcp,
+          schema.teams.allow_private_github_repos,
+          schema.teams.github_mcp_limit,
           schema.teams.created_at,
           schema.teams.updated_at
         )
@@ -136,6 +145,9 @@ export default async function getTeamAdminRoute(server: FastifyInstance) {
           mcp_server_limit: team.mcp_server_limit,
           member_limit: team.member_limit,
           allow_remote_mcp: team.allow_remote_mcp,
+          allow_github_mcp: team.allow_github_mcp,
+          allow_private_github_repos: team.allow_private_github_repos,
+          github_mcp_limit: team.github_mcp_limit,
           mcp_servers_count: team.mcp_servers_count,
           members_count: team.members_count,
           created_at: team.created_at.toISOString(),

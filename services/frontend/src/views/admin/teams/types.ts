@@ -9,6 +9,9 @@ export interface Team {
   mcp_server_limit: number
   member_limit: number
   allow_remote_mcp: boolean
+  allow_github_mcp: boolean
+  allow_private_github_repos: boolean
+  github_mcp_limit: number
   mcp_servers_count: number
   members_count: number
   created_at: string
@@ -51,6 +54,9 @@ export interface UpdateTeamAdminRequest {
   mcp_server_limit?: number
   member_limit?: number
   allow_remote_mcp?: boolean
+  allow_github_mcp?: boolean
+  allow_private_github_repos?: boolean
+  github_mcp_limit?: number
 }
 
 export interface UpdateTeamResponse {
