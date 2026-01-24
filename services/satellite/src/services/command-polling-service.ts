@@ -84,6 +84,17 @@ export interface McpServerConfig {
     /** Names of environment variables that are secrets */
     env?: string[];
   };
+
+  /** Server source - for GitHub deployment detection */
+  source?: 'manual' | 'github' | 'official_registry' | null;
+
+  /** GitHub repository information (parsed from github: URLs) */
+  github_owner?: string;
+  github_repo?: string;
+  github_ref?: string;
+
+  /** Temporary directory path (for cleanup after process termination) */
+  temp_dir?: string;
 }
 
 export interface ConfigurationUpdate {

@@ -63,6 +63,7 @@ export interface CreateMcpInstallationRequest {
   server_id: string;
   installation_name: string;
   installation_type?: 'global' | 'team';
+  satellite_id?: string;
   team_args?: string[];
   team_env?: Record<string, string>;
   team_headers?: Record<string, string>;
@@ -115,7 +116,12 @@ export class McpInstallationService {
     return installations;
   }
 
-  async getTeamInstallations(teamId: string, userId: string, includeStats: boolean = false): Promise<McpInstallation[]> {
+  async getTeamInstallations(
+    teamId: string,
+    userId: string,
+    includeStats: boolean = false,
+    source?: 'official_registry' | 'manual' | 'github'
+  ): Promise<McpInstallation[]> {
 
     // Optimized query: Select minimal columns + user's instance status
     const installations = await this.db
@@ -133,6 +139,10 @@ export class McpInstallationService {
         server_icon_url: this.mcpServers.icon_url,
         server_category_id: this.mcpServers.category_id,
         server_runtime: this.mcpServers.runtime,
+        server_source: this.mcpServers.source,
+        server_repository_url: this.mcpServers.repository_url,
+        server_git_branch: this.mcpServers.git_branch,
+        server_git_commit_sha: this.mcpServers.git_commit_sha,
 
         // User's instance status
         instance_id: this.mcpServerInstances.id,
@@ -152,7 +162,14 @@ export class McpInstallationService {
         )
       )
       .leftJoin(this.authUser, eq(this.mcpServerInstances.user_id, this.authUser.id))
-      .where(eq(this.mcpServerInstallations.team_id, teamId))
+      .where(
+        source
+          ? and(
+              eq(this.mcpServerInstallations.team_id, teamId),
+              eq(this.mcpServers.source, source)
+            )
+          : eq(this.mcpServerInstallations.team_id, teamId)
+      )
       .orderBy(desc(this.mcpServerInstallations.created_at));
 
     // Map to result structure
@@ -174,6 +191,10 @@ export class McpInstallationService {
         icon_url: row.server_icon_url,
         category_id: row.server_category_id,
         runtime: row.server_runtime,
+        source: row.server_source,
+        repository_url: row.server_repository_url,
+        git_branch: row.server_git_branch,
+        git_commit_sha: row.server_git_commit_sha,
       } : undefined
     } as any)); // Type assertion needed due to minimal response structure
 
@@ -612,6 +633,7 @@ export class McpInstallationService {
       created_by: userId,
       installation_name: data.installation_name,
       installation_type: data.installation_type || 'global',
+      satellite_id: data.satellite_id || null,
       team_args: data.team_args
         ? await this.encryptArguments(
             data.team_args,
@@ -756,6 +778,37 @@ export class McpInstallationService {
       teamId
     }, 'Deleting MCP installation');
 
+    // STEP 1: Get installation + server info BEFORE deletion
+    const installationWithServer = await this.db
+      .select({
+        id: this.mcpServerInstallations.id,
+        server_id: this.mcpServerInstallations.server_id,
+        server_source: this.mcpServers.source,
+        server_visibility: this.mcpServers.visibility,
+        owner_team_id: this.mcpServers.owner_team_id
+      })
+      .from(this.mcpServerInstallations)
+      .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
+      .where(
+        and(
+          eq(this.mcpServerInstallations.id, installationId),
+          eq(this.mcpServerInstallations.team_id, teamId)
+        )
+      )
+      .limit(1);
+
+    if (!installationWithServer[0]) {
+      this.logger.warn({
+        operation: 'delete_installation',
+        installationId,
+        teamId
+      }, 'Installation not found');
+      return false;
+    }
+
+    const { server_id, server_source, server_visibility, owner_team_id } = installationWithServer[0];
+
+    // STEP 2: Delete installation from mcpServerInstallations
     const result = await this.db
       .delete(this.mcpServerInstallations)
       .where(
@@ -768,7 +821,54 @@ export class McpInstallationService {
     // PostgreSQL returns rowCount for deleted rows
     const deleted = (result.rowCount || 0) > 0;
 
-    return deleted;
+    if (!deleted) {
+      this.logger.warn({
+        operation: 'delete_installation',
+        installationId,
+        teamId
+      }, 'Failed to delete installation');
+      return false;
+    }
+
+    this.logger.info({
+      operation: 'delete_installation',
+      installationId,
+      teamId,
+      serverId: server_id,
+      serverSource: server_source
+    }, 'Installation deleted from mcpServerInstallations');
+
+    // STEP 3: If GitHub source AND team-owned, also delete from mcpServers
+    if (server_source === 'github' && server_visibility === 'team' && owner_team_id === teamId) {
+      this.logger.info({
+        operation: 'delete_github_server',
+        serverId: server_id,
+        teamId,
+        source: server_source,
+        visibility: server_visibility
+      }, 'Deleting GitHub-deployed server from mcpServers table');
+
+      await this.db
+        .delete(this.mcpServers)
+        .where(eq(this.mcpServers.id, server_id));
+
+      this.logger.info({
+        operation: 'delete_github_server',
+        serverId: server_id,
+        teamId
+      }, 'GitHub server deleted from mcpServers table');
+    } else {
+      this.logger.debug({
+        operation: 'delete_installation',
+        serverId: server_id,
+        serverSource: server_source,
+        serverVisibility: server_visibility,
+        ownerTeamId: owner_team_id,
+        currentTeamId: teamId
+      }, 'Server not deleted from mcpServers (not GitHub or not team-owned)');
+    }
+
+    return true;
   }
 
   /**

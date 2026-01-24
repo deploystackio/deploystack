@@ -26,6 +26,8 @@ import { oauth2DiscoveryRoutes, oauth2ApiRoutes } from './oauth2'
 import adminRoutes from './admin'
 // Import satellite routes
 import satellitesRoutes from './satellites'
+// Import deployment callback routes
+import deployGitHubCallbackRoute from './deploy/github-callback'
 
 // Response schema for the root health check endpoint
 const healthCheckResponseSchema = z.object({
@@ -77,6 +79,9 @@ export const registerRoutes = (server: FastifyInstance): void => {
 
     // Register satellite routes
     await apiInstance.register(satellitesRoutes);
+
+    // Register deployment callback routes (global, no team prefix)
+    await apiInstance.register(deployGitHubCallbackRoute);
   }, { prefix: '/api' });
 
 

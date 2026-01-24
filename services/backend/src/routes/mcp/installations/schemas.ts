@@ -132,6 +132,10 @@ export const CREATE_INSTALLATION_REQUEST_SCHEMA = {
       enum: ['global', 'team'],
       description: 'Installation type (defaults to global)'
     },
+    satellite_id: {
+      type: 'string',
+      description: 'Satellite ID to install on (optional, auto-selected if not provided)'
+    },
     team_args: {
       type: 'array',
       items: { type: 'string' },
@@ -744,6 +748,7 @@ export interface CreateInstallationRequest {
   server_id: string;
   installation_name: string;
   installation_type?: 'global' | 'team';
+  satellite_id?: string;
   team_args?: string[];
   team_env?: Record<string, string>;
   team_headers?: Record<string, string>;

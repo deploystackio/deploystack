@@ -21,7 +21,8 @@ import {
   LayoutDashboard,
   Server,
   Bot,
-  BarChart3
+  BarChart3,
+  GitBranch
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 
@@ -69,6 +70,11 @@ const navigationItems = computed<NavItem[]>(() => [
     title: t('sidebar.navigation.mcpServer'),
     icon: Server,
     url: '/mcp-server',
+  },
+  {
+    title: t('sidebar.navigation.deploy'),
+    icon: GitBranch,
+    url: '/deploy',
   },
   {
     title: t('sidebar.navigation.clientConfiguration'),

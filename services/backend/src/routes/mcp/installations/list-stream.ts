@@ -18,6 +18,7 @@ import {
 export default async function getInstallationsStreamRoute(server: FastifyInstance) {
   server.get<{
     Params: TeamIdParams;
+    Querystring: { source?: 'official_registry' | 'manual' | 'github' };
   }>('/teams/:teamId/mcp/installations/stream', {
     sse: true,
     preValidation: [
@@ -27,13 +28,14 @@ export default async function getInstallationsStreamRoute(server: FastifyInstanc
     schema: {
       tags: ['MCP Installations'],
       summary: 'Stream MCP installations (SSE)',
-      description: 'Real-time installations list stream via Server-Sent Events. Sends initial snapshot then streams list changes as they occur (new installations, deletions, status updates). Connection automatically reconnects on disconnect.',
+      description: 'Real-time installations list stream via Server-Sent Events. Optionally filter by source with ?source=github. Sends initial snapshot then streams list changes as they occur (new installations, deletions, status updates). Connection automatically reconnects on disconnect.',
       security: DUAL_AUTH_SECURITY,
 
       params: TEAM_ID_PARAM_SCHEMA,
     },
   }, async (request, reply) => {
     const { teamId } = request.params as TeamIdParams;
+    const source = request.query.source;
     const userId = request.user!.id;
     const authType = request.tokenPayload ? 'oauth2' : 'cookie';
 
@@ -52,7 +54,7 @@ export default async function getInstallationsStreamRoute(server: FastifyInstanc
       const installationService = new McpInstallationService(db, request.log);
 
       // Step 1: Get initial installations list
-      const initialInstallations = await installationService.getTeamInstallations(teamId, userId);
+      const initialInstallations = await installationService.getTeamInstallations(teamId, userId, false, source);
 
       // Step 2: Send initial snapshot
       const initialSnapshot = formatInstallationListResponse(initialInstallations as RawInstallationListItem[]);
@@ -88,7 +90,7 @@ export default async function getInstallationsStreamRoute(server: FastifyInstanc
 
         try {
           // Query for updated installations
-          const updatedInstallations = await installationService.getTeamInstallations(teamId, userId);
+          const updatedInstallations = await installationService.getTeamInstallations(teamId, userId, false, source);
           const currentInstallationIds = new Set(updatedInstallations.map(i => i.id));
 
           // Check #2: After async operation completes

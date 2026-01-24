@@ -52,6 +52,8 @@ export {
   globalSettingGroups,
   globalSettings,
   teamCloudCredentials,
+  deploymentCredentials,
+  deploymentSettings,
 } from './schema-tables/settings';
 
 // MCP Server Catalog Tables

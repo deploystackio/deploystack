@@ -34,6 +34,7 @@ export const mcpServers = pgTable('mcpServers', {
   repository_id: text('repository_id'), // Platform-specific repo ID for API calls
   repository_subfolder: text('repository_subfolder'), // For monorepos
   git_branch: text('git_branch'), // Git branch - no default, only set when repository_url exists
+  git_commit_sha: text('git_commit_sha'), // Git commit SHA for GitHub deployments
   website_url: text('website_url'),
   icon_url: text('icon_url'), // Icon/logo URL for display in frontend
 
@@ -98,7 +99,7 @@ export const mcpServers = pgTable('mcpServers', {
   auto_install_new_default_team: boolean('auto_install_new_default_team').notNull().default(false),
 
   // Source Tracking
-  source: text('source', { enum: ['official_registry', 'manual'] }).notNull().default('manual'),
+  source: text('source', { enum: ['official_registry', 'manual', 'github'] }).notNull().default('manual'),
 
   // Official Registry Sync Tracking
   synced_from_official_registry: boolean('synced_from_official_registry').notNull().default(false),

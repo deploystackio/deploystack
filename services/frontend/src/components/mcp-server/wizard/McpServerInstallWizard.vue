@@ -296,6 +296,7 @@ const submitInstallation = async () => {
     const installationData = {
       server_id: props.serverId,
       installation_type: formData.value.platform.installation_type,
+      satellite_id: formData.value.platform.satellite_id,
       team_args: formData.value.environment.team_args,
       team_env: formData.value.environment.team_env,
       team_headers: formData.value.environment.team_headers,
@@ -353,7 +354,8 @@ const handleOAuthAuthorization = async () => {
     const authorizationData = {
       server_id: props.serverId,
       installation_name: props.serverData?.name || 'Unknown Server',
-      installation_type: formData.value.platform.installation_type
+      installation_type: formData.value.platform.installation_type,
+      satellite_id: formData.value.platform.satellite_id
     }
 
     const response = await McpInstallationService.startOAuthAuthorization(

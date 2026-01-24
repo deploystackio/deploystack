@@ -1,6 +1,6 @@
 import { type FastifyInstance } from 'fastify';
 import { getDb, getSchema } from '../../db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or, isNull } from 'drizzle-orm';
 import { requireSatelliteAuth } from '../../middleware/satelliteAuthMiddleware';
 import { McpArgsStorage } from '../../utils/mcpArgsStorage';
 import { McpEnvStorage } from '../../utils/mcpEnvStorage';
@@ -164,6 +164,8 @@ interface McpServerConfig {
   instance_status?: string; // Instance status from mcpServerInstances
   // OAuth support for HTTP/SSE MCP servers
   requires_oauth?: boolean;
+  // Server source (for GitHub detection)
+  source?: 'manual' | 'github' | 'official_registry' | null;
   settings?: {
     request_logging_enabled?: boolean;
   };
@@ -356,11 +358,22 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
 
       // Get ALL MCP server installations with server details (adapted from gateway logic)
       // Global satellites get all teams, team satellites get only their team
+      // Only return installations assigned to THIS satellite OR unassigned (NULL)
       const whereClause = satelliteData.satellite_type === 'global'
-        ? eq(mcpServers.status, 'active')
+        ? and(
+            eq(mcpServers.status, 'active'),
+            or(
+              eq(mcpServerInstallations.satellite_id, satelliteId),
+              isNull(mcpServerInstallations.satellite_id)
+            )
+          )
         : and(
             eq(mcpServers.status, 'active'),
-            eq(mcpServerInstallations.team_id, satelliteData.team_id!)
+            eq(mcpServerInstallations.team_id, satelliteData.team_id!),
+            or(
+              eq(mcpServerInstallations.satellite_id, satelliteId),
+              isNull(mcpServerInstallations.satellite_id)
+            )
           );
 
       const installations = await db
@@ -729,8 +742,22 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             user_id: member.id,
             user_slug: member.id,
             // OAuth support for HTTP/SSE MCP servers
-            requires_oauth: server.requires_oauth || false
+            requires_oauth: server.requires_oauth || false,
+            // Source (for GitHub detection)
+            source: server.source as 'manual' | 'github' | 'official_registry' | null
           };
+
+          // DEBUG: Log source field being sent to satellite
+          request.log.debug({
+            operation: 'config_source_field_debug',
+            server_id: server.id,
+            server_slug: server.slug,
+            installation_id: installation.id,
+            user_id: member.id,
+            source_from_db: server.source,
+            source_type: typeof server.source,
+            source_in_config: serverConfig.source
+          }, `Backend config: server.source='${server.source}' (type: ${typeof server.source}) -> config.source='${serverConfig.source}'`);
 
           if (server.transport_type === 'stdio') {
             // For stdio transport, use the processed command and args

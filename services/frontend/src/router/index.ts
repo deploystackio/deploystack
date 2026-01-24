@@ -213,6 +213,18 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresSetup: true },
   },
   {
+    path: '/deploy',
+    name: 'Deploy',
+    component: () => import('../views/deploy/index.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
+    path: '/deploy/create',
+    name: 'DeployCreate',
+    component: () => import('../views/deploy/create.vue'),
+    meta: { requiresSetup: true },
+  },
+  {
     path: '/client-configuration',
     name: 'ClientConfiguration',
     component: () => import('../views/client-configuration/index.vue'),

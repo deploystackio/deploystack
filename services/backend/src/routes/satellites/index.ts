@@ -8,12 +8,14 @@ import registrationTokenRoutes from './registration-tokens';
 import satelliteEventsRoute from './events';
 import satelliteTokensRoute from './tokens';
 import satelliteTokensStatusRoute from './tokens-status';
+import githubTokenRoute from './github-token';
 
 export default async function satellitesRoute(server: FastifyInstance) {
   await server.register(satelliteRegisterRoute);
   await server.register(satelliteCommandsRoute);
   await server.register(satelliteHeartbeatRoute);
   await server.register(satelliteConfigRoute);
+  await server.register(githubTokenRoute);
   await server.register(satelliteManageRoutes);
   await server.register(registrationTokenRoutes);
   await server.register(satelliteEventsRoute);

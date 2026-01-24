@@ -246,8 +246,8 @@ export async function createServer() {
 
   // Initialize Process Manager and Runtime State for stdio subprocess servers (EventBus will be added after registration)
   const runtimeState = new RuntimeState();
-  
-  const processManager = new ProcessManager(server.log as any, undefined, runtimeState); // Fastify logger is compatible with pino Logger
+
+  const processManager = new ProcessManager(server.log as any, undefined, runtimeState, backendClient); // Fastify logger is compatible with pino Logger
   
   // Set up RuntimeState to listen for restart limit exceeded events
   runtimeState.listenToProcessManager(processManager);
@@ -388,7 +388,8 @@ export async function createServer() {
               user_id: serverConfig.user_id,
               command: serverConfig.command!,
               args: serverConfig.args!,
-              env: serverConfig.env || {}
+              env: serverConfig.env || {},
+              source: serverConfig.source  // GitHub deployment detection
             };
 
             // Spawn the process with updated configuration
@@ -456,7 +457,8 @@ export async function createServer() {
               user_id: serverConfig.user_id,
               command: serverConfig.command!,
               args: serverConfig.args!,
-              env: serverConfig.env || {}
+              env: serverConfig.env || {},
+              source: serverConfig.source  // GitHub deployment detection
             };
 
             // Spawn the process

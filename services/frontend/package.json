@@ -1,6 +1,6 @@
 {
   "name": "@deploystack/frontend",
-  "version": "0.54.0",
+  "version": "0.55.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -60,6 +60,6 @@
     "vite": "^7.3.1",
     "vite-plugin-vue-devtools": "^8.0.5",
     "vue-i18n": "^11.2.8",
-    "vue-tsc": "^3.2.1"
+    "vue-tsc": "^3.2.2"
   }
 }

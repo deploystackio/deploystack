@@ -17,6 +17,7 @@ import {
 
 interface InstallationListQuery {
   include_stats?: boolean;
+  source?: 'official_registry' | 'manual' | 'github';
 }
 
 export default async function listInstallationsRoute(server: FastifyInstance) {
@@ -31,7 +32,7 @@ export default async function listInstallationsRoute(server: FastifyInstance) {
     schema: {
       tags: ['MCP Installations'],
       summary: 'List team MCP installations',
-      description: 'Retrieves all MCP server installations for the specified team. Optionally include instance statistics with ?include_stats=true (requires mcp.installations.stats.view permission).',
+      description: 'Retrieves all MCP server installations for the specified team. Optionally filter by source with ?source=github. Optionally include instance statistics with ?include_stats=true (requires mcp.installations.stats.view permission).',
       security: DUAL_AUTH_SECURITY,
 
       // Fastify validation schema
@@ -52,9 +53,10 @@ export default async function listInstallationsRoute(server: FastifyInstance) {
     const userId = request.user!.id;
     const authType = request.tokenPayload ? 'oauth2' : 'cookie';
 
-    // Parse include_stats query parameter
+    // Parse query parameters
     const query = request.query as InstallationListQuery;
     const includeStats = query.include_stats === true || query.include_stats === 'true' as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const source = query.source;
 
     request.log.debug({
       operation: 'list_mcp_installations',
@@ -104,7 +106,7 @@ export default async function listInstallationsRoute(server: FastifyInstance) {
       const db = getDb();
       const installationService = new McpInstallationService(db, request.log);
 
-      const installations = await installationService.getTeamInstallations(teamId, userId, includeStats);
+      const installations = await installationService.getTeamInstallations(teamId, userId, includeStats, source);
 
       request.log.info({
         operation: 'list_mcp_installations',

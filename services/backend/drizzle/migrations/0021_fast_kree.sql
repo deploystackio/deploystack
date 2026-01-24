@@ -1,0 +1,3 @@
+ALTER TABLE "mcpServerInstallations" ADD COLUMN "satellite_id" text;--> statement-breakpoint
+ALTER TABLE "mcpServerInstallations" ADD CONSTRAINT "mcpServerInstallations_satellite_id_satellites_id_fk" FOREIGN KEY ("satellite_id") REFERENCES "public"."satellites"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "mcp_installations_satellite_idx" ON "mcpServerInstallations" USING btree ("satellite_id");

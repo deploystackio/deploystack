@@ -14,6 +14,8 @@ export interface MCPServerConfig {
   command: string;              // "npx" for Node.js packages
   args: string[];               // ["-y", "@upstash/context7"]
   env: Record<string, string>;  // Environment variables from three-tier config
+  source?: 'manual' | 'github' | 'official_registry' | null; // Server source (for GitHub detection)
+  temp_dir?: string;            // Temporary directory path (for GitHub deployments, cleanup on termination)
 }
 
 /**

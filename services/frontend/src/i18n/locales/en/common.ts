@@ -31,7 +31,9 @@ export default {
     close: 'Close',
     cancel: 'Cancel',
     save: 'Save',
-    saving: 'Saving...'
+    saving: 'Saving...',
+    back: 'Back',
+    next: 'Next'
   },
   messages: {
     error: 'An error occurred',

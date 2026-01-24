@@ -781,4 +781,92 @@ export class BackendClient {
       };
     }
   }
+
+  /**
+   * Fetch GitHub token for private repository deployment
+   */
+  async fetchGitHubToken(installationId: string): Promise<{ token: string; expires_at: string } | null> {
+    const startTime = Date.now();
+
+    try {
+      const data = await this.loadPersistedData();
+
+      if (!data || !data.satellite_id) {
+        this.logger.error({
+          operation: 'github_token_fetch_failed',
+          error: 'Satellite not registered'
+        }, 'Cannot fetch GitHub token: satellite not registered');
+        return null;
+      }
+
+      const url = `${this.backendUrl}/api/satellites/${data.satellite_id}/github-token/${installationId}`;
+
+      this.logger.debug({
+        operation: 'github_token_fetch_start',
+        backend_url: this.backendUrl,
+        satellite_id: data.satellite_id,
+        installation_id: installationId
+      }, 'Fetching GitHub token from backend');
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${data.api_key}`
+        }
+      });
+
+      const responseTime = Date.now() - startTime;
+
+      if (response.ok) {
+        const result = await response.json() as { token: string; expires_at: string };
+
+        this.logger.info({
+          operation: 'github_token_fetch_success',
+          backend_url: this.backendUrl,
+          satellite_id: data.satellite_id,
+          installation_id: installationId,
+          expires_at: result.expires_at,
+          response_time_ms: responseTime
+        }, 'GitHub token fetched successfully');
+
+        return result;
+      } else {
+        const errorBody = await response.text();
+        let errorMessage = `HTTP ${response.status}`;
+
+        try {
+          const errorJson = JSON.parse(errorBody);
+          errorMessage = errorJson.error || errorMessage;
+        } catch {
+          // Keep default error message
+        }
+
+        this.logger.error({
+          operation: 'github_token_fetch_failed',
+          backend_url: this.backendUrl,
+          satellite_id: data.satellite_id,
+          installation_id: installationId,
+          status_code: response.status,
+          error_message: errorMessage,
+          response_time_ms: responseTime
+        }, 'GitHub token fetch failed');
+
+        return null;
+      }
+    } catch (error) {
+      const responseTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      this.logger.error({
+        operation: 'github_token_fetch_exception',
+        backend_url: this.backendUrl,
+        installation_id: installationId,
+        error: errorMessage,
+        response_time_ms: responseTime
+      }, 'GitHub token fetch failed with exception');
+
+      return null;
+    }
+  }
 }

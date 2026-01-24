@@ -5,6 +5,7 @@ import { pgTable, text, integer, boolean, timestamp, index, jsonb, uniqueIndex }
 import { authUser } from './auth';
 import { teams } from './teams';
 import { mcpServers } from './mcp-catalog';
+import { satellites } from './satellites';
 
 // MCP OAuth Providers - Pre-registered OAuth providers for non-DCR auth servers (GitHub, Google, etc.)
 export const mcpOauthProviders = pgTable('mcpOauthProviders', {
@@ -125,6 +126,9 @@ export const mcpServerInstallations = pgTable('mcpServerInstallations', {
 
   settings: jsonb('settings').default('{}'), // Generic settings object: {request_logging_enabled: boolean, ...}
 
+  // Satellite tracking - which satellite is running this installation (all instances run on same satellite)
+  satellite_id: text('satellite_id').references(() => satellites.id, { onDelete: 'set null' }),
+
   // Metadata
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -133,6 +137,7 @@ export const mcpServerInstallations = pgTable('mcpServerInstallations', {
   teamInstallationNameIdx: index('mcp_installations_team_name_idx').on(table.team_id, table.installation_name),
   teamServerIdx: index('mcp_installations_team_server_idx').on(table.team_id, table.server_id),
   createdByIdx: index('mcp_installations_created_by_idx').on(table.created_by),
+  satelliteIdx: index('mcp_installations_satellite_idx').on(table.satellite_id),
 }));
 
 // MCP User Configurations - Individual user configurations per installation (Tier 3)

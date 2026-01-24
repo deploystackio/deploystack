@@ -9,6 +9,7 @@ import getTeamUsageRoute from './usage';
 import teamMembersRoutes from './members';
 import mcpInstallationsRoutes from './mcp-installations';
 import getTeamSatellitesRoute from './satellites';
+import deploymentRoutes from './deploy';
 
 export default async function teamsRoute(fastify: FastifyInstance) {
   // Register individual team route handlers
@@ -28,4 +29,7 @@ export default async function teamsRoute(fastify: FastifyInstance) {
 
   // Register team satellites routes
   await fastify.register(getTeamSatellitesRoute);
+
+  // Register deployment routes
+  await fastify.register(deploymentRoutes);
 }

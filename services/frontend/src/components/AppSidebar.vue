@@ -45,7 +45,8 @@ import {
   Satellite,
   ListTodo,
   Bot,
-  BarChart3
+  BarChart3,
+  GitBranch
 } from 'lucide-vue-next'
 
 // Define props, including variant
@@ -99,6 +100,11 @@ const navigationItems = [
     title: t('sidebar.navigation.mcpServer'),
     icon: Server,
     url: '/mcp-server',
+  },
+  {
+    title: t('sidebar.navigation.deploy'),
+    icon: GitBranch,
+    url: '/deploy',
   },
   {
     title: t('sidebar.navigation.clientConfiguration'),

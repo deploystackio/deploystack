@@ -2,11 +2,16 @@ import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import { Logger } from 'pino';
-import { mkdir } from 'fs/promises';
+import { mkdir, rm } from 'fs/promises';
 import { existsSync } from 'fs';
+import { Octokit } from '@octokit/rest';
+import * as tar from 'tar';
+import * as path from 'path';
+import * as fs from 'fs';
 import { MCPServerConfig, ProcessInfo } from './types';
 import type { EventBus } from '../services/event-bus';
 import type { RuntimeState } from './runtime-state';
+import type { BackendClient } from '../services/backend-client';
 import { nsjailConfig, mcpCacheBaseDir, BLOCKED_ENV_VARS } from '../config/nsjail';
 
 /**
@@ -68,6 +73,7 @@ export class ProcessManager extends EventEmitter {
   private eventBus?: EventBus;
   private runtimeState?: RuntimeState;
   private respawningProcesses = new Map<string, Promise<ProcessInfo>>(); // installationName -> respawn promise
+  private backendClient?: BackendClient; // BackendClient for GitHub token fetching
 
   // Log batching for mcp.server.logs events
   private logBuffer: BufferedLogEntry[] = [];
@@ -78,11 +84,12 @@ export class ProcessManager extends EventEmitter {
   // Backend status tracking callback
   private backendStatusCallback?: (installationId: string, status: string, statusMessage?: string) => void;
 
-  constructor(logger: Logger, eventBus?: EventBus, runtimeState?: RuntimeState) {
+  constructor(logger: Logger, eventBus?: EventBus, runtimeState?: RuntimeState, backendClient?: BackendClient) {
     super();
     this.logger = logger;
     this.eventBus = eventBus;
     this.runtimeState = runtimeState;
+    this.backendClient = backendClient;
 
     // Listen for process exits to detect crashes and attempt restart
     this.on('processExit', (processInfo, code, signal) => {
@@ -535,20 +542,96 @@ export class ProcessManager extends EventEmitter {
    */
   async spawnProcess(config: MCPServerConfig): Promise<ProcessInfo> {
     const processId = uuidv4();
-    
+
     this.logger.info({
       operation: 'mcp_server_spawn_start',
       installation_name: config.installation_name,
       installation_id: config.installation_id,
       team_id: config.team_id,
       command: config.command,
-      args: config.args
+      args: config.args,
+      source: config.source
     }, `Spawning MCP server: ${config.installation_name}`);
 
     try {
-      // Determine isolation mode based on environment
+      // STEP 1: Handle GitHub repository deployments via Octokit
+      if (config.source === 'github' && config.command === 'npx' && this.backendClient) {
+        this.logger.info({
+          operation: 'github_deployment_detected',
+          installation_name: config.installation_name,
+          installation_id: config.installation_id,
+          command: config.command,
+          args: config.args
+        }, 'GitHub deployment detected, downloading repository via Octokit');
+
+        // Parse GitHub URL from NPX arguments
+        const githubInfo = this.parseGitHubUrl(config.command, config.args || []);
+        if (!githubInfo) {
+          throw new Error('Failed to parse GitHub URL from NPX arguments');
+        }
+
+        this.logger.debug({
+          operation: 'github_url_parsed',
+          owner: githubInfo.owner,
+          repo: githubInfo.repo,
+          ref: githubInfo.ref
+        }, `Parsed GitHub URL: ${githubInfo.owner}/${githubInfo.repo}#${githubInfo.ref}`);
+
+        // Fetch GitHub App installation token
+        const tokenResult = await this.backendClient.fetchGitHubToken(config.installation_id);
+        if (!tokenResult || !tokenResult.token) {
+          throw new Error('Failed to fetch GitHub token for private repository deployment');
+        }
+
+        this.logger.debug({
+          operation: 'github_token_fetched',
+          installation_id: config.installation_id,
+          expires_at: tokenResult.expires_at
+        }, 'GitHub token fetched successfully');
+
+        // Download repository as tarball
+        const tarballBuffer = await this.downloadGitHubRepository(
+          githubInfo.owner,
+          githubInfo.repo,
+          githubInfo.ref,
+          tokenResult.token
+        );
+
+        // Create temp directory
+        const tempDir = `/tmp/mcp-${uuidv4()}`;
+        this.logger.debug({
+          operation: 'temp_dir_created',
+          temp_dir: tempDir
+        }, `Created temp directory: ${tempDir}`);
+
+        // Extract tarball
+        await this.extractTarball(tarballBuffer, tempDir);
+
+        // Install dependencies
+        await this.installDependencies(tempDir);
+
+        // Build package if build script exists
+        await this.buildPackage(tempDir);
+
+        // Resolve package entry point
+        const entryPoint = await this.resolvePackageEntry(tempDir);
+
+        // Update config to run from local directory
+        config.command = 'node';
+        config.args = [entryPoint];
+        config.temp_dir = tempDir;
+
+        this.logger.info({
+          operation: 'github_deployment_ready',
+          installation_name: config.installation_name,
+          temp_dir: tempDir,
+          entry_point: entryPoint
+        }, 'GitHub repository downloaded and ready to spawn');
+      }
+
+      // STEP 2: Determine isolation mode based on environment
       const useNsjail = this.shouldUseNsjail();
-      const childProcess = useNsjail 
+      const childProcess = useNsjail
         ? await this.spawnWithNsjail(config)
         : this.spawnDirect(config);
 
@@ -1011,13 +1094,39 @@ export class ProcessManager extends EventEmitter {
     processInfo.status = 'terminated';
     this.processes.delete(processInfo.id);
     this.processIdsByName.delete(processInfo.config.installation_name);
-    
+
+    // Cleanup temp directory if this was a GitHub deployment
+    if (processInfo.config.temp_dir) {
+      try {
+        this.logger.debug({
+          operation: 'temp_dir_cleanup_start',
+          installation_name: processInfo.config.installation_name,
+          temp_dir: processInfo.config.temp_dir
+        }, `Cleaning up temp directory: ${processInfo.config.temp_dir}`);
+
+        await rm(processInfo.config.temp_dir, { recursive: true, force: true });
+
+        this.logger.debug({
+          operation: 'temp_dir_cleanup_success',
+          installation_name: processInfo.config.installation_name,
+          temp_dir: processInfo.config.temp_dir
+        }, 'Temp directory cleaned up successfully');
+      } catch (error) {
+        this.logger.warn({
+          operation: 'temp_dir_cleanup_failed',
+          installation_name: processInfo.config.installation_name,
+          temp_dir: processInfo.config.temp_dir,
+          error: error instanceof Error ? error.message : String(error)
+        }, 'Failed to cleanup temp directory (non-fatal)');
+      }
+    }
+
     this.logger.info({
       operation: 'mcp_server_terminate_success',
       installation_name: processInfo.config.installation_name,
       process_id: processInfo.id
     }, `Terminated MCP server: ${processInfo.config.installation_name}`);
-    
+
     this.emit('processTerminated', processInfo);
   }
 
@@ -1434,6 +1543,383 @@ export class ProcessManager extends EventEmitter {
       }, `MCP handshake failed for ${processInfo.config.installation_name}`);
       
       throw new Error(`MCP handshake failed: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Parse GitHub URL from NPX arguments
+   * Supports: github:owner/repo#ref
+   */
+  private parseGitHubUrl(command: string, args: string[]): { owner: string; repo: string; ref: string } | null {
+    // Check if this is an NPX command with GitHub shorthand
+    if (command !== 'npx') {
+      return null;
+    }
+
+    // Find the github: argument (skip -y or other flags)
+    const githubArg = args.find(arg => arg.startsWith('github:'));
+    if (!githubArg) {
+      return null;
+    }
+
+    // Parse github:owner/repo#ref
+    const match = githubArg.match(/^github:([^/]+)\/([^#]+)#(.+)$/);
+    if (!match) {
+      this.logger.warn({
+        operation: 'github_url_parse_failed',
+        github_arg: githubArg
+      }, 'Failed to parse GitHub URL from NPX arguments');
+      return null;
+    }
+
+    return {
+      owner: match[1],
+      repo: match[2],
+      ref: match[3]
+    };
+  }
+
+  /**
+   * Download GitHub repository as tarball using Octokit
+   * Includes retry logic with exponential backoff
+   */
+  private async downloadGitHubRepository(
+    owner: string,
+    repo: string,
+    ref: string,
+    token: string,
+    maxRetries = 3
+  ): Promise<Buffer> {
+    const octokit = new Octokit({ auth: token });
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        this.logger.debug({
+          operation: 'github_tarball_download_start',
+          owner,
+          repo,
+          ref,
+          attempt,
+          max_retries: maxRetries
+        }, `Downloading GitHub repository tarball (attempt ${attempt}/${maxRetries})`);
+
+        const response = await octokit.request('GET /repos/{owner}/{repo}/tarball/{ref}', {
+          owner,
+          repo,
+          ref,
+          request: {
+            parseSuccessResponseBody: false // Get raw response
+          }
+        });
+
+        // Response.data is a ReadableStream - convert to Buffer
+        let buffer: Buffer;
+
+        if (response.data instanceof ReadableStream) {
+          // Convert ReadableStream to Buffer
+          const reader = response.data.getReader();
+          const chunks: Uint8Array[] = [];
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+
+          buffer = Buffer.concat(chunks);
+        } else if (response.data instanceof ArrayBuffer) {
+          buffer = Buffer.from(response.data);
+        } else if (Buffer.isBuffer(response.data)) {
+          buffer = response.data;
+        } else {
+          throw new Error(`Unexpected response data type: ${typeof response.data}`);
+        }
+
+        this.logger.info({
+          operation: 'github_tarball_download_success',
+          owner,
+          repo,
+          ref,
+          size_bytes: buffer.length,
+          attempt
+        }, `Downloaded GitHub repository tarball (${(buffer.length / 1024).toFixed(2)} KB)`);
+
+        return buffer;
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        this.logger.error({
+          operation: 'github_tarball_download_failed',
+          owner,
+          repo,
+          ref,
+          attempt,
+          max_retries: maxRetries,
+          error: errorMessage
+        }, `Failed to download GitHub repository tarball (attempt ${attempt}/${maxRetries})`);
+
+        if (attempt === maxRetries) {
+          throw new Error(`Failed to download GitHub repository after ${maxRetries} attempts: ${errorMessage}`);
+        }
+
+        // Exponential backoff: 1s, 2s, 4s
+        const backoffMs = Math.pow(2, attempt - 1) * 1000;
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+
+    throw new Error('Unreachable: maxRetries exhausted');
+  }
+
+  /**
+   * Extract tarball to temporary directory
+   */
+  private async extractTarball(tarballBuffer: Buffer, tempDir: string): Promise<void> {
+    this.logger.debug({
+      operation: 'tarball_extract_start',
+      temp_dir: tempDir,
+      tarball_size: tarballBuffer.length
+    }, 'Extracting tarball to temporary directory');
+
+    try {
+      // Create temp directory
+      await mkdir(tempDir, { recursive: true });
+
+      // Write tarball to temp file (tar.extract needs a file path)
+      const tarballPath = path.join(tempDir, 'repo.tar.gz');
+      await fs.promises.writeFile(tarballPath, tarballBuffer);
+
+      // Extract tarball (GitHub tarballs have a root directory, so strip it)
+      await tar.extract({
+        file: tarballPath,
+        cwd: tempDir,
+        strip: 1 // Remove the root directory from GitHub tarball
+      });
+
+      // Remove the tarball file
+      await fs.promises.unlink(tarballPath);
+
+      this.logger.debug({
+        operation: 'tarball_extract_success',
+        temp_dir: tempDir
+      }, 'Tarball extracted successfully');
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      this.logger.error({
+        operation: 'tarball_extract_failed',
+        temp_dir: tempDir,
+        error: errorMessage
+      }, 'Failed to extract tarball');
+
+      throw new Error(`Failed to extract tarball: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Install dependencies in extracted repository
+   */
+  private async installDependencies(tempDir: string): Promise<void> {
+    this.logger.debug({
+      operation: 'npm_install_start',
+      temp_dir: tempDir
+    }, 'Installing dependencies with npm install --production');
+
+    return new Promise((resolve, reject) => {
+      const npmInstall = spawn('npm', ['install', '--production'], {
+        cwd: tempDir,
+        stdio: 'pipe'
+      });
+
+      let stderr = '';
+
+      npmInstall.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      npmInstall.on('exit', (code) => {
+        if (code === 0) {
+          this.logger.info({
+            operation: 'npm_install_success',
+            temp_dir: tempDir
+          }, 'Dependencies installed successfully');
+          resolve();
+        } else {
+          this.logger.error({
+            operation: 'npm_install_failed',
+            temp_dir: tempDir,
+            exit_code: code,
+            stderr: stderr.substring(0, 500) // Limit stderr output
+          }, `npm install failed with code ${code}`);
+
+          reject(new Error(`npm install failed with code ${code}: ${stderr.substring(0, 200)}`));
+        }
+      });
+
+      npmInstall.on('error', (error) => {
+        this.logger.error({
+          operation: 'npm_install_error',
+          temp_dir: tempDir,
+          error: error.message
+        }, 'npm install process error');
+
+        reject(new Error(`npm install process error: ${error.message}`));
+      });
+    });
+  }
+
+  /**
+   * Build package if build script exists
+   */
+  private async buildPackage(tempDir: string): Promise<void> {
+    try {
+      // Read package.json to check for build script
+      const packageJsonPath = path.join(tempDir, 'package.json');
+      const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
+      const packageJson = JSON.parse(packageJsonContent);
+
+      // Check if there's a build script
+      if (!packageJson.scripts?.build) {
+        this.logger.debug({
+          operation: 'npm_build_skip',
+          temp_dir: tempDir
+        }, 'No build script found, skipping build');
+        return;
+      }
+
+      this.logger.debug({
+        operation: 'npm_build_start',
+        temp_dir: tempDir
+      }, 'Building package with npm run build');
+
+      return new Promise((resolve, reject) => {
+        const npmBuild = spawn('npm', ['run', 'build'], {
+          cwd: tempDir,
+          stdio: 'pipe'
+        });
+
+        let stderr = '';
+
+        npmBuild.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        npmBuild.on('exit', (code) => {
+          if (code === 0) {
+            this.logger.info({
+              operation: 'npm_build_success',
+              temp_dir: tempDir
+            }, 'Package built successfully');
+            resolve();
+          } else {
+            this.logger.error({
+              operation: 'npm_build_failed',
+              temp_dir: tempDir,
+              exit_code: code,
+              stderr: stderr.substring(0, 500)
+            }, `npm run build failed with code ${code}`);
+
+            reject(new Error(`npm run build failed with code ${code}: ${stderr.substring(0, 200)}`));
+          }
+        });
+
+        npmBuild.on('error', (error) => {
+          this.logger.error({
+            operation: 'npm_build_error',
+            temp_dir: tempDir,
+            error: error.message
+          }, 'npm run build process error');
+
+          reject(new Error(`npm run build process error: ${error.message}`));
+        });
+      });
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      this.logger.error({
+        operation: 'npm_build_check_failed',
+        temp_dir: tempDir,
+        error: errorMessage
+      }, 'Failed to check for build script');
+
+      throw new Error(`Failed to check for build script: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Resolve package entry point from package.json
+   */
+  private async resolvePackageEntry(tempDir: string): Promise<string> {
+    this.logger.debug({
+      operation: 'package_entry_resolve_start',
+      temp_dir: tempDir
+    }, 'Resolving package entry point from package.json');
+
+    try {
+      const packageJsonPath = path.join(tempDir, 'package.json');
+      const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
+      const packageJson = JSON.parse(packageJsonContent);
+
+      // Check for bin field (can be string or object)
+      if (packageJson.bin) {
+        let entryPoint: string;
+
+        if (typeof packageJson.bin === 'string') {
+          // bin: "dist/index.js"
+          entryPoint = packageJson.bin;
+        } else if (typeof packageJson.bin === 'object') {
+          // bin: { "server-name": "dist/index.js" }
+          // Use the first entry
+          const binEntries = Object.values(packageJson.bin);
+          if (binEntries.length === 0) {
+            throw new Error('bin field is empty object');
+          }
+          entryPoint = binEntries[0] as string;
+        } else {
+          throw new Error(`Invalid bin field type: ${typeof packageJson.bin}`);
+        }
+
+        const absolutePath = path.join(tempDir, entryPoint);
+
+        this.logger.info({
+          operation: 'package_entry_resolved',
+          temp_dir: tempDir,
+          entry_point: entryPoint,
+          absolute_path: absolutePath
+        }, `Resolved package entry point: ${entryPoint}`);
+
+        return absolutePath;
+      }
+
+      // Fallback to main field
+      if (packageJson.main) {
+        const absolutePath = path.join(tempDir, packageJson.main);
+
+        this.logger.info({
+          operation: 'package_entry_resolved_main',
+          temp_dir: tempDir,
+          main: packageJson.main,
+          absolute_path: absolutePath
+        }, `Using main field as entry point: ${packageJson.main}`);
+
+        return absolutePath;
+      }
+
+      throw new Error('No bin or main field found in package.json');
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      this.logger.error({
+        operation: 'package_entry_resolve_failed',
+        temp_dir: tempDir,
+        error: errorMessage
+      }, 'Failed to resolve package entry point');
+
+      throw new Error(`Failed to resolve package entry point: ${errorMessage}`);
     }
   }
 }
