@@ -1,9 +1,14 @@
-# DeployStack - MCP Management Platform
+# DeployStack - Open Source MCP Hosting Platform
 
 <p align="center">
     <a href="https://deploystack.io">
         <img src="./.assets/deploystack-banner.png" alt="DeployStack Logo" />
     </a>
+</p>
+
+<p align="center">
+    <a href="https://opensource.org/licenses/AGPL-3.0"><img src="https://img.shields.io/badge/License-AGPL--3.0-blue.svg" alt="License: AGPL-3.0" /></a>
+    <a href="https://github.com/deploystackio/deploystack/stargazers"><img src="https://img.shields.io/github/stars/deploystackio/deploystack" alt="GitHub Stars" /></a>
 </p>
 
 <p align="center">
@@ -16,31 +21,45 @@
 
 ---
 
-Centralized MCP server management, credential vault, governance, and token optimization for developers and enterprises.
+Deploy MCP servers from GitHub to HTTP endpoints in 30 seconds. Works with n8n, Dify, Voiceflow, Langflow, Claude Code, Cursor, and any MCP client.
 
 ## The Problem
 
-MCP changes how AI agents use tools, but it has created two critical challenges:
+Most MCP servers are **stdio-only**. But workflow automation platforms need **HTTP endpoints**.
 
-### Problem 1: Management Chaos
+| Platform | What They Need | The Problem |
+|----------|---------------|-------------|
+| **n8n** | HTTP URLs for MCP Client node | stdio doesn't work |
+| **Dify** | HTTP/SSE endpoints (v1.6+) | No stdio support |
+| **Voiceflow** | Remote MCP endpoints | "Local MCP NOT supported" |
+| **Langflow** | HTTP/SSE for production | Local processes won't scale |
 
-- **Credential Sprawl**: Developers copy and paste sensitive API keys and tokens into insecure local configuration files, creating a huge security risk.
-- **No Governance**: Who is using which tools? Which agent is accessing sensitive customer data? Without a central control plane, companies are blind.
-- **Developer Friction**: Developers spend hours managing complex configurations for dozens of tools, a process that is both tedious and error-prone. Onboarding a new developer is a nightmare of configuration management.
-- **Inconsistent Environments**: Every developer has a slightly different local setup, leading to "it works on my machine" problems and configuration drift.
+Current workarounds are painful:
+- `mcp-remote` requires local Node.js setup
+- Docker containers need DevOps expertise
+- DIY hosting (Fly.io, Railway) takes hours
 
-### Problem 2: Context Window Consumption Crisis
-
-- **Token Bloat**: Each MCP server adds 5-15 tools to context. With 10 servers, that's 75,000+ tokens consumed before any work begins.
-- **Performance Degradation**: LLM accuracy drops significantly after 20-40 tools are loaded.
-- **Hard Limits**: Tools like Cursor enforce a 40-tool maximum, forcing developers to disable useful servers.
-- **Cannot Scale**: Teams hit performance walls when trying to use more than 5-8 MCP servers simultaneously.
-
-**Real-world example**: Claude Code users report 82,000 tokens (41% of context window) consumed by MCP tools at startup, leaving only 6% for actual work.
-
-DeployStack solves both problems with a complete MCP management platform and intelligent context window optimization.
+**And for teams**, the problems multiply:
+- Credentials scattered across Slack DMs and `.env` files
+- No visibility into who uses which tools
+- Onboarding new developers takes hours
+- When someone leaves, good luck rotating all those API keys
 
 ## Who DeployStack Is For
+
+### For AI Automation Builders
+
+- **n8n, Dify, Voiceflow, Langflow users**: Get HTTP endpoints for MCP servers - no more stdio limitations
+- **No DevOps required**: Skip the Docker containers and mcp-remote setup
+- **Deploy your custom MCP servers**: Point at a GitHub repo, get a URL in 30 seconds
+- **Focus on workflows**: Build automations, not infrastructure
+
+### For Automation Agencies
+
+- **Client-ready MCP hosting**: Deploy MCP servers for client projects without managing infrastructure
+- **White-label ready**: Team isolation keeps client data separate
+- **Scale without ops burden**: Add more MCP servers without adding DevOps headcount
+- **Credential management**: Secure vault for all your clients' API keys
 
 ### For Platform / DevOps Teams
 
@@ -51,7 +70,7 @@ DeployStack solves both problems with a complete MCP management platform and int
 
 ### For Developers
 
-- **Zero setup**: Add one URL to VS Code, get access to all team MCP tools instantly
+- **Zero setup**: Add one URL to your MCP client, get access to all team MCP tools instantly
 - **No local installs**: No `npm install`, no process management, no port conflicts
 - **Just works**: Same configuration everywhere - no more "works on my machine" debugging
 - **Focus on code**: Security and credentials are handled for you
@@ -63,81 +82,142 @@ DeployStack solves both problems with a complete MCP management platform and int
 - **Full visibility**: See which tools your team uses, how often, and what they access
 - **Offboarding safety**: When someone leaves, revoke access instantly - no credential rotation nightmare
 
-## 🚀 How It Works: A Quick Tour
+## The Solution
 
-### Global Satellite (Zero Installation)
+DeployStack hosts MCP servers as HTTP endpoints. Two ways to use it:
 
-1. **Admin**: Creates account at `cloud.deploystack.io`, adds MCP servers (like GitHub), stores API tokens securely in DeployStack vault
-2. **Developer**: Gets OAuth credentials from dashboard
-3. **VS Code Setup**: Adds one URL to MCP configuration: `https://satellite.deploystack.io/mcp`
-4. **Instant Access**: All team MCP tools work immediately - no installation, no local processes
-5. **The Magic**:
-   - VS Code calls satellite via HTTPS (like any other API)
-   - Satellite receives request, checks team permissions
-   - Spawns MCP server process with injected credentials
-   - Returns results via standard HTTP response
-   - Automatically shuts down idle processes to save resources
+### Deploy from GitHub
 
-**Before DeployStack:**
+Point DeployStack at any GitHub repo with an MCP server:
 
-```bash
-# Manual setup nightmare
-npm install -g some-mcp-cli
-some-mcp configure --api-key=xxx
-# Repeat for every tool, every developer
-```
+1. Connect your GitHub account
+2. Select a repository
+3. Get an HTTP endpoint that works immediately
 
-**After DeployStack:**
+Auto-deploys when you push. Like Vercel, but for MCP servers.
 
-```json
-{
-  "mcpServers": {
-    "deploystack": {
-      "type": "http",
-      "url": "https://satellite.deploystack.io/mcp"
-    }
-  }
-}
-```
+### Use the Curated Catalog
+
+Don't have your own MCP server? Browse our catalog of popular servers:
+
+- One-click installation
+- Pre-configured and tested
+- Ready to use in seconds
 
 ## Key Features
 
-### 🎯 Intelligent Context Window Optimization
+### Deploy from GitHub
 
-DeployStack includes a **hierarchical router** that reduces MCP token consumption by 90%+:
-
-**Traditional Approach:**
-
-- 10 MCP servers × 15 tools = 150 tools loaded
-- 150 tools × 500 tokens = 75,000 tokens consumed
-- Result: 37.5% of context window gone before you start
-
-**DeployStack Hierarchical Router:**
-
-- Exposes only 2 meta-tools: `discover_mcp_tools` and `execute_mcp_tool`
-- 2 tools × 686 tokens = 1372 tokens consumed
-- Result: 0.686% of context window used
-- **Token Reduction: 98.3%** ✅
-**How it works:**
-
-1. LLM calls `discover_mcp_tools(query)` - "Find GitHub tools"
-2. Router searches across all team MCP servers, returns relevant tool paths
-3. LLM calls `execute_mcp_tool(path, args)` with selected tool
-4. Router executes the actual MCP tool and returns results
-
-This means you can scale from 3 to 100+ MCP servers without degrading LLM performance.
-
-### 🚀 Zero Installation Experience
-
-**Before DeployStack:**
-
-```bash
-npm install -g some-mcp-cli
-some-mcp configure --api-key=xxx
-# Repeat for every tool, every developer
+```
+GitHub Repo → DeployStack → HTTP Endpoint → Your MCP Client
 ```
 
-**After DeployStack:**
+- Any stdio MCP server becomes an HTTP endpoint
+- Auto-deploy on git push
+- Branch deployments for testing
+- Zero DevOps required
+
+### 98% Token Reduction
+
+Traditional MCP setup loads all tools into context:
+- 10 servers × 15 tools = 150 tools = 75,000 tokens consumed
+
+DeployStack's hierarchical router exposes only 2 meta-tools:
+- `discover_mcp_tools` - find relevant tools
+- `execute_mcp_tool` - run the tool you need
+- Result: 1,372 tokens instead of 75,000
+
+Scale to 100+ MCP servers without degrading LLM performance.
+
+### Credential Vault
+
+Store API keys and secrets securely:
+
+- Encrypted at rest
+- Automatic injection at runtime
+- No credentials in config files
+- No secrets in Slack DMs
+- Rotate once, update everywhere
+
+### Team Management & RBAC
+
+Control access across your team:
+
+- Invite team members with specific roles
+- Define who can use which MCP servers
+- Manage permissions from one dashboard
+- Instant onboarding for new developers
+
+### Audit Logging
+
+Full visibility into MCP usage:
+
+- Track every tool interaction
+- See who accessed what and when
+- Export logs for compliance
+- Debug issues with complete history
+
+### Works Everywhere
+
+Compatible with any MCP client that supports HTTP/SSE:
+
+| Workflow Platforms | AI Coding Tools | Other Clients |
+|-------------------|-----------------|---------------|
+| n8n | Claude Code | Any HTTP MCP client |
+| Dify | Cursor | Custom integrations |
+| Voiceflow | VS Code | |
+| Langflow | Windsurf | |
+
+## Architecture
+
+```
+┌─────────────┐     ┌─────────────────┐     ┌─────────────┐
+│   GitHub    │────▶│   DeployStack   │────▶│  HTTP URL   │
+│    Repo     │     │    Satellite    │     │   Endpoint  │
+└─────────────┘     └─────────────────┘     └─────────────┘
+                            │
+                    ┌───────┴───────┐
+                    │               │
+              ┌─────▼───-──┐   ┌───-──▼──-───┐
+              │ Credential │   │ Hierarchical│
+              │   Vault    │   │   Router    │
+              └──────────-─┘   └─--──────────┘
+```
+
+**Two deployment options:**
+
+| Global Satellites | Team Satellites |
+|------------------|-----------------|
+| Managed by DeployStack | Deploy on your infrastructure |
+| Zero setup | Full data control |
+| Free tier available | Enterprise security |
+| `satellite.deploystack.io` | `satellite.yourcompany.com` |
+
+## Quick Start
+
+### 1. Sign Up
+
+Create a free account at [cloud.deploystack.io](https://cloud.deploystack.io)
+
+### 2. Add MCP Servers
+
+**Option A: Deploy from GitHub**
+- Connect your GitHub account
+- Select a repository with an MCP server
+- Click Deploy
+
+**Option B: Use Catalog**
+- Browse the MCP server catalog
+- Click Install on any server
+- Configure credentials if needed
+
+### 3. Get Your Endpoint
+
+Copy the HTTP endpoint URL from your dashboard.
+
+### 4. Configure Your MCP Client
+
+Add to your MCP client configuration:
 
 ```json
 {
@@ -150,195 +230,125 @@ some-mcp configure --api-key=xxx
 }
 ```
 
-### 🔒 Enterprise Security & Governance
+That's it. All your MCP servers are now accessible via one URL.
 
-- **Credential Vault**: Encrypted storage with automatic injection
-- **Team Isolation**: Complete separation between teams
-- **Audit Logging**: Track every tool interaction
-- **Role-Based Access**: Fine-grained permissions
+## Self-Hosting
 
-## Architecture: Two Ways to Deploy
-
-### Global Satellites (Managed by DeployStack)
-
-- **Zero Installation**: Just add URL to VS Code
-- **Context Optimization**: Hierarchical routing reduces token usage by 90%+
-- **Freemium Model**: Free tier with basic MCP servers
-- **Instant Access**: Pre-configured tools ready to use
-- **Multi-tenant**: Resource isolation between teams
-- **Example**: `https://satellite.deploystack.io/mcp`
-
-### Team Satellites (Deploy Your Own)
-
-- **Enterprise Security**: On-premise deployment within your network
-- **Internal Access**: Connect to company databases, APIs, file systems
-- **Complete Isolation**: Full team separation using Linux containers
-- **Same Performance**: Hierarchical routing reduces context consumption
-- **GitHub Actions Style**: Simple deployment with Docker
-- **Example**: `https://team-satellite.yourcompany.com/mcp`
-
-### Technical Flow
+DeployStack is open source (AGPL-3.0). Run it on your own infrastructure:
 
 ```bash
-VS Code → HTTPS Request → DeployStack Satellite → MCP Server Process → External API
-         ↓                 ↓                       ↓                   ↓
-    (OAuth JWT)     (Team Permissions)      (Credential Injection)  (GitHub/etc)
+git clone https://github.com/deploystackio/deploystack
+cd deploystack
+docker-compose up
 ```
 
-**Core Components:**
-
-- **Control Plane**: `cloud.deploystack.io` - web dashboard for teams, credentials, configurations
-- **Satellites**: Managed MCP infrastructure - no local processes, just HTTPS
-- **Process Manager**: On-demand MCP server spawning with X-minute idle timeout
-- **Team Isolation**: Complete separation using Linux namespaces and resource limits
-
-### Why Satellite vs Traditional Gateway?
-
-**User Experience:**
-
-- **Gateway**: "Install our CLI tool, configure localhost, manage processes"
-- **Satellite**: "Add this URL: `https://satellite.deploystack.io/mcp`"
-
-**Why This Matters:**
-
-- **Adoption Friction Kills Everything**: Every MCP solution requiring CLI installation loses interested developers
-- **"Another Local Proxy" Fatigue**: Market saturated with similar gateway solutions requiring installation
-- **Teams Can't Scale**: Complex setups prevent MCP adoption beyond early adopters
-- **Enterprise Path**: Natural progression from managed service to on-premise deployment
-
-**Technical Benefits:**
-
-- **No Local Dependencies**: No Node.js, npm, or port management
-- **Familiar Pattern**: Works like OpenAI API, Claude API, or any SaaS
-- **Auto-scaling**: Handles traffic spikes automatically
-- **High Availability**: multi-region deployment
-- **Instant Updates**: No user installations required for new features
+See [Self-Hosting Documentation](https://docs.deploystack.io/self-hosted/quick-start) for detailed instructions.
 
 ## Roadmap
 
-### **Phase 1: Foundation** (Completed)
+### Phase 1: Foundation (Completed)
 
-- **[Done]** Deployed `cloud.deploystack.io` hosted version with backend and frontend
-- **[Done]** Implemented a secure user and team management system with roles and permissions
-- **[Done]** Integrated OAuth for secure logins (e.g., GitHub)
-- **[Done]** Created the initial MCP Server Catalog for tool discovery
-- **[Done]** Established documentation and self-hosted Docker support
-- **[Done]** PostgreSQL-only database architecture - migrated from multi-database support (SQLite/Turso/PostgreSQL) to PostgreSQL-only for simplified maintenance and enterprise scalability
+- [x] Deployed `cloud.deploystack.io` hosted version with backend and frontend
+- [x] Implemented secure user and team management system with roles and permissions
+- [x] Integrated OAuth for secure logins (GitHub)
+- [x] Created initial MCP Server Catalog for tool discovery
+- [x] Established documentation and self-hosted Docker support
+- [x] PostgreSQL-only database architecture for enterprise scalability
 
-### **Phase 2: Enterprise Governance** (Completed)
+### Phase 2: Enterprise Governance (Completed)
 
-- **[Done]** Auto-install MCP servers for new users with admin-controlled defaults
-- **[Done]** Featured MCP servers filtering for improved tool discovery
-- **[Done]** Global Event Bus System - event-driven architecture with plugin integration
-- **[Done]** Three-Tier MCP Configuration Architecture - complete database schema redesign separating template, team, and user-level configurations
-- **[Done]** Multi-User Configuration Management - support for multiple users within teams, each with personalized device-specific configurations
-- **[Done]** Advanced MCP Argument & Environment Variable Handling - complete service layer with schema validation and runtime configuration assembly
-- **[Done]** HTTP Headers & URL Query Parameters Support - three-tier configuration for HTTP/SSE transport with intelligent URL parsing, automatic secret detection, and transport type validation
-- **[Done]** Selective Secret Masking in Satellite Logs - backend sends secret metadata to satellites for selective masking of sensitive query parameters, headers, and environment variables in logs (first 3 chars + *****), preventing credential exposure in log files and monitoring systems
+- [x] Auto-install MCP servers for new users with admin-controlled defaults
+- [x] Featured MCP servers filtering for improved tool discovery
+- [x] Global Event Bus System with plugin integration
+- [x] Three-Tier MCP Configuration Architecture (template, team, user levels)
+- [x] Multi-User Configuration Management with personalized device-specific configs
+- [x] Advanced MCP Argument & Environment Variable Handling with schema validation
+- [x] HTTP Headers & URL Query Parameters Support for HTTP/SSE transport
+- [x] Selective Secret Masking in Satellite Logs
 
-### **Phase 3: Satellite Infrastructure** (Completed)
+### Phase 3: Satellite Infrastructure (Completed)
 
-- **[Done]** **Global Satellite Infrastructure** - managed MCP servers via HTTPS
-- **[Done]** **Zero-Installation Experience** - just add URL to VS Code
-- **[Done]** **OAuth Authentication** - token-based auth
-- **[Done]** **Satellite Pairing Security** - JWT-based token registration system for secure satellite onboarding
-- **[Done]** **Public Launch** - production satellite for community use
-- **[Done]** **Resource Management** - process isolation (remote MCP) and limits
-- **[Done]** **GitHub README and Stars Integration** - automatic GitHub data fetching, secure storage, XSS prevention, DoS protection, and audit logging for MCP server catalog enhancement
-- **[Done]** **Background Job Queue System** - complete 4-phase custom PostgreSQL-based job queue with worker infrastructure, admin API, frontend monitoring UI, and documentation for long-running tasks
-- **[Done]** **Cron Job Scheduling System** - recurring task scheduler using node-cron with integration into the job queue system, standard cron expression support, automatic lifecycle management, and complete separation of scheduling logic from execution for reliability and monitoring
-- **[Done]** **Frontend Syntax Highlighting** - reusable CodeHighlight component with Prism.js for JSON, JavaScript, TypeScript, Bash, and YAML code blocks
-- **[Done]** **Resource Management** - process isolation (stdio) and limits
-- **[Done]** **MCP Registry** - integration of the official MCP Registry
+- [x] Global Satellite Infrastructure - managed MCP servers via HTTPS
+- [x] Zero-Installation Experience - just add URL to your MCP client
+- [x] OAuth Authentication with token-based auth
+- [x] Satellite Pairing Security with JWT-based token registration
+- [x] Public Launch - production satellite for community use
+- [x] Resource Management - process isolation and limits
+- [x] GitHub README and Stars Integration for MCP catalog
+- [x] Background Job Queue System with PostgreSQL-based worker infrastructure
+- [x] Cron Job Scheduling System with node-cron integration
+- [x] MCP Registry Integration - official MCP Registry support
 
-### **Phase 4: Context Window Optimization** (Current Priority)
+### Phase 4: Context Window Optimization (Completed)
 
-**Goal**: Reduce MCP token consumption by 90%+ through intelligent hierarchical routing
+- [x] Hierarchical Router Implementation - 2-tool pattern achieving 98% token reduction
+- [x] Semantic Tool Search with Fuse.js fuzzy matching (2-5ms performance)
+- [x] Tool Discovery API with paths, descriptions, transport types, relevance scores
+- [x] Smart Tool Execution with automatic routing to stdio or HTTP/SSE backends
+- [x] MCP Tool Metadata Collection with token counting and event-driven sync
+- [x] Tool Display & Analytics API for team-aware tool management
+- [x] Token Analytics Dashboard with visual comparisons and per-installation breakdown
+- [x] OAuth 2.1 Authentication for MCP Servers (Box, Linear, GitHub Copilot, etc.)
 
-- **[Done]** **Hierarchical Router Implementation** - 2-tool pattern with `discover_mcp_tools` and `execute_mcp_tool` achieving 99.5% token reduction
-- **[Done]** **Semantic Tool Search** - natural language queries with Fuse.js fuzzy matching across all installed MCP servers (2-5ms performance)
-- **[Done]** **Tool Discovery API** - returns tool paths, descriptions, transport types, and relevance scores
-- **[Done]** **Smart Tool Execution** - automatic routing to stdio or HTTP/SSE backends with credential injection
-- **[Done]** **Performance Benchmarks** - achieved 99.5% token reduction (exceeded 90%+ target): 2 meta-tools (350 tokens) vs 150 tools (75,000 tokens)
-- **[Done]** **MCP Tool Metadata Collection** - automatic tool discovery with token counting, event-driven metadata sync from satellites to backend, per-installation tool storage with descriptions and input schemas
-- **[Done]** **Tool Display & Analytics API** - team-aware endpoints for fetching tool lists per installation and aggregated token savings across all team installations
-- **[Done]** **Token Analytics Dashboard** - complete statistics dashboard with visual token comparison (stacked bar chart), 4 summary cards (installations, tools, savings %, DeployStack usage), side-by-side traditional vs hierarchical comparison, and expandable installation breakdown table with per-tool token counts
-- **[To Do]** **OAuth 2.1 Authentication for MCP Servers** - enable DeployStack to connect to OAuth-protected MCP servers (Box, Linear, GitHub Copilot) with on-the-fly endpoint discovery, PKCE flow, encrypted token storage, automatic refresh, and browser popup authentication
-- **[To Do]** **Optimization Recommendations** - suggest which servers to disable based on usage patterns
-- **[To Do]** **Documentation & Case Study** - technical deep-dive blog post with real-world metrics
+### Phase 5: Advanced Governance (Completed)
 
-**Result**: Teams can now scale from 3 to 100+ MCP servers without performance degradation. Context window consumption reduced from 37.5% to 0.175%. Full visibility into tool availability and token usage per installation.
+- [x] Analytics dashboards for tool usage and performance
+- [x] Per-tool access controls - team admins can disable individual tools
+- [x] Improved searchable MCP Server Catalog with Featured page and categories
+- [x] AI Instructions - ready-to-copy instruction files for AI coding assistants
 
-### **Phase 5: Advanced Governance** (Next 90 Days)
+### Phase 6: Advanced Architecture (Completed)
 
-- **[In Progress]** Build out Audit Logging features in the cloud UI
-- **[Done]** Develop Analytics dashboards for tool usage and performance
-- **[Done]** Per-tool access controls - team admins can disable individual tools per MCP installation
-- **[To Do]** Implement advanced policy controls (e.g., rate limiting, request validation)
-- **[Done]** Improve the searchable MCP Server Catalog with Featured page and category browsing
-- **[Done]** AI Instructions - ready-to-copy instruction files for AI coding assistants
-- **[To Do]** Deeper integration with IDEs and AI agent frameworks
-- **[To Do]** Per-team token budgets and cost attribution
-- **[To Do]** AI-powered tool recommendations based on conversation context
+- [x] Multi-Transport Support - SSE, Streamable HTTP, Direct HTTP protocols
+- [x] Real-Time Command Orchestration with instant status feedback
+- [x] Satellite Job System with JobManager and extensible architecture
+- [x] Satellite Backend Events System with batch processing and JSON schema validation
+- [x] MCP Client Activity Tracking across all components
+- [x] Time-Series Metrics System with 15-minute bucket aggregation
+- [x] Multi-region satellite deployment
 
-### **Phase 6: Advanced Architecture** (Completed)
+### Phase 7: GitHub Deployment (Completed)
 
-- **[Done]** **Multi-Transport Support** - SSE, Streamable HTTP, Direct HTTP protocols
-- **[Done]** **Real-Time Command Orchestration** - instant status feedback
-- **[Done]** **Satellite Job System** - recurring background task management with JobManager, abstract BaseJob class, automatic error handling, execution metrics tracking, and extensible architecture for health checks, cleanup tasks, and periodic maintenance operations
-- **[Done]** **Satellite Backend Events System** - real-time event processing with convention-based auto-discovery handler pattern, batch processing (1-100 events), partial success handling, JSON schema validation per event type, and extensible architecture supporting MCP client connections, tool executions, server crashes, and custom event types
-- **[Done]** **MCP Client Activity Tracking** - personal dashboard feature tracking active MCP clients per user across all components (backend database with mcpClientActivity table, satellite in-memory tracker with 30-second background job reporting via event system, dashboard API endpoint with dual authentication and pagination, client name detection from OAuth/headers/user-agent)
-- **[Done]** **Time-Series Metrics System** - production-ready metrics infrastructure with 15-minute bucket aggregation, 3-day retention, automated cleanup
-- **[Done]** **PostgreSQL-Only Database Architecture** - complete migration to PostgreSQL with simplified schema management, environment-based configuration, streamlined migration system, and production-ready setup for enterprise scalability
+- [x] Deploy MCP servers from any GitHub repository
+- [x] Auto-deploy on git push via webhooks
+- [x] Branch deployments for testing
+- [x] Team Satellites - customer-deployed satellites for enterprise
 
-### **Phase 7: Enterprise Features** (Future)
+### Phase 8: In Progress
 
-- **[To Do]** **Complete Monitoring** - satellite health and usage analytics
-- **[To Do]** **Enterprise Security** - advanced audit logging and compliance features
-- **[To Do]** **Team Satellites** - customer-deployed satellites for enterprise (*security infrastructure completed, deployment tooling pending*)
-- **[To Do]** **Advanced Team Isolation** - Linux namespaces and cgroups
-- **[To Do]** **On-Premise Deployment** - GitHub Actions runner-style deployment  
-- **[To Do]** **Enterprise Authentication** - SSO integration (SAML, OIDC)
+- [ ] Advanced Audit UI - detailed logging dashboard
+- [ ] Python MCP Server Support - deploy Python-based MCP servers
 
-### **Phase 8: Ecosystem Expansion** (Future)
+### Phase 9: Planned
 
-- **[To Do]** Multi-region satellite deployment
-- **[To Do]** AI agent framework integrations
-- **[To Do]** Performance SLAs and guarantees
-- **[To Do]** SOC 2 Type II certification
-
-## Try DeployStack
-
-### Get Started in 3 Minutes
-
-1. **Sign up**: Create free account at [cloud.deploystack.io](https://cloud.deploystack.io)
-2. **Get credentials**: Copy OAuth client credentials from dashboard
-3. **Configure VS Code**: Add satellite URL to MCP settings
-4. **Start using MCP tools**: Instant access to team tools
-
-### Links
-
-- 🌐 **Platform**: [cloud.deploystack.io](https://cloud.deploystack.io)
-- 📚 **Documentation**: [docs.deploystack.io](https://docs.deploystack.io)
-- 💬 **Discord**: [Join our community](https://discord.gg/42Ce3S7b3b)
+- [ ] SSO Integration (SAML, OIDC)
+- [ ] SOC 2 Type II certification
+- [ ] AI-powered tool recommendations based on conversation context
+- [ ] Per-team token budgets and cost attribution
 
 ## Contributing
 
-We're building the future of MCP adoption. Want to help?
+We welcome contributions. Here's how:
 
 1. Fork the repository
-2. Create feature branch: `git checkout -b feature/your-enhancement`
+2. Create a feature branch: `git checkout -b feature/your-idea`
 3. Follow TypeScript and ESLint conventions
 4. Add tests for new functionality
-5. Submit pull request with clear description
+5. Submit a pull request
 
-**Areas we need help:**
+**Areas where we need help:**
+- MCP server integrations
+- Documentation improvements
+- Satellite infrastructure
+- Enterprise features
 
-- Satellite infrastructure and scaling
-- MCP server integrations and testing  
-- Documentation and developer experience
-- Enterprise features and security
+## Links
+
+- **Platform**: [cloud.deploystack.io](https://cloud.deploystack.io)
+- **Documentation**: [docs.deploystack.io](https://docs.deploystack.io)
+- **GitHub**: [github.com/deploystackio/deploystack](https://github.com/deploystackio/deploystack)
+- **Discord**: [Join the community](https://discord.gg/42Ce3S7b3b)
 
 ## License
 
-Server Side Public License (SSPL) v1 - see [LICENSE](LICENSE) file for details.
+[AGPL-3.0](LICENSE) - you can self-host, modify, and use DeployStack freely. If you offer it as a service, you must open-source your modifications.
