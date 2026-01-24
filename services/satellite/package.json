@@ -33,7 +33,7 @@
     "@release-it/conventional-changelog": "^10.0.4",
     "@types/node": "^25.0.10",
     "@types/uuid": "^11.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.53.0",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.52.0",
     "copy-webpack-plugin": "^13.0.1",
     "eslint": "^9.39.2",
