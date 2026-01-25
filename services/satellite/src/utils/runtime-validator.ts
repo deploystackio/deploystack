@@ -207,7 +207,7 @@ function buildWarningMessage(result: RuntimeCheckResult): string {
  * @param logger - Logger instance (must have info() and fatal() methods)
  * @throws Never - Calls process.exit(1) on fatal errors
  */
-export function validateSystemRuntimes(logger: any): void {
+export function validateSystemRuntimes(logger: { info: (msg: string) => void; fatal: (msg: string) => void }): void {
   // Check if skip flag is set
   const skipChecks = process.env.DEPLOYSTACK_SKIP_RUNTIME_CHECKS === 'true';
 

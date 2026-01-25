@@ -23,7 +23,7 @@ import { McpActivityTracker } from './services/mcp-activity-tracker';
 import { ToolSearchService } from './services/tool-search-service';
 import { OAuthTokenService } from './services/oauth-token-service';
 import { SsePingService } from './services/sse-ping-service';
-import { validateSystemRuntimes } from './utils/runtime-validator.js';
+import { validateSystemRuntimes } from './utils/runtime-validator';
 
 /**
  * Validate registration token format and availability
