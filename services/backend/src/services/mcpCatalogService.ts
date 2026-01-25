@@ -399,13 +399,13 @@ export class McpCatalogService {
       try {
         const repoInfo = await GitHubService.getRepositoryInfo(data.repository_url, this.logger);
         githubInfo = {
-          description: data.description || repoInfo.description,
-          long_description: data.long_description || repoInfo.description,
-          language: data.language || repoInfo.language,
-          website_url: data.website_url || repoInfo.homepage,
-          license: data.license || repoInfo.license,
-          tags: data.tags || repoInfo.topics,
-          github_account_id: data.github_account_id || repoInfo.github_account_id
+          description: data.description ?? repoInfo.description,
+          long_description: data.long_description ?? repoInfo.description,
+          language: data.language ?? repoInfo.language,
+          website_url: data.website_url ?? repoInfo.homepage,
+          license: data.license ?? repoInfo.license,
+          tags: data.tags ?? repoInfo.topics,
+          github_account_id: data.github_account_id ?? repoInfo.github_account_id
         };
         
         this.logger.info({
@@ -429,8 +429,8 @@ export class McpCatalogService {
       id: serverId,
       name: data.name,
       slug,
-      description: githubInfo.description || data.description,
-      long_description: githubInfo.long_description || data.long_description,
+      description: githubInfo.description ?? data.description,
+      long_description: githubInfo.long_description ?? data.long_description,
       
       // Version information
       version: data.version || null,
