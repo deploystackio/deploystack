@@ -189,7 +189,9 @@ const convertServerToFormData = (server: McpServer, readmeBase64: string = ''): 
       featured: Boolean(server.featured),
       auto_install_new_default_team: Boolean(server.auto_install_new_default_team),
       website_url: server.website_url || '',
-      icon_url: server.icon_url || ''
+      icon_url: server.icon_url || '',
+      language: server.language || 'typescript',
+      runtime: server.runtime || 'node'
     },
     repository: {
       repository_url: server.repository_url || '',

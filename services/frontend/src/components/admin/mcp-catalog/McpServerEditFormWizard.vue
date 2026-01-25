@@ -336,7 +336,9 @@ const formData = ref<McpServerFormData>({
     featured: false,
     auto_install_new_default_team: false,
     website_url: '',
-    icon_url: ''
+    icon_url: '',
+    language: 'typescript',
+    runtime: 'node'
   },
   repository: {
     repository_url: '',
@@ -537,7 +539,9 @@ const autoPopulateFromRepository = (repositoryData: any) => {
       tags: repositoryData.topics || repositoryData.tags || [],
       featured: false,
       auto_install_new_default_team: false,
-      website_url: repositoryData.homepage || repositoryData.website_url || ''
+      website_url: repositoryData.homepage || repositoryData.website_url || '',
+      language: formData.value.basic.language || 'typescript',
+      runtime: formData.value.basic.runtime || 'node'
     },
     repository: {
       repository_url: repositoryData.html_url || repositoryData.repository_url || formData.value.repository_setup.repository_url,

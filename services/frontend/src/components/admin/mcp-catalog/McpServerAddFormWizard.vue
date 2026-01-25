@@ -15,6 +15,7 @@ import ClaudeDesktopConfigStep from '@/components/admin/mcp-catalog/ClaudeDeskto
 import ConfigurationSchemaStepAdd from '@/components/admin/mcp-catalog/steps/ConfigurationSchemaStepAdd.vue'
 import BasicInfoStepAdd from '@/components/admin/mcp-catalog/steps/BasicInfoStepAdd.vue'
 import type { McpServerFormData } from '@/views/admin/mcp-server-catalog/types'
+import { useRuntimeDetection } from '@/composables/admin/mcp-catalog'
 
 // Props interface
 interface Props {
@@ -38,6 +39,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const eventBus = useEventBus()
+const { detectRuntimeFromCommand } = useRuntimeDetection()
 
 // Form data interface for add wizard
 interface McpServerAddFormData {
@@ -68,6 +70,8 @@ interface McpServerAddFormData {
     transport_type: string
     website_url: string
     icon_url: string
+    language: string
+    runtime: string
   }
 }
 
@@ -152,7 +156,9 @@ const formData = ref<McpServerAddFormData>({
     auto_install_new_default_team: false,
     transport_type: 'auto',
     website_url: '',
-    icon_url: ''
+    icon_url: '',
+    language: 'typescript',
+    runtime: 'node'
   }
 })
 
@@ -276,6 +282,39 @@ const nextStep = () => {
     currentStep.value++
     const stepData = steps[currentStep.value]
     if (!stepData) return
+
+    // If moving to the Basic Info step (index 3), populate language and runtime from detected values
+    if (currentStep.value === 3) {
+      const claudeConfig = formData.value.claudeConfig.claude_desktop_config as any
+      let serverConfig: any = null
+
+      if (claudeConfig && claudeConfig.mcpServers) {
+        const serverKey = Object.keys(claudeConfig.mcpServers)[0]
+        serverConfig = serverKey ? claudeConfig.mcpServers[serverKey] : null
+      }
+
+      // Detect language and runtime
+      let detectedLanguage = 'typescript'
+      let detectedRuntime = 'node'
+
+      if (serverConfig) {
+        if (serverConfig.url) {
+          // HTTP/SSE servers
+          detectedLanguage = 'http'
+          detectedRuntime = 'http'
+        } else if (serverConfig.command) {
+          // STDIO servers - detect from command
+          const detection = detectRuntimeFromCommand(serverConfig.command)
+          detectedLanguage = detection.language
+          detectedRuntime = detection.runtime
+        }
+      }
+
+      // Update form data with detected values
+      formData.value.basic.language = detectedLanguage
+      formData.value.basic.runtime = detectedRuntime
+    }
+
     emit('stepChanged', { step: currentStep.value, stepKey: stepData.key })
 
     // Emit event bus event
@@ -391,10 +430,11 @@ const submitForm = async () => {
     let extractedPackages: any = null;
     let extractedRemotes: any = null;
     let extractedTransportType = 'stdio';
+    let serverConfig: any = null;
 
     if (claudeConfig && claudeConfig.mcpServers) {
       const serverKey = Object.keys(claudeConfig.mcpServers)[0];
-      const serverConfig = serverKey ? claudeConfig.mcpServers[serverKey] : null;
+      serverConfig = serverKey ? claudeConfig.mcpServers[serverKey] : null;
 
       if (serverConfig) {
         if (serverConfig.url) {
@@ -422,6 +462,11 @@ const submitForm = async () => {
       }
     }
 
+    // Use language and runtime from the Basic Info form (user can edit these in step 4)
+    // These values are auto-populated when navigating to step 4, but user can override them
+    const finalLanguage = formData.value.basic.language || 'typescript'
+    const finalRuntime = formData.value.basic.runtime || 'node'
+
     // Construct the final payload for the backend API
     const finalPayload: any = {
       // Basic Info
@@ -445,8 +490,8 @@ const submitForm = async () => {
       claude_desktop_config: formData.value.claudeConfig.claude_desktop_config,
 
       // Properly extracted fields based on transport type
-      language: extractedTransportType === 'http' || extractedTransportType === 'sse' ? 'http' : 'typescript',
-      runtime: extractedTransportType === 'http' || extractedTransportType === 'sse' ? 'http' : 'node',
+      language: finalLanguage,
+      runtime: finalRuntime,
       transport_type: extractedTransportType,
       packages: extractedPackages,
       remotes: extractedRemotes,

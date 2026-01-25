@@ -70,7 +70,9 @@ const defaultData: BasicInfoFormData = {
   featured: false,
   auto_install_new_default_team: false,
   website_url: '',
-  icon_url: ''
+  icon_url: '',
+  language: 'typescript',
+  runtime: 'node'
 }
 
 // Storage-first reactive data - using ref instead of computed for better reactivity

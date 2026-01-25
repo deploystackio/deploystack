@@ -341,6 +341,8 @@ export interface BasicInfoFormData {
   auto_install_new_default_team: boolean
   website_url: string
   icon_url?: string
+  language: string
+  runtime: string
 }
 
 export interface RepositoryFormData {

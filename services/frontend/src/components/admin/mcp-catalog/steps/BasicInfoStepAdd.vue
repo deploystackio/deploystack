@@ -26,6 +26,7 @@ import { Switch } from '@/components/ui/switch'
 import { X, Plus, CheckCircle } from 'lucide-vue-next'
 import { DynamicIcon } from '@/components/ui/dynamic-icon'
 import type { BasicInfoFormData } from '@/views/admin/mcp-server-catalog/types'
+import { LANGUAGE_OPTIONS, RUNTIME_OPTIONS } from '@/views/admin/mcp-server-catalog/types'
 import { useCategories } from '@/composables/admin/mcp-catalog/useCategories'
 import { useTagManager } from '@/composables/admin/mcp-catalog/useTagManager'
 import SharedFormField from '../shared/SharedFormField.vue'
@@ -219,6 +220,58 @@ loadCategories()
               {{ localData.auto_install_new_default_team ? 'Yes' : 'No' }}
             </span>
           </div>
+        </SharedFormField>
+
+        <!-- Language -->
+        <SharedFormField
+          label="Programming Language"
+          description="The primary programming language used by this MCP server (auto-detected from command)"
+        >
+          <Select
+            :model-value="localData.language"
+            @update:model-value="(value) => updateField('language', String(value || 'typescript'))"
+          >
+            <SelectTrigger>
+              <span>
+                {{ LANGUAGE_OPTIONS.find(opt => opt.value === localData.language)?.label || 'Select language' }}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="option in LANGUAGE_OPTIONS"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </SharedFormField>
+
+        <!-- Runtime -->
+        <SharedFormField
+          label="Runtime Environment"
+          description="The runtime environment required to run this MCP server (auto-detected from command)"
+        >
+          <Select
+            :model-value="localData.runtime"
+            @update:model-value="(value) => updateField('runtime', String(value || 'node'))"
+          >
+            <SelectTrigger>
+              <span>
+                {{ RUNTIME_OPTIONS.find(opt => opt.value === localData.runtime)?.label || 'Select runtime' }}
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="option in RUNTIME_OPTIONS"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </SharedFormField>
 
         <!-- Author Name -->
