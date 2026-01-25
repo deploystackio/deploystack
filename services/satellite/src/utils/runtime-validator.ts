@@ -8,6 +8,11 @@ import { spawnSync } from 'child_process';
  * but required runtimes are missing on the system.
  */
 
+interface Logger {
+  info: (obj: Record<string, unknown>, msg: string) => void;
+  fatal: (obj: Record<string, unknown>, msg: string) => void;
+}
+
 interface RuntimeCheck {
   name: string;           // Display name (e.g., "Node.js")
   commands: string[];     // Commands to check (e.g., ["node", "npx"])
@@ -207,7 +212,7 @@ function buildWarningMessage(result: RuntimeCheckResult): string {
  * @param logger - Logger instance (must have info() and fatal() methods)
  * @throws Never - Calls process.exit(1) on fatal errors
  */
-export function validateSystemRuntimes(logger: { info: (msg: string) => void; fatal: (msg: string) => void }): void {
+export function validateSystemRuntimes(logger: Logger): void {
   // Check if skip flag is set
   const skipChecks = process.env.DEPLOYSTACK_SKIP_RUNTIME_CHECKS === 'true';
 

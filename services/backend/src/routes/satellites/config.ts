@@ -45,6 +45,8 @@ const CONFIG_RESPONSE_SCHEMA = {
           requires_oauth: { type: 'boolean', description: 'Whether this MCP server requires OAuth authentication' },
           user_id: { type: 'string', description: 'User ID for this specific instance (per-user process)' },
           user_slug: { type: 'string', description: 'User ID used in processId for this specific instance' },
+          language: { type: 'string', description: 'Programming language (e.g., "typescript", "python", "go")' },
+          runtime: { type: 'string', description: 'Runtime environment (e.g., "node", "python", "docker")' },
           secret_metadata: {
             type: 'object',
             properties: {
@@ -166,6 +168,9 @@ interface McpServerConfig {
   requires_oauth?: boolean;
   // Server source (for GitHub detection)
   source?: 'manual' | 'github' | 'official_registry' | null;
+  // Language and runtime from mcpServers table
+  language?: string;
+  runtime?: string;
   settings?: {
     request_logging_enabled?: boolean;
   };
@@ -744,7 +749,10 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             // OAuth support for HTTP/SSE MCP servers
             requires_oauth: server.requires_oauth || false,
             // Source (for GitHub detection)
-            source: server.source as 'manual' | 'github' | 'official_registry' | null
+            source: server.source as 'manual' | 'github' | 'official_registry' | null,
+            // Language and runtime from mcpServers table
+            language: server.language || undefined,
+            runtime: server.runtime || undefined
           };
 
           // DEBUG: Log source field being sent to satellite
@@ -1053,7 +1061,9 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
               transport_type: server.transport_type as 'stdio' | 'http' | 'sse',
               user_id: member.id,
               user_slug: member.id,
-              enabled: false // Disabled due to processing error
+              enabled: false, // Disabled due to processing error
+              language: server.language || undefined,
+              runtime: server.runtime || undefined
             };
           }
         } // Close member loop
@@ -1063,7 +1073,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
         mcp_servers: mcpServerConfigs,
         satellite_config: mergedConfig
       };
-      
+
       request.log.info({
         operation: 'satellite_config_retrieval',
         satelliteId,

@@ -18,6 +18,8 @@ interface ServerInfo {
   status: string;
   command: string;
   args: string[];
+  language?: string;
+  runtime?: string;
   pid?: number;
   uptime_ms?: number;
   message_count?: number;
@@ -51,6 +53,8 @@ const serverInfoSchema = {
     status: { type: 'string' },
     command: { type: 'string' },
     args: { type: 'array', items: { type: 'string' } },
+    language: { type: 'string' },
+    runtime: { type: 'string' },
     pid: { type: 'number' },
     uptime_ms: { type: 'number' },
     message_count: { type: 'number' },
@@ -259,6 +263,8 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           error_count: processInfo.errorCount,
           command: processInfo.config.command,
           args: processInfo.config.args,
+          language: processInfo.config.language,
+          runtime: processInfo.config.runtime,
           last_activity: new Date(processInfo.lastActivity).toISOString(),
           restart_count: status?.restart_count || 0,
           ...backendStatusData
@@ -286,6 +292,8 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           status: backendStatusData.backend_status || 'dormant',
           command: config.command,
           args: config.args,
+          language: config.language,
+          runtime: config.runtime,
           message: 'Process terminated due to inactivity, will respawn on next request',
           ...backendStatusData
         });
@@ -319,6 +327,8 @@ export async function registerDebugRoutes(server: FastifyInstance) {
           status: backendStatusData.backend_status || 'configured',
           command: serverConfig.command || serverConfig.url || '',
           args: serverConfig.args || [],
+          language: serverConfig.language,
+          runtime: serverConfig.runtime,
           url: serverConfig.url,
           message: isOnline ? 'Server is online and ready' : (backendStatusData.backend_status ? `Server status: ${backendStatusData.backend_status}` : 'Server configured but not yet started'),
           ...backendStatusData

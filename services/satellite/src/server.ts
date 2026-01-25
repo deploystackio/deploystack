@@ -401,7 +401,9 @@ export async function createServer() {
               command: serverConfig.command!,
               args: serverConfig.args!,
               env: serverConfig.env || {},
-              source: serverConfig.source  // GitHub deployment detection
+              source: serverConfig.source,  // GitHub deployment detection
+              language: serverConfig.language,
+              runtime: serverConfig.runtime
             };
 
             // Spawn the process with updated configuration
@@ -470,7 +472,9 @@ export async function createServer() {
               command: serverConfig.command!,
               args: serverConfig.args!,
               env: serverConfig.env || {},
-              source: serverConfig.source  // GitHub deployment detection
+              source: serverConfig.source,  // GitHub deployment detection
+              language: serverConfig.language,
+              runtime: serverConfig.runtime
             };
 
             // Spawn the process

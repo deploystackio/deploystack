@@ -88,6 +88,12 @@ export interface McpServerConfig {
   /** Server source - for GitHub deployment detection */
   source?: 'manual' | 'github' | 'official_registry' | null;
 
+  /** Programming language (e.g., "typescript", "python", "go") */
+  language?: string;
+
+  /** Runtime environment (e.g., "node", "python", "docker") */
+  runtime?: string;
+
   /** GitHub repository information (parsed from github: URLs) */
   github_owner?: string;
   github_repo?: string;

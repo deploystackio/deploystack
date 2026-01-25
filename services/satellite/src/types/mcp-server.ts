@@ -64,6 +64,12 @@ export interface McpServerConfig {
   /** User ID that owns this instance (per-user process) */
   user_id?: string;
 
+  /** Programming language (e.g., "typescript", "python", "go") */
+  language?: string;
+
+  /** Runtime environment (e.g., "node", "python", "docker") */
+  runtime?: string;
+
   /** Metadata about which fields contain secrets (for secure logging) */
   secret_metadata?: {
     /** Names of query parameters that are secrets */

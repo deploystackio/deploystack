@@ -15,6 +15,8 @@ export interface MCPServerConfig {
   args: string[];               // ["-y", "@upstash/context7"]
   env: Record<string, string>;  // Environment variables from three-tier config
   source?: 'manual' | 'github' | 'official_registry' | null; // Server source (for GitHub detection)
+  language?: string;            // Programming language (e.g., "typescript", "python", "go")
+  runtime?: string;             // Runtime environment (e.g., "node", "python", "docker")
   temp_dir?: string;            // Temporary directory path (for GitHub deployments, cleanup on termination)
 }
 
