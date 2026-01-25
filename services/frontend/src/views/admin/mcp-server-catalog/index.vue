@@ -24,7 +24,7 @@ import NavbarLayout from '@/components/NavbarLayout.vue'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { McpCatalogService, type PaginationMeta } from '@/services/mcpCatalogService'
 import { useEventBus } from '@/composables/useEventBus'
-import McpServerTableColumns from './McpServerTableColumns.vue'
+import McpServerTableWrapper from './McpServerTableWrapper.vue'
 import PaginationControls from '@/components/ui/pagination/PaginationControls.vue'
 import type { McpServer } from './types'
 import type { McpServerSearchParams } from '@/types/mcp-catalog'
@@ -45,7 +45,7 @@ const deletedServerIds = ref<Set<string>>(new Set())
 
 // Search and filter state
 const searchQuery = ref('')
-const selectedSource = ref<'all' | 'official_registry' | 'manual'>('all')
+const selectedSource = ref<'all' | 'official_registry' | 'manual' | 'deployments'>('all')
 const selectedStatus = ref<'active' | 'deprecated' | 'maintenance' | 'disabled' | 'all'>('all')
 const selectedLanguage = ref('all')
 const selectedRuntime = ref('all')
@@ -363,7 +363,10 @@ const searchServers = async (): Promise<void> => {
     }
 
     // Add filters if selected (skip 'all' values)
-    if (selectedSource.value !== 'all') {
+    // Map 'deployments' to 'github' source for backend query
+    if (selectedSource.value === 'deployments') {
+      searchParams.source = 'github'
+    } else if (selectedSource.value !== 'all') {
       searchParams.source = selectedSource.value
     }
     if (selectedStatus.value !== 'all') {
@@ -409,7 +412,10 @@ const fetchServers = async (): Promise<void> => {
     }
 
     // Add active filters
-    if (selectedSource.value !== 'all') {
+    // Map 'deployments' to 'github' source for backend query
+    if (selectedSource.value === 'deployments') {
+      filters.source = 'github'
+    } else if (selectedSource.value !== 'all') {
       filters.source = selectedSource.value
     }
     if (selectedStatus.value !== 'all') {
@@ -464,7 +470,7 @@ const executeSearch = async () => {
 }
 
 // Handle source filter change from tabs
-const handleSourceChange = async (source: 'all' | 'official_registry' | 'manual') => {
+const handleSourceChange = async (source: 'all' | 'official_registry' | 'manual' | 'deployments') => {
   selectedSource.value = source
   selectedServerIds.value = [] // Clear selection when switching source
   currentPage.value = 1
@@ -650,8 +656,8 @@ onUnmounted(() => {
 
       <!-- Data Table -->
       <div v-else class="space-y-4">
-        <!-- Servers Table Component -->
-        <McpServerTableColumns
+        <!-- Servers Table Wrapper Component -->
+        <McpServerTableWrapper
           :is-loading="isLoading"
           :servers="visibleServers"
           :selected-source="selectedSource"

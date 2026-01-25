@@ -10298,127 +10298,609 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
-  /api/{teamId}/deploy/{*}:
+  /api/teams/{teamId}/deploy/github/install:
     get:
+      summary: Start GitHub App installation flow
+      tags:
+        - Deployment
+      description: Redirects to GitHub App installation page where user can select
+        repositories
       parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "302":
+          description: Redirect to GitHub App installation
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden
+  /api/teams/{teamId}/deploy/github/callback:
+    get:
+      summary: GitHub App installation callback
+      tags:
+        - Deployment
+      description: Handles GitHub App installation callback and stores installation ID
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: query
+          name: installation_id
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: setup_action
+          required: false
+        - schema:
+            type: string
+            minLength: 1
+          in: query
+          name: state
+          required: true
         - schema:
             type: string
           in: path
           name: teamId
           required: true
-        - schema:
-            type: string
-          in: path
-          name: "*"
-          required: true
       responses:
-        "200":
-          description: Default Response
-    head:
+        "302":
+          description: Redirect to frontend
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Bad Request
+        "403":
+          description: Forbidden - Feature disabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden - Feature disabled
+  /api/teams/{teamId}/deploy/github/connection:
+    get:
+      summary: Check GitHub App installation status
+      tags:
+        - Deployment
+      description: Returns whether the team has installed the GitHub App
       parameters:
         - schema:
             type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Connection status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected:
+                    type: boolean
+                    description: Whether the team has connected their GitHub account
+                required:
+                  - connected
+                description: Connection status
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden
+  /api/teams/{teamId}/deploy/github/repositories:
+    get:
+      summary: List GitHub repositories
+      tags:
+        - Deployment
+      description: Returns list of repositories accessible to the authenticated GitHub
+        account
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: List of repositories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  repositories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: number
+                        name:
+                          type: string
+                        full_name:
+                          type: string
+                        owner:
+                          type: string
+                        description:
+                          type:
+                            - "null"
+                            - string
+                        url:
+                          type: string
+                        clone_url:
+                          type: string
+                        default_branch:
+                          type: string
+                        private:
+                          type: boolean
+                        updated_at:
+                          type: string
+                required:
+                  - repositories
+                description: List of repositories
+        "400":
+          description: GitHub not connected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: GitHub not connected
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden
+  /api/teams/{teamId}/deploy/github/repositories/{owner}/{repo}/branches:
+    get:
+      summary: List branches for a GitHub repository
+      tags:
+        - Deployment
+      description: Returns list of branches for the specified repository
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
           in: path
           name: teamId
           required: true
         - schema:
             type: string
+            minLength: 1
           in: path
-          name: "*"
+          name: owner
           required: true
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: repo
+          required: true
+      security:
+        - cookieAuth: []
       responses:
         "200":
-          description: Default Response
-    trace:
-      parameters:
-        - schema:
-            type: string
-          in: path
-          name: teamId
-          required: true
-        - schema:
-            type: string
-          in: path
-          name: "*"
-          required: true
-      responses:
-        "200":
-          description: Default Response
-    delete:
-      parameters:
-        - schema:
-            type: string
-          in: path
-          name: teamId
-          required: true
-        - schema:
-            type: string
-          in: path
-          name: "*"
-          required: true
-      responses:
-        "200":
-          description: Default Response
-    options:
-      parameters:
-        - schema:
-            type: string
-          in: path
-          name: teamId
-          required: true
-        - schema:
-            type: string
-          in: path
-          name: "*"
-          required: true
-      responses:
-        "200":
-          description: Default Response
-    patch:
-      parameters:
-        - schema:
-            type: string
-          in: path
-          name: teamId
-          required: true
-        - schema:
-            type: string
-          in: path
-          name: "*"
-          required: true
-      responses:
-        "200":
-          description: Default Response
-    put:
-      parameters:
-        - schema:
-            type: string
-          in: path
-          name: teamId
-          required: true
-        - schema:
-            type: string
-          in: path
-          name: "*"
-          required: true
-      responses:
-        "200":
-          description: Default Response
+          description: List of branches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  branches:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        commit_sha:
+                          type: string
+                        protected:
+                          type: boolean
+                  default_branch:
+                    type: string
+                    description: Default branch name for the repository
+                required:
+                  - branches
+                  - default_branch
+                description: List of branches
+        "400":
+          description: Bad request or repository not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Bad request or repository not found
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden
+  /api/teams/{teamId}/deploy/github/disconnect:
     post:
+      summary: Uninstall GitHub App
+      tags:
+        - Deployment
+      description: Removes the GitHub App installation for the team
       parameters:
         - schema:
             type: string
+            minLength: 1
           in: path
           name: teamId
           required: true
-        - schema:
-            type: string
-          in: path
-          name: "*"
-          required: true
+      security:
+        - cookieAuth: []
       responses:
         "200":
-          description: Default Response
+          description: Disconnection result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Whether the disconnection was successful
+                required:
+                  - success
+                description: Disconnection result
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                required:
+                  - success
+                  - error
+                description: Forbidden
+  /api/teams/{teamId}/deploy:
+    post:
+      summary: Deploy MCP server from GitHub (synchronous)
+      tags:
+        - Deployment
+      description: "Validates GitHub repository and creates MCP server installation
+        synchronously (2-5 seconds). Returns 201 when installation is created.
+        Frontend then streams logs/status via SSE endpoints. Requires
+        Content-Type: application/json header when sending request body."
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source:
+                  type: string
+                  enum:
+                    - github
+                  description: Deployment source (only GitHub supported currently)
+                repository_url:
+                  type: string
+                  minLength: 1
+                  description: GitHub repository URL (e.g., https://github.com/user/repo)
+                branch:
+                  type: string
+                  minLength: 1
+                  description: Git branch to deploy from (e.g., main)
+                satellite_id:
+                  type: string
+                  description: Satellite ID to deploy on (optional, uses team default if omitted)
+                team_env:
+                  type: object
+                  description: Team-level environment variables
+                  additionalProperties:
+                    type: string
+                template_args:
+                  type: array
+                  items:
+                    type: string
+                  description: Additional command-line arguments for the MCP server
+              required:
+                - source
+                - repository_url
+                - branch
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "201":
+          description: Deployment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      installation_id:
+                        type: string
+                        description: Installation ID of the created MCP server
+                      server_id:
+                        type: string
+                        description: Server ID in the MCP catalog
+                      commit_sha:
+                        type: string
+                        description: Git commit SHA that was deployed
+                    required:
+                      - installation_id
+                      - server_id
+                      - commit_sha
+                required:
+                  - success
+                  - data
+                description: Deployment created successfully
+        "400":
+          description: Validation error (missing package.json, invalid MCP SDK, etc.)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                  step:
+                    type: string
+                    description: The validation step that failed (e.g., validate_package_json)
+                required:
+                  - success
+                  - error
+                description: Validation error (missing package.json, invalid MCP SDK, etc.)
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                  step:
+                    type: string
+                    description: The validation step that failed (e.g., validate_package_json)
+                required:
+                  - success
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                  step:
+                    type: string
+                    description: The validation step that failed (e.g., validate_package_json)
+                required:
+                  - success
+                  - error
+                description: Forbidden
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                  error:
+                    type: string
+                  step:
+                    type: string
+                    description: The validation step that failed (e.g., validate_package_json)
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/teams/{teamId}/cloud-providers:
     get:
       summary: List available cloud providers
@@ -12561,11 +13043,13 @@ paths:
             enum:
               - official_registry
               - manual
+              - github
           in: query
           name: source
           required: false
           description: "Filter by source: official_registry for servers synced from MCP
-            Registry, manual for manually added servers"
+            Registry, manual for manually added servers, github for GitHub
+            deployments"
         - schema:
             type: boolean
           in: query
@@ -12714,6 +13198,7 @@ paths:
                               enum:
                                 - official_registry
                                 - manual
+                                - github
                               description: Source of the MCP server
                             created_at:
                               type: string
@@ -12723,6 +13208,18 @@ paths:
                               type: string
                               format: date-time
                               description: Last update timestamp
+                            team_name:
+                              type: string
+                              nullable: true
+                              description: Team name (present when server belongs to a team)
+                            team_slug:
+                              type: string
+                              nullable: true
+                              description: Team slug (present when server belongs to a team)
+                            team_id:
+                              type: string
+                              nullable: true
+                              description: Team ID (present when server belongs to a team)
                           required:
                             - id
                             - name
@@ -13276,10 +13773,11 @@ paths:
             enum:
               - official_registry
               - manual
+              - github
           in: query
           name: source
           required: false
-          description: "Filter by server source: official_registry or manual"
+          description: "Filter by server source: official_registry, manual, or github"
         - schema:
             type: string
             enum:
@@ -13449,6 +13947,7 @@ paths:
                               enum:
                                 - official_registry
                                 - manual
+                                - github
                               description: Source of the MCP server
                             created_at:
                               type: string
@@ -13458,6 +13957,18 @@ paths:
                               type: string
                               format: date-time
                               description: Last update timestamp
+                            team_name:
+                              type: string
+                              nullable: true
+                              description: Team name (present when server belongs to a team)
+                            team_slug:
+                              type: string
+                              nullable: true
+                              description: Team slug (present when server belongs to a team)
+                            team_id:
+                              type: string
+                              nullable: true
+                              description: Team ID (present when server belongs to a team)
                           required:
                             - id
                             - name
@@ -16561,6 +17072,10 @@ paths:
                     - global
                     - team
                   description: Installation type (defaults to global)
+                satellite_id:
+                  type: string
+                  description: Satellite ID to install on (optional, auto-selected if not
+                    provided)
                 team_args:
                   type: array
                   items:
@@ -16984,8 +17499,9 @@ paths:
       tags:
         - MCP Installations
       description: Retrieves all MCP server installations for the specified team.
-        Optionally include instance statistics with ?include_stats=true
-        (requires mcp.installations.stats.view permission).
+        Optionally filter by source with ?source=github. Optionally include
+        instance statistics with ?include_stats=true (requires
+        mcp.installations.stats.view permission).
       parameters:
         - schema:
             type: boolean
@@ -17357,10 +17873,10 @@ paths:
       summary: Stream MCP installations (SSE)
       tags:
         - MCP Installations
-      description: Real-time installations list stream via Server-Sent Events. Sends
-        initial snapshot then streams list changes as they occur (new
-        installations, deletions, status updates). Connection automatically
-        reconnects on disconnect.
+      description: Real-time installations list stream via Server-Sent Events.
+        Optionally filter by source with ?source=github. Sends initial snapshot
+        then streams list changes as they occur (new installations, deletions,
+        status updates). Connection automatically reconnects on disconnect.
       parameters:
         - schema:
             type: string
@@ -29287,6 +29803,87 @@ paths:
                   - success
                   - error
                 description: Internal server error
+  /api/satellites/{satelliteId}/github-token/{installationId}:
+    get:
+      summary: Get GitHub token for deployment
+      tags:
+        - Satellites
+      description: Returns ephemeral GitHub App installation token for satellite to
+        spawn GitHub-deployed servers. Only the satellite running the instance
+        can access its token.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: satelliteId
+          required: true
+          description: Satellite ID requesting the token
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+          description: Installation ID for the GitHub-deployed server
+      responses:
+        "200":
+          description: GitHub token retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: GitHub App installation access token
+                  expires_at:
+                    type: string
+                    format: date-time
+                    description: Token expiration timestamp
+                required:
+                  - token
+                  - expires_at
+                description: GitHub token retrieved successfully
+        "403":
+          description: Forbidden - Satellite not authorized for this installation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                description: Forbidden - Satellite not authorized for this installation
+        "404":
+          description: Installation not found or not a GitHub deployment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                description: Installation not found or not a GitHub deployment
+        "500":
+          description: Failed to generate GitHub token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Error message
+                required:
+                  - error
+                description: Failed to generate GitHub token
   /api/satellites/manage:
     get:
       summary: List all satellites
@@ -30664,51 +31261,36 @@ paths:
                   - success
                   - error
                 description: Internal Server Error - Failed to check token status
-  /api/webhooks/deploy/{teamId}:
-    post:
-      summary: GitHub webhook receiver
+  /api/deploy/github/callback:
+    get:
+      summary: GitHub App installation callback (global)
       tags:
-        - Webhooks
-      description: Receives GitHub push events and triggers deployments
+        - Deployment
+      description: Handles GitHub App installation callback from any team. No
+        authentication required - this is a public OAuth callback endpoint.
       parameters:
         - schema:
             type: string
             minLength: 1
-          in: path
-          name: teamId
+          in: query
+          name: installation_id
+          required: true
+        - schema:
+            type: string
+          in: query
+          name: setup_action
+          required: false
+        - schema:
+            type: string
+            minLength: 1
+          in: query
+          name: state
           required: true
       responses:
-        "200":
-          description: Event ignored or processed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                description: Event ignored or processed
-        "202":
-          description: Deployment queued
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  job_id:
-                    type: string
-                    description: Deployment job ID
-                  status:
-                    type: string
-                    enum:
-                      - queued
-                    description: Deployment status
-                required:
-                  - job_id
-                  - status
-                description: Deployment queued
-        "400":
-          description: Bad request
+        "302":
+          description: Redirect to frontend
+        "403":
+          description: Forbidden - Feature disabled
           content:
             application/json:
               schema:
@@ -30722,9 +31304,9 @@ paths:
                 required:
                   - success
                   - error
-                description: Bad request
-        "401":
-          description: Invalid signature
+                description: Forbidden - Feature disabled
+        "500":
+          description: Internal Server Error - Configuration missing
           content:
             application/json:
               schema:
@@ -30738,7 +31320,7 @@ paths:
                 required:
                   - success
                   - error
-                description: Invalid signature
+                description: Internal Server Error - Configuration missing
   /api/auth/email/register:
     post:
       summary: User registration via email

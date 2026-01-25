@@ -115,8 +115,8 @@ export const SEARCH_SERVERS_QUERY_SCHEMA = {
     },
     source: {
       type: 'string',
-      enum: ['official_registry', 'manual'],
-      description: 'Filter by server source: official_registry or manual'
+      enum: ['official_registry', 'manual', 'github'],
+      description: 'Filter by server source: official_registry, manual, or github'
     },
     featured: {
       type: 'string',
@@ -196,8 +196,8 @@ export const LIST_SERVERS_QUERY_SCHEMA = {
     },
     source: {
       type: 'string',
-      enum: ['official_registry', 'manual'],
-      description: 'Filter by source: official_registry for servers synced from MCP Registry, manual for manually added servers'
+      enum: ['official_registry', 'manual', 'github'],
+      description: 'Filter by source: official_registry for servers synced from MCP Registry, manual for manually added servers, github for GitHub deployments'
     },
     auto_install_new_default_team: {
       type: 'boolean',
@@ -1189,9 +1189,12 @@ export const SERVER_LIST_ENTITY_SCHEMA = {
     author_name: { type: 'string', nullable: true, description: 'Author name' },
     organization: { type: 'string', nullable: true, description: 'Organization' },
     official_name: { type: 'string', nullable: true, description: 'Official registry name' },
-    source: { type: 'string', enum: ['official_registry', 'manual'], description: 'Source of the MCP server' },
+    source: { type: 'string', enum: ['official_registry', 'manual', 'github'], description: 'Source of the MCP server' },
     created_at: { type: 'string', format: 'date-time', description: 'Creation timestamp' },
-    updated_at: { type: 'string', format: 'date-time', description: 'Last update timestamp' }
+    updated_at: { type: 'string', format: 'date-time', description: 'Last update timestamp' },
+    team_name: { type: 'string', nullable: true, description: 'Team name (present when server belongs to a team)' },
+    team_slug: { type: 'string', nullable: true, description: 'Team slug (present when server belongs to a team)' },
+    team_id: { type: 'string', nullable: true, description: 'Team ID (present when server belongs to a team)' }
   },
   required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'transport_type', 'visibility', 'status', 'featured', 'requires_oauth', 'source', 'created_at', 'updated_at']
 } as const;
@@ -1477,7 +1480,7 @@ export interface ListServersQueryParams {
   runtime?: string;
   status?: McpServerStatus;
   featured?: 'true' | 'false';
-  source?: 'official_registry' | 'manual';
+  source?: 'official_registry' | 'manual' | 'github';
   auto_install_new_default_team?: boolean;
   search?: string;
   limit?: string;
@@ -1540,7 +1543,7 @@ export interface ServerEntity {
   featured: boolean;
   auto_install_new_default_team: boolean;
   requires_oauth: boolean;
-  source: 'official_registry' | 'manual';
+  source: 'official_registry' | 'manual' | 'github';
   
   // Official Registry Sync Tracking
   official_name: string | null;
@@ -1781,9 +1784,13 @@ export interface ServerListEntity {
   author_name: string | null;
   organization: string | null;
   official_name: string | null;
-  source: 'official_registry' | 'manual';
+  source: 'official_registry' | 'manual' | 'github';
   created_at: string;
   updated_at: string;
+  // Team information (present when server belongs to a team)
+  team_name?: string;
+  team_slug?: string;
+  team_id?: string;
 }
 
 export interface ListServersSuccessResponse {
@@ -1981,6 +1988,12 @@ export function formatServerListResponse(
     official_name: server.official_name || null,
     source: server.source || 'manual',
     created_at: server.created_at.toISOString(),
-    updated_at: server.updated_at.toISOString()
+    updated_at: server.updated_at.toISOString(),
+    // Include team information if present (when server belongs to a team)
+    ...(server.team_name && {
+      team_name: server.team_name,
+      team_slug: server.team_slug,
+      team_id: server.team_id
+    })
   };
 }

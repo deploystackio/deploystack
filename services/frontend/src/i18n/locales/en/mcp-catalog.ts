@@ -27,7 +27,8 @@ export default {
       created: 'Created',
       actions: 'Actions',
       properties: 'Properties',
-      details: 'Details'
+      details: 'Details',
+      team: 'Team'
     },
     actions: {
       edit: 'Edit',
@@ -871,6 +872,7 @@ export default {
       all: 'All',
       official_registry: 'Official Registry',
       manual: 'Manual',
+      deployments: 'Deployments',
       github: 'GitHub'
     },
     status: {

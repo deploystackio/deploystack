@@ -23,7 +23,7 @@ export interface McpServer {
   resources?: McpResource[]
   prompts?: McpPrompt[]
   visibility: 'global' | 'team'
-  owner_team_id?: string
+  owner_team_id?: string | null
   created_by: string
   author_name?: string
   author_contact?: string
@@ -57,11 +57,29 @@ export interface McpServer {
   status: 'active' | 'deprecated' | 'maintenance' | 'disabled'
   featured: boolean
   auto_install_new_default_team: boolean
-  source: 'official_registry' | 'manual'
+  source: 'official_registry' | 'manual' | 'github'
   created_at: string
   updated_at: string
   last_sync_at?: string
   github_readme_base64?: string
+  // Team information (present when server belongs to a team)
+  team_name?: string
+  team_slug?: string
+  team_id?: string
+}
+
+// Extend McpServer type to include team information for deployments
+export interface McpServerWithTeam extends McpServer {
+  team_name: string
+  team_slug: string
+  team_id: string
+}
+
+// Deployment-specific server type
+export interface McpServerDeployment extends McpServer {
+  source: 'github'
+  owner_team_id: string  // Required for deployments
+  team_name: string      // Required for deployments
 }
 
 export interface McpCategory {

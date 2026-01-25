@@ -120,7 +120,7 @@ export interface CreateMcpServerRequest {
   featured?: boolean;
   auto_install_new_default_team?: boolean;
   requires_oauth?: boolean;
-  source?: 'official_registry' | 'manual';
+  source?: 'official_registry' | 'manual' | 'github';
   
   // Official Registry Sync Tracking
   official_name?: string;
@@ -185,7 +185,7 @@ export interface McpServerFilters {
   runtime?: string;
   status?: 'active' | 'deprecated' | 'maintenance' | 'disabled';
   featured?: boolean;
-  source?: 'official_registry' | 'manual';
+  source?: 'official_registry' | 'manual' | 'github';
   search?: string;
   tags?: string;
 }
@@ -324,15 +324,31 @@ export class McpCatalogService {
     }
     
     // Build the query with all conditions combined
-    const baseQuery = this.db.select().from(this.mcpServers);
+    // Always join with teams table to get team info for servers that have owner_team_id
+    const schema = getSchema();
+    const { teams } = schema;
+
+    const baseQuery = this.db
+      .select()
+      .from(this.mcpServers)
+      .leftJoin(teams, eq(this.mcpServers.owner_team_id, teams.id));
+
     const queryWithConditions = whereConditions.length > 0
       ? baseQuery.where(and(...whereConditions))
       : baseQuery;
 
     // Apply sorting based on sortBy parameter
-    const servers = await (sortBy === 'github_stars'
+    const results = await (sortBy === 'github_stars'
       ? queryWithConditions.orderBy(desc(this.mcpServers.github_stars), asc(this.mcpServers.name))
       : queryWithConditions.orderBy(desc(this.mcpServers.featured), asc(this.mcpServers.name)));
+
+    // Map the joined results to include team information
+    const servers = results.map((row: any) => ({
+      ...row.mcpServers,
+      team_name: row.teams?.name || null,
+      team_slug: row.teams?.slug || null,
+      team_id: row.teams?.id || null
+    }));
     
     this.logger.info({
       operation: 'get_servers_for_user',

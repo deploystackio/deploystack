@@ -19,7 +19,7 @@ interface SearchServersQueryParams extends Omit<ListServersQueryParams, 'search'
   q: string; // Search query is required for search endpoint
   tags?: string; // Optional comma-separated tags filter
   sort_by?: 'name' | 'github_stars'; // Optional sort parameter
-  source?: 'official_registry' | 'manual'; // Optional source filter
+  source?: 'official_registry' | 'manual' | 'github'; // Optional source filter
 }
 
 export default async function searchServers(server: FastifyInstance) {

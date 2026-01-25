@@ -4,7 +4,7 @@ export interface McpServerSearchParams {
   language?: string
   runtime?: string
   status?: 'active' | 'deprecated' | 'maintenance' | 'disabled'
-  source?: 'official_registry' | 'manual'
+  source?: 'official_registry' | 'manual' | 'github'
   featured?: boolean
   sort_by?: 'name' | 'github_stars'
   limit?: number
