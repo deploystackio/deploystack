@@ -6,11 +6,23 @@ FROM node:24-bookworm-slim
 RUN useradd -m -d /opt/deploystack -s /bin/bash deploystack
 
 # Install essential runtime dependencies including gosu for privilege dropping
+# Python 3 and UV are required for Python-based MCP servers
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ca-certificates \
     gosu \
+    python3 \
+    python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
+
+# Install UV (Python package manager for MCP servers)
+# Using pip installation for reliable system-wide access
+# This installs both 'uv' and 'uvx' commands to /usr/local/bin
+RUN pip3 install --break-system-packages uv && \
+    which uv && \
+    which uvx && \
+    uv --version
 
 # Create mcp-cache base directory with proper ownership
 RUN mkdir -p /opt/deploystack/mcp-cache && \

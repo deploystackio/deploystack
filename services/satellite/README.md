@@ -51,6 +51,37 @@ npm start
 
 The satellite service uses environment variables for configuration and automatically manages persistent storage:
 
+## System Requirements
+
+The satellite service requires the following runtimes to be installed on the system:
+
+### Required Runtimes
+
+- **Node.js 18+** - Requires both `node` (to build) and `npm` (to execute/install packages) for spawning MCP servers
+- **Python 3.8+** - Requires `python3` (to build) for Python-based MCP servers
+- **UV Package Manager** - Requires `uvx` (to start/execute) for Python async MCP servers
+
+### Optional Runtimes
+
+- **python** - Legacy Python symlink (warns if missing, not required)
+
+### Runtime Validation
+
+The satellite automatically validates that required runtimes are installed during startup:
+
+- **PATH-based detection**: Checks if commands are available in your system PATH (same as shell command lookup)
+- **Works everywhere**: Finds commands regardless of installation location (Homebrew, custom paths, etc.)
+- **Fail-fast**: If required runtimes are missing, satellite exits with a clear error message
+- **All commands required**: For Node.js, both `node` AND `npm` must be present. For Python, both `python3` AND `uvx` must be present.
+
+To skip runtime validation (e.g., for CI/CD or Docker builds):
+
+```bash
+DEPLOYSTACK_SKIP_RUNTIME_CHECKS=true npm start
+```
+
+**Note**: Skipping runtime checks is not recommended. MCP servers will fail at spawn time if runtimes are actually missing.
+
 ### Persistent Storage
 
 Satellites maintain registration state across restarts using local file storage:

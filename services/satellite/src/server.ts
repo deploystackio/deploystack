@@ -23,6 +23,7 @@ import { McpActivityTracker } from './services/mcp-activity-tracker';
 import { ToolSearchService } from './services/tool-search-service';
 import { OAuthTokenService } from './services/oauth-token-service';
 import { SsePingService } from './services/sse-ping-service';
+import { validateSystemRuntimes } from './utils/runtime-validator.js';
 
 /**
  * Validate registration token format and availability
@@ -153,6 +154,17 @@ export async function createServer() {
   
   validateSatelliteName(satelliteName, tempLogger);
   validateRegistrationToken(registrationToken, tempLogger);
+
+  // STEP 1.5: Validate system runtimes (Node.js, Python)
+  tempLogger.info({ operation: 'runtime_validation_start' }, 'Validating system runtimes...');
+  const skipRuntimeChecks = process.env.DEPLOYSTACK_SKIP_RUNTIME_CHECKS === 'true';
+
+  if (skipRuntimeChecks) {
+    tempLogger.info({ operation: 'runtime_validation_skipped' }, 'Runtime validation skipped (DEPLOYSTACK_SKIP_RUNTIME_CHECKS=true)');
+  } else {
+    validateSystemRuntimes(tempLogger);
+    tempLogger.info({ operation: 'runtime_validation_complete' }, 'System runtime validation passed');
+  }
 
   const server = fastify({
     logger: loggerConfig,
