@@ -870,7 +870,8 @@ export default {
     source: {
       all: 'All',
       official_registry: 'Official Registry',
-      manual: 'Manual'
+      manual: 'Manual',
+      github: 'GitHub'
     },
     status: {
       label: 'Status',

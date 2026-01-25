@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
@@ -41,6 +41,7 @@ const servers = ref<McpServer[]>([])
 const isLoading = ref(true)
 const isSearching = ref(false)
 const error = ref<string | null>(null)
+const deletedServerIds = ref<Set<string>>(new Set())
 
 // Search and filter state
 const searchQuery = ref('')
@@ -96,6 +97,11 @@ const pagination = ref<PaginationMeta>({
 
 // Selection state
 const selectedServerIds = ref<string[]>([])
+
+// Filter out servers that are queued for deletion
+const visibleServers = computed(() => {
+  return servers.value.filter(server => !deletedServerIds.value.has(server.id))
+})
 
 // Visible filters state (lifted from child to preserve across loading)
 const visibleFilters = ref<Set<string>>(new Set())
@@ -163,15 +169,21 @@ const handleDeleteServer = async (serverId: string): Promise<void> => {
 
     await McpCatalogService.deleteGlobalServer(serverId)
 
-    toast.success(t('mcpCatalog.messages.deletionQueued', { name: serverName }))
+    // Optimistically add to deleted IDs
+    deletedServerIds.value.add(serverId)
 
-    // Refresh the table
-    if (hasTextSearch()) {
-      await searchServers()
-    } else {
-      await fetchServers()
-    }
+    // Store in EventBus for persistence
+    const deletedIds = Array.from(deletedServerIds.value)
+    eventBus.setState('deleted_server_ids', deletedIds)
+
+    // Clear selection if deleted server was selected
+    selectedServerIds.value = selectedServerIds.value.filter(id => id !== serverId)
+
+    toast.success(t('mcpCatalog.messages.deletionQueued', { name: serverName }))
   } catch (err) {
+    // Remove from deleted IDs on error
+    deletedServerIds.value.delete(serverId)
+
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     toast.error(t('mcpCatalog.messages.deleteError', { error: errorMessage }))
     throw err // Re-throw so the dialog knows deletion failed
@@ -181,6 +193,18 @@ const handleDeleteServer = async (serverId: string): Promise<void> => {
 const handleBulkDeleteServers = async (serverIds: string[]): Promise<void> => {
   try {
     const result = await McpCatalogService.bulkDeleteGlobalServers(serverIds)
+
+    // Add queued servers to deleted IDs
+    const queuedServerIds = new Set(result.jobs.map(job => job.server_id))
+    queuedServerIds.forEach(id => deletedServerIds.value.add(id))
+
+    // Update storage
+    const deletedIds = Array.from(deletedServerIds.value)
+    eventBus.setState('deleted_server_ids', deletedIds)
+
+    // Update pagination count
+    totalItems.value = Math.max(0, totalItems.value - result.total_queued)
+    selectedServerIds.value = []
 
     if (result.total_skipped > 0) {
       toast.success(t('mcpCatalog.bulkDelete.partialSuccess', {
@@ -192,15 +216,6 @@ const handleBulkDeleteServers = async (serverIds: string[]): Promise<void> => {
         queued: result.total_queued
       }))
     }
-
-    // Optimistically remove deleted servers from the UI
-    // (they're queued for deletion in background jobs, not immediately deleted from DB)
-    const queuedServerIds = new Set(result.jobs.map(job => job.server_id))
-    servers.value = servers.value.filter(server => !queuedServerIds.has(server.id))
-    totalItems.value = Math.max(0, totalItems.value - result.total_queued)
-
-    // Clear selection
-    selectedServerIds.value = []
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     toast.error(t('mcpCatalog.bulkDelete.error', { error: errorMessage }))
@@ -541,6 +556,16 @@ const fetchLanguages = async () => {
 onMounted(async () => {
   setBreadcrumbs([{ label: t('mcpCatalog.title') }])
 
+  // Load deleted IDs from storage on mount
+  const storedDeletedIds = eventBus.getState<string[]>('deleted_server_ids', []) || []
+  deletedServerIds.value = new Set(storedDeletedIds)
+
+  // Check for deletion query params
+  const deletedId = route.query.deletedId as string
+  if (deletedId) {
+    deletedServerIds.value.add(deletedId)
+  }
+
   await Promise.all([
     fetchServers(),
     fetchRuntimes(),
@@ -572,12 +597,26 @@ onMounted(async () => {
 
   // Listen for server creation from add page
   eventBus.on('mcp-server-created', handleServerCreated)
+
+  // Listen for MCP_SERVER_DELETED event to clean up
+  eventBus.on('mcp-server-deleted', (data: { serverId?: string; server?: { id: string } }) => {
+    // Remove from deleted IDs when actually deleted
+    const serverId = data.serverId || data.server?.id
+    if (serverId) {
+      deletedServerIds.value.delete(serverId)
+
+      // Update storage
+      const deletedIds = Array.from(deletedServerIds.value)
+      eventBus.setState('deleted_server_ids', deletedIds)
+    }
+  })
 })
 
 onUnmounted(() => {
   // Clean up event listeners
   eventBus.off('mcp-catalog-updated')
   eventBus.off('mcp-server-created', handleServerCreated)
+  eventBus.off('mcp-server-deleted')
 })
 </script>
 
@@ -614,7 +653,7 @@ onUnmounted(() => {
         <!-- Servers Table Component -->
         <McpServerTableColumns
           :is-loading="isLoading"
-          :servers="servers"
+          :servers="visibleServers"
           :selected-source="selectedSource"
           :search-query="searchQuery"
           :is-searching="isSearching"

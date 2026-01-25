@@ -358,8 +358,9 @@ export class McpCatalogService {
 
   /**
    * Delete a global MCP server (admin only)
+   * Returns the deletion job information for optimistic UI updates
    */
-  static async deleteGlobalServer(serverId: string): Promise<void> {
+  static async deleteGlobalServer(serverId: string): Promise<{ id: string; name: string; job_id: string; status: 'queued' }> {
     const response = await fetch(`${this.baseUrl}/api/mcp/servers/global/${serverId}`, {
       method: 'DELETE',
       credentials: 'include',
@@ -369,6 +370,9 @@ export class McpCatalogService {
       const errorData = await response.json().catch(() => ({}))
       throw new Error(errorData.message || `Failed to delete MCP server: ${response.status}`)
     }
+
+    const data = await response.json()
+    return data.data
   }
 
   /**

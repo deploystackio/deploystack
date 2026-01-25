@@ -7,6 +7,7 @@ import { ButtonGroup } from '@/components/ui/button-group'
 import { McpServerCatalogDetailPageHeading } from '@/components/admin/mcp-server-catalog'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import McpServerDeleteDialog from '@/components/mcp-server/McpServerDeleteDialog.vue'
+import { useEventBus } from '@/composables/useEventBus'
 import type { McpServer } from '@/views/admin/mcp-server-catalog/types'
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 
 const props = defineProps<Props>()
 const router = useRouter()
+const eventBus = useEventBus()
 
 const isDeleting = ref(false)
 const showDeleteDialog = ref(false)
@@ -28,9 +30,14 @@ const deleteServer = async () => {
     const serverName = props.server?.name || 'Unknown Server'
     await McpCatalogService.deleteGlobalServer(props.serverId)
 
+    // Store deleted server ID in localStorage for optimistic filtering
+    const deletedIds = eventBus.getState<string[]>('deleted_server_ids', []) || []
+    deletedIds.push(props.serverId)
+    eventBus.setState('deleted_server_ids', deletedIds)
+
     router.push({
       path: '/admin/mcp-server-catalog',
-      query: { deletionQueued: serverName }
+      query: { deletionQueued: serverName, deletedId: props.serverId }
     })
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to delete server'
