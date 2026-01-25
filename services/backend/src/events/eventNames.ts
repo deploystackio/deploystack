@@ -38,6 +38,7 @@ export const EVENT_NAMES = {
   MCP_SERVER_CREATED: 'mcp.server_created',             // matches mcp.servers.create
   MCP_SERVER_UPDATED: 'mcp.server_updated',             // matches mcp.servers.edit
   MCP_SERVER_DELETED: 'mcp.server_deleted',             // matches mcp.servers.delete
+  MCP_DEPLOYMENT_CREATED: 'mcp.deployment_created',     // matches mcp.servers.deploy permission
 
   // System Events
   SYSTEM_STARTUP: 'system.startup',

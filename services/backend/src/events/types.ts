@@ -387,6 +387,21 @@ export interface CoreEventData {
     };
   };
 
+  [EVENT_NAMES.MCP_DEPLOYMENT_CREATED]: {
+    deployment: {
+      installationId: string;
+      serverId: string;
+      commitSha: string;
+    };
+    deployedBy: {
+      id: string;
+      email: string;
+    };
+    metadata: {
+      ip: string;
+    };
+  };
+
   [EVENT_NAMES.SYSTEM_STARTUP]: {
     version: string;
     environment: string;

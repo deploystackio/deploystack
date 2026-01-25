@@ -681,7 +681,53 @@ export default async function deployRoutes(server: FastifyInstance) {
       }, 'Sent configure commands to satellites for all team members');
 
       // ============================================
-      // STEP 11: Return Success (Installation Created!)
+      // STEP 11: Emit MCP_DEPLOYMENT_CREATED Event
+      // ============================================
+      try {
+        const eventContext = {
+          db: db,
+          logger: request.log,
+          user: {
+            id: userId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'unknown'
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.MCP_DEPLOYMENT_CREATED,
+          {
+            deployment: {
+              installationId: mcpInstallation.id,
+              serverId,
+              commitSha
+            },
+            deployedBy: {
+              id: userId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            metadata: {
+              ip: request.ip
+            }
+          },
+          eventContext
+        );
+        request.log.info(`MCP_DEPLOYMENT_CREATED event emitted for installation: ${mcpInstallation.id}`);
+      } catch (eventError) {
+        request.log.error(eventError, `Failed to emit MCP_DEPLOYMENT_CREATED event for installation ${mcpInstallation.id}:`);
+        // Don't fail deployment if event emission fails
+      }
+
+      // ============================================
+      // STEP 12: Return Success (Installation Created!)
       // ============================================
       const successResponse: DeploySuccessResponse = {
         success: true,
