@@ -72,7 +72,7 @@ export class JobQueueService {
   async getNextPendingJob(): Promise<Job | null> {
     try {
       const now = new Date();
-      
+
       const result = await this.db
         .select()
         .from(this.queueJobs)

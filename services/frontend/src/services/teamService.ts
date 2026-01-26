@@ -20,6 +20,8 @@ export const TeamSchema = z.object({
   mcp_server_limit: z.number(),
   member_limit: z.number(),
   allow_remote_mcp: z.boolean(),
+  allow_github_mcp: z.boolean(),
+  allow_private_github_repos: z.boolean(),
   created_at: z.string(),
   updated_at: z.string(),
   role: z.enum(['team_admin', 'team_user']).optional(),
@@ -74,6 +76,7 @@ export interface TeamUsageData {
   total_installed_mcp_servers: number;
   non_http_mcp_servers: number;
   http_mcp_servers: number;
+  github_mcp_servers: number;
   limits: TeamUsageLimits;
 }
 

@@ -99,7 +99,7 @@ describe('TemplateRenderer', () => {
         expect.objectContaining({
           basedir: expect.stringContaining('templates'),
           pretty: false,
-          cache: true,
+          cache: false, // false in test environment (NODE_ENV !== 'production')
         })
       );
       expect(mockCompiledTemplate).toHaveBeenCalledWith({

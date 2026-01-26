@@ -121,10 +121,11 @@ describe('EmailService', () => {
       expect(result.success).toBe(true);
       expect(result.messageId).toBe('test-message-id');
       expect(result.recipients).toEqual(['recipient@example.com']);
-      expect(mockRender).toHaveBeenCalledWith({
+      expect(mockRender).toHaveBeenCalledWith(expect.objectContaining({
         template: 'welcome',
         variables: { userName: 'John Doe' },
-      });
+        logger: expect.any(Object),
+      }));
       expect(mockSendMail).toHaveBeenCalledWith({
         from: '"Test App" <noreply@example.com>',
         to: 'recipient@example.com',
@@ -395,7 +396,7 @@ describe('EmailService', () => {
         const result = await EmailService.sendWelcomeEmail(options, mockLogger);
 
         expect(result.success).toBe(true);
-        expect(mockRender).toHaveBeenCalledWith({
+        expect(mockRender).toHaveBeenCalledWith(expect.objectContaining({
           template: 'welcome',
           variables: {
             userName: 'John Doe',
@@ -403,7 +404,8 @@ describe('EmailService', () => {
             loginUrl: 'https://app.example.com/login',
             supportEmail: 'support@example.com',
           },
-        });
+          logger: expect.any(Object),
+        }));
         expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
           to: 'user@example.com',
           subject: 'Welcome to DeployStack, John Doe!',
@@ -420,12 +422,13 @@ describe('EmailService', () => {
 
         await EmailService.sendWelcomeEmail(options, mockLogger);
 
-        expect(mockRender).toHaveBeenCalledWith({
+        expect(mockRender).toHaveBeenCalledWith(expect.objectContaining({
           template: 'welcome',
           variables: expect.objectContaining({
             supportEmail: 'hello@deploystack.io',
           }),
-        });
+          logger: expect.any(Object),
+        }));
       });
     });
 
@@ -441,7 +444,7 @@ describe('EmailService', () => {
         const result = await EmailService.sendPasswordResetEmail(options, mockLogger);
 
         expect(result.success).toBe(true);
-        expect(mockRender).toHaveBeenCalledWith({
+        expect(mockRender).toHaveBeenCalledWith(expect.objectContaining({
           template: 'password-reset',
           variables: {
             userName: 'John Doe',
@@ -449,7 +452,8 @@ describe('EmailService', () => {
             expirationTime: '24 hours',
             supportEmail: 'support@deploystack.io',
           },
-        });
+          logger: expect.any(Object),
+        }));
         expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
           to: 'user@example.com',
           subject: 'Reset Your DeployStack Password',
@@ -471,7 +475,7 @@ describe('EmailService', () => {
         const result = await EmailService.sendNotificationEmail(options, mockLogger);
 
         expect(result.success).toBe(true);
-        expect(mockRender).toHaveBeenCalledWith({
+        expect(mockRender).toHaveBeenCalledWith(expect.objectContaining({
           template: 'notification',
           variables: {
             title: 'Deployment Complete',
@@ -480,7 +484,8 @@ describe('EmailService', () => {
             actionText: 'View Deployment',
             userName: 'John Doe',
           },
-        });
+          logger: expect.any(Object),
+        }));
         expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
           to: 'user@example.com',
           subject: 'Deployment Complete',

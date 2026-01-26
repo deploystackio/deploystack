@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
-import { useEventBus } from '@/composables/useEventBus'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
+import { useTeamContext } from '@/composables/useTeamContext'
 import { useMcpToolsStatsStore } from '@/stores/mcpToolsStatsStore'
 import McpInstallationsEmptyState from '@/components/mcp-server/McpInstallationsEmptyState.vue'
 import {
@@ -40,21 +40,15 @@ import type { TeamMcpToolsStats } from '@/types/mcpStats'
 
 const { t } = useI18n()
 const router = useRouter()
-const eventBus = useEventBus()
 const statsStore = useMcpToolsStatsStore()
 const { setBreadcrumbs } = useBreadcrumbs()
+
+// Team context using composable
+const { teamId } = useTeamContext()
 
 const stats = ref<TeamMcpToolsStats | null>(null)
 const error = ref<string | null>(null)
 const expandedRows = ref<Set<string>>(new Set())
-
-// Use ref instead of computed for better reactivity
-const teamId = ref<string | null>(null)
-
-// Initialize teamId from storage
-const initializeTeamId = () => {
-  teamId.value = eventBus.getState<string>('selected_team_id')
-}
 
 async function fetchStats() {
   if (!teamId.value) {
@@ -123,28 +117,20 @@ const chartData = computed(() => {
   }
 })
 
-// Event handler for team selection from sidebar
-const handleTeamSelected = () => {
-  // Update teamId from storage and fetch stats
-  teamId.value = eventBus.getState<string>('selected_team_id')
-  fetchStats()
-}
+// Watch for team changes to refetch stats
+watch(teamId, (newTeamId) => {
+  if (newTeamId) {
+    fetchStats()
+  }
+})
 
 onMounted(() => {
   setBreadcrumbs([{ label: t('statistics.title') }])
 
-  // Initialize teamId from storage
-  initializeTeamId()
-  // Fetch initial stats
-  fetchStats()
-
-  // Listen for team selection events from sidebar
-  eventBus.on('team-selected', handleTeamSelected)
-})
-
-onUnmounted(() => {
-  // Clean up event listeners
-  eventBus.off('team-selected', handleTeamSelected)
+  // Fetch initial stats if team is already loaded
+  if (teamId.value) {
+    fetchStats()
+  }
 })
 </script>
 

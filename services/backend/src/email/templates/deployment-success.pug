@@ -1,0 +1,43 @@
+//- @description Email notification when a GitHub MCP server deployment succeeds
+//- @variables userName, serverName, repositoryUrl, branch, commitSha, deployedAt, installationUrl
+extends layouts/base.pug
+
+block content
+  h1 GitHub Deployment Successful
+
+  p Hi #{userName},
+
+  p Your GitHub MCP server deployment was successful!
+
+  .deployment-info
+    p
+      strong Server Name:
+    p= serverName
+
+    p
+      strong Repository:
+    p
+      a(href=repositoryUrl)= repositoryUrl
+
+    p
+      strong Branch:
+    p= branch
+
+    p
+      strong Commit:
+    p= commitSha
+
+    p
+      strong Deployed At:
+    p= deployedAt
+
+  p Your MCP server is now online and ready to use.
+
+  if installationUrl
+    .text-center
+      a.button(href=installationUrl) View Installation Details
+
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team

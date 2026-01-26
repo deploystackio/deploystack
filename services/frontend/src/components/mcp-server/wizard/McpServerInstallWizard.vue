@@ -8,9 +8,9 @@ import { Spinner } from '@/components/ui/spinner'
 import { DsProgressSteps, type ProgressStep } from '@/components/ui/ds-progress-steps'
 import { toast } from 'vue-sonner'
 import { McpInstallationService } from '@/services/mcpInstallationService'
-import { TeamService } from '@/services/teamService'
 import { SatelliteService, type TeamSatellite } from '@/services/satelliteService'
 import { useEventBus } from '@/composables/useEventBus'
+import { useTeamContext } from '@/composables/useTeamContext'
 import EnvironmentVariablesStep from './EnvironmentVariablesStep.vue'
 import OAuthAuthorizationStep from './OAuthAuthorizationStep.vue'
 import SatelliteSelectionStep from './SatelliteSelectionStep.vue'
@@ -34,6 +34,9 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const router = useRouter()
 const eventBus = useEventBus()
+
+// Team context using composable
+const { teamId } = useTeamContext()
 
 // Form data interface
 interface InstallationFormData {
@@ -62,7 +65,6 @@ const environmentValidation = ref({
   isValid: true,
   missingFields: [] as string[]
 })
-const currentTeamId = ref<string | null>(null)
 
 // Satellite selection state
 const satellites = ref<TeamSatellite[]>([])
@@ -171,13 +173,13 @@ const handleCancel = () => {
 
 // Fetch available satellites for the team
 const fetchSatellites = async () => {
-  if (!currentTeamId.value) {
+  if (!teamId.value) {
     return
   }
 
   try {
     isFetchingSatellites.value = true
-    const response = await SatelliteService.getTeamSatellites(currentTeamId.value)
+    const response = await SatelliteService.getTeamSatellites(teamId.value)
     satellites.value = response.data.satellites
 
     // Auto-select satellite if only one is available
@@ -192,40 +194,6 @@ const fetchSatellites = async () => {
     satellites.value = []
   } finally {
     isFetchingSatellites.value = false
-  }
-}
-
-// Initialize team context from event bus storage
-const initializeTeamContext = async () => {
-  try {
-    const userTeams = await TeamService.getUserTeams()
-    if (userTeams.length > 0) {
-      const storedTeamId = eventBus.getState<string>('selected_team_id')
-
-      if (storedTeamId) {
-        const storedTeam = userTeams.find(team => team.id === storedTeamId)
-        if (storedTeam) {
-          currentTeamId.value = storedTeam.id
-        } else {
-          const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
-          if (defaultTeam) {
-            currentTeamId.value = defaultTeam.id
-            eventBus.setState('selected_team_id', defaultTeam.id)
-          }
-        }
-      } else {
-        const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
-        if (defaultTeam) {
-          currentTeamId.value = defaultTeam.id
-          eventBus.setState('selected_team_id', defaultTeam.id)
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error initializing team context:', error)
-    toast.error('Failed to initialize team context', {
-      description: 'Please refresh the page and try again.'
-    })
   }
 }
 
@@ -289,7 +257,7 @@ const submitInstallation = async () => {
   try {
     isSubmitting.value = true
 
-    if (!currentTeamId.value) {
+    if (!teamId.value) {
       throw new Error('No team selected. Please refresh the page and try again.')
     }
 
@@ -308,7 +276,7 @@ const submitInstallation = async () => {
       installation_name: props.serverData?.name || 'Unknown Server'
     }
 
-    const response = await McpInstallationService.createInstallation(currentTeamId.value, installationData)
+    const response = await McpInstallationService.createInstallation(teamId.value, installationData)
 
     if (response.success) {
       toast.success('Installation successful', {
@@ -347,7 +315,7 @@ const handleOAuthAuthorization = async () => {
   try {
     isSubmitting.value = true
 
-    if (!currentTeamId.value) {
+    if (!teamId.value) {
       throw new Error('No team selected. Please refresh the page and try again.')
     }
 
@@ -359,7 +327,7 @@ const handleOAuthAuthorization = async () => {
     }
 
     const response = await McpInstallationService.startOAuthAuthorization(
-      currentTeamId.value,
+      teamId.value,
       authorizationData
     )
 
@@ -447,9 +415,18 @@ watch(() => props.serverData, () => {
   initializeEnvironmentForm()
 }, { immediate: true })
 
+// Watch for team changes and refetch satellites
+watch(teamId, async (newTeamId) => {
+  if (newTeamId) {
+    await fetchSatellites()
+  }
+})
+
 onMounted(async () => {
-  await initializeTeamContext()
-  await fetchSatellites()
+  // Wait for team context to load before fetching satellites
+  if (teamId.value) {
+    await fetchSatellites()
+  }
 
   window.addEventListener('message', handleOAuthMessage)
 })

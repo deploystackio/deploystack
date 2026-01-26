@@ -64,7 +64,10 @@ export default async function getCurrentUserTeamsRoute(server: FastifyInstance) 
         created_at: team.created_at ? team.created_at.toISOString() : null,
         updated_at: team.updated_at ? team.updated_at.toISOString() : null,
         role: String(team.role),
-        is_owner: Boolean(team.is_owner)
+        is_owner: Boolean(team.is_owner),
+        allow_remote_mcp: Boolean(team.allow_remote_mcp),
+        allow_github_mcp: Boolean(team.allow_github_mcp),
+        allow_private_github_repos: Boolean(team.allow_private_github_repos)
       }));
 
       const successResponse: UserTeamsResponse = {

@@ -6,19 +6,47 @@ import type { TemplateRenderOptions, TemplateValidationResult } from './types';
 
 export class TemplateRenderer {
   private static templateCache = new Map<string, pug.compileTemplate>();
-  private static templatesDir = path.join(__dirname, 'templates');
-  private static layoutsDir = path.join(__dirname, 'templates', 'layouts');
+
+  /**
+   * Get templates directory path (resolved at runtime to avoid stale cached paths)
+   */
+  private static getTemplatesDir(): string {
+    return path.join(__dirname, 'templates');
+  }
+
+  /**
+   * Get layouts directory path (resolved at runtime to avoid stale cached paths)
+   */
+  private static getLayoutsDir(): string {
+    return path.join(__dirname, 'templates', 'layouts');
+  }
 
   /**
    * Render an email template with the given variables
    */
   static async render(options: TemplateRenderOptions): Promise<string> {
-    const { template, variables, layout = 'base' } = options;
+    const { template, variables, layout = 'base', logger } = options;
 
     try {
       // Validate template exists
       const templatePath = this.getTemplatePath(template);
-      if (!fs.existsSync(templatePath)) {
+      const templatesDir = this.getTemplatesDir();
+      const fileExists = fs.existsSync(templatePath);
+
+      // Structured trace logging with Pino logger
+      if (logger) {
+        logger.trace({
+          operation: 'template_path_resolution',
+          template,
+          templatesDir,
+          templatePath,
+          fileExists,
+          __dirname,
+          cwd: process.cwd()
+        }, `Resolving template path: ${template}`);
+      }
+
+      if (!fileExists) {
         throw new Error(`Template '${template}' not found at ${templatePath}`);
       }
 
@@ -33,7 +61,7 @@ export class TemplateRenderer {
         appName: 'DeployStack',
         // Layout information
         layout,
-        layoutsDir: this.layoutsDir,
+        layoutsDir: this.getLayoutsDir(),
       };
 
       // Render the template
@@ -102,11 +130,12 @@ export class TemplateRenderer {
    */
   static getAvailableTemplates(logger: FastifyBaseLogger): string[] {
     try {
-      if (!fs.existsSync(this.templatesDir)) {
+      const templatesDir = this.getTemplatesDir();
+      if (!fs.existsSync(templatesDir)) {
         return [];
       }
 
-      return fs.readdirSync(this.templatesDir)
+      return fs.readdirSync(templatesDir)
         .filter(file => file.endsWith('.pug') && !file.startsWith('_'))
         .map(file => file.replace('.pug', ''));
     } catch (error) {
@@ -139,9 +168,9 @@ export class TemplateRenderer {
     // Compile template
     const templatePath = this.getTemplatePath(template);
     const compiledTemplate = pug.compileFile(templatePath, {
-      basedir: this.templatesDir,
+      basedir: this.getTemplatesDir(),
       pretty: false,
-      cache: true,
+      cache: process.env.NODE_ENV === 'production', // Only cache in production to avoid stale paths
     });
 
     // Cache the compiled template
@@ -154,19 +183,21 @@ export class TemplateRenderer {
    * Get the full path to a template file
    */
   private static getTemplatePath(template: string): string {
-    return path.join(this.templatesDir, `${template}.pug`);
+    return path.join(this.getTemplatesDir(), `${template}.pug`);
   }
 
   /**
    * Ensure templates directory exists
    */
   static ensureTemplatesDirectory(): void {
-    if (!fs.existsSync(this.templatesDir)) {
-      fs.mkdirSync(this.templatesDir, { recursive: true });
+    const templatesDir = this.getTemplatesDir();
+    if (!fs.existsSync(templatesDir)) {
+      fs.mkdirSync(templatesDir, { recursive: true });
     }
 
-    if (!fs.existsSync(this.layoutsDir)) {
-      fs.mkdirSync(this.layoutsDir, { recursive: true });
+    const layoutsDir = this.getLayoutsDir();
+    if (!fs.existsSync(layoutsDir)) {
+      fs.mkdirSync(layoutsDir, { recursive: true });
     }
   }
 

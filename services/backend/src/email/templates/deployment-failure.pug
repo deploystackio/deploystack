@@ -1,0 +1,43 @@
+//- @description Email notification when a GitHub MCP server deployment fails
+//- @variables userName, serverName, repositoryUrl, branch, commitSha, deployedAt, installationUrl
+extends layouts/base.pug
+
+block content
+  h1 GitHub Deployment Failed
+
+  p Hi #{userName},
+
+  p Unfortunately, your GitHub MCP server deployment encountered an error.
+
+  .deployment-info
+    p
+      strong Server Name:
+    p= serverName
+
+    p
+      strong Repository:
+    p
+      a(href=repositoryUrl)= repositoryUrl
+
+    p
+      strong Branch:
+    p= branch
+
+    p
+      strong Commit:
+    p= commitSha
+
+    p
+      strong Attempted At:
+    p= deployedAt
+
+  p Please check the installation details for more information about what went wrong.
+
+  if installationUrl
+    .text-center
+      a.button(href=installationUrl) View Installation Details
+
+  p.text-muted
+    | Best regards,
+    br
+    | The DeployStack Team

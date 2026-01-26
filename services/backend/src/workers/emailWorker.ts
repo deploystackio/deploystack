@@ -57,9 +57,19 @@ export class EmailWorker implements Worker {
     try {
       // Import EmailService dynamically to avoid circular dependencies
       const { EmailService } = await import('../email');
+      const { TemplateRenderer } = await import('../email/templateRenderer');
 
-      this.logger.info({ 
-        jobId, 
+      // Clear template cache to ensure fresh path resolution (prevents stale __dirname)
+      TemplateRenderer.clearCache();
+
+      this.logger.trace({
+        jobId,
+        template: emailPayload.template,
+        operation: 'send_email_worker',
+      }, 'Template cache cleared before rendering');
+
+      this.logger.info({
+        jobId,
         to: emailPayload.to,
         subject: emailPayload.subject,
         template: emailPayload.template,
@@ -82,8 +92,8 @@ export class EmailWorker implements Worker {
         throw new Error(result.error || 'Email sending failed');
       }
 
-      this.logger.info({ 
-        jobId, 
+      this.logger.info({
+        jobId,
         messageId: result.messageId,
         recipients: result.recipients,
         template: emailPayload.template,

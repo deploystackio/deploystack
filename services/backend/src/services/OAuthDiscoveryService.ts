@@ -19,6 +19,7 @@ export interface OAuthDetectionResult {
   requiresOauth: boolean;
   metadata?: OAuthServerMetadata;
   provider?: MatchedOAuthProvider; // Pre-registered provider (when DCR not available)
+  discoveryUrl?: string; // Optional discovery URL from WWW-Authenticate header
 }
 
 export class OAuthDiscoveryService {
@@ -35,21 +36,30 @@ export class OAuthDiscoveryService {
 
     try {
       // Step 1: Check if OAuth is required
-      const requiresOauth = await this.checkOAuthRequirement(url);
+      const detectionResult = await this.checkOAuthRequirement(url);
 
-      if (!requiresOauth) {
+      if (!detectionResult.requiresOauth) {
         this.logger.info({ url }, 'MCP server does not require OAuth');
         return { requiresOauth: false };
       }
 
-      // Step 2: Extract issuer from URL
-      const issuerUrl = new URL(url);
-      const issuer = `${issuerUrl.protocol}//${issuerUrl.host}`;
+      // Step 2: Extract issuer from URL (use discovery URL from header if available)
+      let issuer: string;
+      if (detectionResult.discoveryUrl) {
+        this.logger.info(
+          { url, discoveryUrl: detectionResult.discoveryUrl },
+          'OAuth discovery URL found in WWW-Authenticate header'
+        );
+        issuer = detectionResult.discoveryUrl;
+      } else {
+        const issuerUrl = new URL(url);
+        issuer = `${issuerUrl.protocol}//${issuerUrl.host}`;
+      }
 
       this.logger.info({ url, issuer }, 'OAuth required, starting discovery');
 
       // Step 3: Discover OAuth metadata
-      const metadata = await this.discoverOAuthMetadata(issuer);
+      const metadata = await this.discoverOAuthMetadata(issuer, detectionResult.discoveryUrl);
 
       this.logger.info(
         {
@@ -119,67 +129,151 @@ export class OAuthDiscoveryService {
   }
 
   /**
-   * Checks if MCP server requires OAuth by making a test request
+   * Checks if MCP server requires OAuth by making test requests
+   *
+   * Tries GET first (most common case), then POST with MCP protocol request
+   * (handles servers like Harmonic that only protect POST endpoints)
    *
    * @param url - MCP server URL
-   * @returns true if 401 + WWW-Authenticate: Bearer header present
+   * @returns Detection result with optional discovery URL from WWW-Authenticate header
    */
-  private async checkOAuthRequirement(url: string): Promise<boolean> {
+  private async checkOAuthRequirement(url: string): Promise<{
+    requiresOauth: boolean;
+    discoveryUrl?: string;
+  }> {
     try {
-      this.logger.debug({ url }, 'Making test request to check OAuth requirement');
+      // Try GET first (fast path for most servers)
+      this.logger.debug({ url, method: 'GET' }, 'Making test request to check OAuth requirement');
+      const getResult = await this.tryOAuthDetection(url, 'GET');
+      if (getResult.requiresOauth) {
+        this.logger.info({ url, method: 'GET' }, 'OAuth detected via GET');
+        return getResult;
+      }
 
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          'User-Agent': 'DeployStack/1.0'
-        },
-        signal: AbortSignal.timeout(10000) // 10 second timeout
+      // Try POST with MCP protocol request (handles Harmonic-style servers)
+      this.logger.debug(
+        { url, method: 'POST' },
+        'Server returned non-401 on GET, trying POST with MCP protocol request'
+      );
+      const postResult = await this.tryOAuthDetection(url, 'POST', {
+        jsonrpc: '2.0',
+        method: 'tools/list',
+        id: 1
       });
 
-      // Check for 401 Unauthorized
-      if (response.status !== 401) {
-        this.logger.debug(
-          { url, status: response.status },
-          'Server returned non-401 status, OAuth not required'
-        );
-        return false;
+      if (postResult.requiresOauth) {
+        this.logger.info({ url, method: 'POST' }, 'OAuth detected via POST');
+        return postResult;
       }
 
-      // Check for WWW-Authenticate: Bearer header
-      const wwwAuthenticate = response.headers.get('www-authenticate');
-      if (!wwwAuthenticate || !wwwAuthenticate.toLowerCase().includes('bearer')) {
-        this.logger.debug(
-          { url, wwwAuthenticate },
-          'No Bearer authentication scheme found, OAuth not required'
-        );
-        return false;
-      }
-
-      this.logger.info(
-        { url, wwwAuthenticate },
-        'OAuth requirement detected (401 + WWW-Authenticate: Bearer)'
-      );
-      return true;
+      this.logger.debug({ url }, 'No OAuth requirement detected (both GET and POST returned non-401)');
+      return { requiresOauth: false };
     } catch (error) {
       this.logger.warn(
         { url, error: error instanceof Error ? error.message : 'Unknown error' },
         'Failed to check OAuth requirement, assuming no OAuth'
       );
-      return false;
+      return { requiresOauth: false };
     }
+  }
+
+  /**
+   * Attempts OAuth detection with specified HTTP method
+   *
+   * @param url - MCP server URL
+   * @param method - HTTP method (GET or POST)
+   * @param body - Optional request body for POST requests
+   * @returns Detection result with optional discovery URL
+   */
+  private async tryOAuthDetection(
+    url: string,
+    method: 'GET' | 'POST',
+    body?: object
+  ): Promise<{
+    requiresOauth: boolean;
+    discoveryUrl?: string;
+  }> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'User-Agent': 'DeployStack/1.0'
+    };
+
+    if (method === 'POST') {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(10000) // 10 second timeout
+    });
+
+    // Check for 401 Unauthorized
+    if (response.status !== 401) {
+      this.logger.debug(
+        { url, method, status: response.status },
+        'Server returned non-401 status'
+      );
+      return { requiresOauth: false };
+    }
+
+    // Check for WWW-Authenticate: Bearer header
+    const wwwAuthenticate = response.headers.get('www-authenticate');
+    if (!wwwAuthenticate || !wwwAuthenticate.toLowerCase().includes('bearer')) {
+      this.logger.debug(
+        { url, method, wwwAuthenticate },
+        'No Bearer authentication scheme found'
+      );
+      return { requiresOauth: false };
+    }
+
+    // Extract optional discovery URL from WWW-Authenticate header
+    // Format: oauth_authorization_server="https://example.com/.well-known/oauth-authorization-server"
+    const match = wwwAuthenticate.match(/oauth_authorization_server="([^"]+)"/);
+    const discoveryUrl = match ? match[1] : undefined;
+
+    this.logger.info(
+      { url, method, wwwAuthenticate, discoveryUrl },
+      'OAuth requirement detected (401 + WWW-Authenticate: Bearer)'
+    );
+
+    return {
+      requiresOauth: true,
+      discoveryUrl
+    };
   }
 
   /**
    * Discovers OAuth server metadata using RFC 8414/9728 well-known endpoints
    *
    * @param issuer - OAuth issuer URL (e.g., "https://api.box.com")
+   * @param discoveryUrl - Optional discovery URL from WWW-Authenticate header
    * @returns OAuth server metadata
    * @throws Error if discovery fails
    */
-  private async discoverOAuthMetadata(issuer: string): Promise<OAuthServerMetadata> {
+  private async discoverOAuthMetadata(
+    issuer: string,
+    discoveryUrl?: string
+  ): Promise<OAuthServerMetadata> {
     // Normalize issuer URL (remove trailing slash)
     const normalizedIssuer = issuer.replace(/\/$/, '');
+
+    // If discovery URL provided in WWW-Authenticate header, try it first
+    if (discoveryUrl) {
+      this.logger.debug(
+        { issuer: normalizedIssuer, discoveryUrl },
+        'Trying discovery URL from WWW-Authenticate header'
+      );
+      const headerMetadata = await this.fetchMetadata(discoveryUrl);
+      if (headerMetadata) {
+        this.logger.info(
+          { issuer: normalizedIssuer, discoveryUrl },
+          'Successfully discovered OAuth metadata via WWW-Authenticate header'
+        );
+        return headerMetadata;
+      }
+    }
 
     // Try RFC 8414 first
     this.logger.debug({ issuer: normalizedIssuer }, 'Trying RFC 8414 discovery');
@@ -205,13 +299,13 @@ export class OAuthDiscoveryService {
       return oidcMetadata;
     }
 
-    // Both failed
+    // All failed
     this.logger.error(
-      { issuer: normalizedIssuer, rfc8414Url, oidcUrl },
+      { issuer: normalizedIssuer, discoveryUrl, rfc8414Url, oidcUrl },
       'OAuth discovery failed on all endpoints'
     );
     throw new Error(
-      `OAuth discovery failed for ${normalizedIssuer}. Tried RFC 8414 and OpenID Connect endpoints.`
+      `OAuth discovery failed for ${normalizedIssuer}. Tried ${discoveryUrl ? 'WWW-Authenticate header, ' : ''}RFC 8414 and OpenID Connect endpoints.`
     );
   }
 

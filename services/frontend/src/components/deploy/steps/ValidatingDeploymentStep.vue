@@ -3,7 +3,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { CheckCircle, XCircle } from 'lucide-vue-next'
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from '@/components/ui/empty'
+import { CheckCircle, AlertCircle } from 'lucide-vue-next'
 
 interface Props {
   isLoading: boolean
@@ -49,34 +50,35 @@ const isSuccess = computed(() => !props.isLoading && !hasError.value)
     </div>
 
     <!-- Error State -->
-    <div v-else-if="hasError" class="text-center">
-      <XCircle class="h-16 w-16 text-destructive mx-auto mb-4" />
-      <h2 class="text-xl font-semibold text-destructive mb-4">{{ t('deployments.wizard.validating.error.title') }}</h2>
-
-      <div class="bg-destructive/10 border border-destructive/20 rounded-lg p-6 text-left max-w-md mx-auto mb-6">
-        <div class="font-semibold text-sm text-destructive mb-2">
-          {{ t('deployments.wizard.validating.error.stepLabel') }}: {{ error!.step }}
+    <Empty v-else-if="hasError">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <AlertCircle class="text-neutral-600" />
+        </EmptyMedia>
+        <EmptyTitle>{{ t('deployments.wizard.validating.error.title') }}</EmptyTitle>
+        <EmptyDescription>
+          <div class="text-sm text-muted-foreground max-w-md mx-auto">
+            {{ error!.error }}
+          </div>
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <div class="flex justify-center gap-4">
+          <Button
+            @click="emit('back')"
+            variant="outline"
+          >
+            {{ t('deployments.wizard.buttons.back') }}
+          </Button>
+          <Button
+            @click="emit('retry')"
+            variant="default"
+          >
+            {{ t('deployments.wizard.validating.error.tryAgain') }}
+          </Button>
         </div>
-        <div class="text-sm text-destructive/90">
-          {{ error!.error }}
-        </div>
-      </div>
-
-      <div class="flex justify-center gap-4">
-        <Button
-          @click="emit('back')"
-          variant="outline"
-        >
-          {{ t('deployments.wizard.buttons.back') }}
-        </Button>
-        <Button
-          @click="emit('retry')"
-          variant="default"
-        >
-          {{ t('deployments.wizard.validating.error.tryAgain') }}
-        </Button>
-      </div>
-    </div>
+      </EmptyContent>
+    </Empty>
 
     <!-- Success State -->
     <div v-else-if="isSuccess" class="text-center">

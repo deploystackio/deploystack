@@ -5,7 +5,7 @@ import { Octokit } from '@octokit/rest';
 import { createAppAuth } from '@octokit/auth-app';
 import { nanoid } from 'nanoid';
 import { getDb, getSchema } from '../../../db';
-import { eq, or } from 'drizzle-orm';
+import { eq, or, and } from 'drizzle-orm';
 import { GlobalSettings } from '../../../global-settings/helpers';
 import { getGitHubAppConfig } from '../../../lib/deployment/github-config';
 import { DeploymentCredentialService } from '../../../services/deploymentCredentialService';
@@ -170,6 +170,10 @@ export default async function deployRoutes(server: FastifyInstance) {
           ...ERROR_RESPONSE_SCHEMA,
           description: 'Forbidden'
         },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Team not found'
+        },
         500: {
           ...ERROR_RESPONSE_SCHEMA,
           description: 'Internal Server Error'
@@ -220,6 +224,88 @@ export default async function deployRoutes(server: FastifyInstance) {
 
     try {
       const db = getDb();
+      const schema = getSchema();
+
+      // ============================================
+      // STEP 0: Validate Team Limits
+      // ============================================
+      // Fetch team with limits
+      const teamData = await db
+        .select({
+          id: schema.teams.id,
+          mcp_server_limit: schema.teams.mcp_server_limit,
+          github_mcp_limit: schema.teams.github_mcp_limit
+        })
+        .from(schema.teams)
+        .where(eq(schema.teams.id, teamId))
+        .limit(1);
+
+      if (!teamData || teamData.length === 0) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'Team not found',
+          step: 'validate_team'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
+      }
+
+      const team = teamData[0];
+
+      // Count total installations for this team
+      const totalInstallations = await db
+        .select()
+        .from(schema.mcpServerInstallations)
+        .where(eq(schema.mcpServerInstallations.team_id, teamId));
+
+      const totalCount = totalInstallations.length;
+
+      // Check total limit
+      if (totalCount >= team.mcp_server_limit) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: `Team has reached the maximum limit of ${team.mcp_server_limit} MCP server installations. Current installations: ${totalCount}. Please remove existing installations or contact your administrator to increase the limit.`,
+          step: 'validate_total_limit'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(400).type('application/json').send(jsonString);
+      }
+
+      // Count GitHub-specific installations
+      const githubInstallations = await db
+        .select()
+        .from(schema.mcpServerInstallations)
+        .leftJoin(schema.mcpServers, eq(schema.mcpServerInstallations.server_id, schema.mcpServers.id))
+        .where(
+          and(
+            eq(schema.mcpServerInstallations.team_id, teamId),
+            eq(schema.mcpServers.source, 'github')
+          )
+        );
+
+      const githubCount = githubInstallations.length;
+
+      // Check GitHub limit
+      if (githubCount >= team.github_mcp_limit) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: `Team has reached the maximum limit of ${team.github_mcp_limit} GitHub MCP server deployments. Current GitHub deployments: ${githubCount}. Please remove existing GitHub deployments or contact your administrator to increase the limit.`,
+          step: 'validate_github_limit'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(400).type('application/json').send(jsonString);
+      }
+
+      request.log.info({
+        teamId,
+        totalCount,
+        totalLimit: team.mcp_server_limit,
+        githubCount,
+        githubLimit: team.github_mcp_limit,
+        availableSlots: team.mcp_server_limit - totalCount,
+        availableGithubSlots: team.github_mcp_limit - githubCount
+      }, 'Team limits validated - deployment allowed');
+
       const credentialService = new DeploymentCredentialService(db);
 
       // ============================================
@@ -411,8 +497,6 @@ export default async function deployRoutes(server: FastifyInstance) {
         teamId,
         db
       );
-
-      const schema = getSchema();
 
       try {
         await db.insert(schema.mcpServers).values({

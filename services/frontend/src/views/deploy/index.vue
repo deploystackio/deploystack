@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import NavbarLayout from '@/components/NavbarLayout.vue'
@@ -11,12 +11,16 @@ import DeploymentEmptyState from '@/components/deploy/DeploymentEmptyState.vue'
 import { useInstallationsStream } from '@/composables/mcp-server'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
 import { useEventBus } from '@/composables/useEventBus'
+import { useTeamContext } from '@/composables/useTeamContext'
 import { toast } from 'vue-sonner'
 import { getEnv } from '@/utils/env'
 
 const { t } = useI18n()
 const router = useRouter()
 const eventBus = useEventBus()
+
+// Team context using composable
+const { selectedTeam, teamId, hasTeam, allowGithubMcp } = useTeamContext()
 
 // SSE Stream for GitHub deployments only
 const {
@@ -28,20 +32,28 @@ const {
 } = useInstallationsStream()
 
 const featureDisabled = ref(false)
-const currentTeamId = ref<string | null>(null)
 
 // Computed
 const hasDeployments = computed(() => deployments.value.length > 0)
 
 async function connectToDeployments() {
-  if (!currentTeamId.value) {
+  if (!teamId.value) {
     return
   }
+
+  // Check team permission first
+  if (!allowGithubMcp.value) {
+    featureDisabled.value = true
+    return
+  }
+
+  // Reset feature disabled flag if permission is granted
+  featureDisabled.value = false
 
   try {
     const baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
     // Connect to SSE stream with source=github filter
-    const url = `${baseUrl}/api/teams/${currentTeamId.value}/mcp/installations/stream?source=github`
+    const url = `${baseUrl}/api/teams/${teamId.value}/mcp/installations/stream?source=github`
     connectDeploymentsStream(url)
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to load deployments'
@@ -56,6 +68,13 @@ async function connectToDeployments() {
     }
   }
 }
+
+// Watch for team changes to reconnect stream
+watch(selectedTeam, (newTeam) => {
+  if (newTeam) {
+    connectToDeployments()
+  }
+})
 
 function handleDeployNew() {
   router.push('/deploy/create')
@@ -77,34 +96,16 @@ function handleRemoveInstallation(installationId: string) {
   eventBus.emit('mcp-installations-updated')
 }
 
-function handleTeamSelected(data: { teamId: string }) {
-  currentTeamId.value = data.teamId
-  // Reconnect stream for new team
-  if (currentTeamId.value) {
-    connectToDeployments()
-  }
-}
-
 onMounted(async () => {
-  // Initialize team context from event bus storage
-  const storedTeamId = eventBus.getState<string>('selected_team_id')
-  currentTeamId.value = storedTeamId
-
-  // Connect to deployments stream
-  if (currentTeamId.value) {
+  // Connect to deployments stream (watch on selectedTeam handles reconnections)
+  if (teamId.value) {
     connectToDeployments()
   }
-
-  // Listen for team selection changes
-  eventBus.on('team-selected', handleTeamSelected)
 })
 
 onUnmounted(() => {
   // Disconnect SSE stream
   disconnectDeploymentsStream()
-
-  // Clean up event listeners
-  eventBus.off('team-selected', handleTeamSelected)
 })
 </script>
 
@@ -112,7 +113,7 @@ onUnmounted(() => {
   <NavbarLayout>
     <DsPageHeading :title="t('deployments.listTitle')">
       <template #actions>
-        <Button v-if="currentTeamId" @click="handleDeployNew" class="flex items-center gap-2">
+        <Button v-if="hasTeam && allowGithubMcp" @click="handleDeployNew" class="flex items-center gap-2">
           {{ t('deployments.actions.deployNew') }}
         </Button>
       </template>
@@ -120,7 +121,7 @@ onUnmounted(() => {
 
     <div class="space-y-6 mt-6">
       <!-- No team selected state -->
-      <div v-if="!currentTeamId" class="text-center py-12">
+      <div v-if="!hasTeam" class="text-center py-12">
         <p class="text-muted-foreground">{{ t('mcpInstallations.teamContext.noTeamSelected') }}</p>
       </div>
 
@@ -135,9 +136,9 @@ onUnmounted(() => {
           <EmptyMedia variant="icon">
             <Settings />
           </EmptyMedia>
-          <EmptyTitle>Deployment Feature Disabled</EmptyTitle>
+          <EmptyTitle>GitHub Deployments Not Allowed</EmptyTitle>
           <EmptyDescription>
-            The GitHub deployment feature is not enabled. Please contact your DeployStack administrator to enable this feature in Global Settings.
+            GitHub MCP deployments are not enabled for this team. Please contact your team administrator or upgrade your team plan to enable this feature.
           </EmptyDescription>
         </EmptyHeader>
       </Empty>

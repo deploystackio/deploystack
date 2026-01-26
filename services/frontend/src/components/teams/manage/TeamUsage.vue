@@ -56,6 +56,18 @@ const isAtNonHttpLimit = computed(() => {
   return usageData.value.non_http_mcp_servers >= usageData.value.limits.non_http_mcp_limit
 })
 
+const githubMcpPercentage = computed(() => {
+  if (!usageData.value) return 0
+  const { github_mcp_servers, limits } = usageData.value
+  if (limits.github_mcp_limit === 0) return 0
+  return Math.min(100, (github_mcp_servers / limits.github_mcp_limit) * 100)
+})
+
+const isAtGithubLimit = computed(() => {
+  if (!usageData.value) return false
+  return usageData.value.github_mcp_servers >= usageData.value.limits.github_mcp_limit
+})
+
 // Load usage data
 const loadUsageData = async () => {
   try {
@@ -194,19 +206,46 @@ onMounted(() => {
             </dd>
           </div>
 
-          <!-- Allow GitHub MCP Servers -->
+          <!-- GitHub MCP Servers -->
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-900 flex items-center gap-2">
               <Github class="h-4 w-4 text-muted-foreground" />
-              Allow GitHub MCP Servers
+              {{ t('teams.manage.usage.githubMcpServers') }}
+            </dt>
+            <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+              <DsMeter :value="githubMcpPercentage" class="space-y-2 max-w-md">
+                <div class="flex justify-between text-sm">
+                  <DsMeterLabel class="font-normal">
+                    {{ usageData.github_mcp_servers }} / {{ usageData.limits.github_mcp_limit }}
+                  </DsMeterLabel>
+                  <DsMeterValue :class="isAtGithubLimit ? 'text-destructive font-medium' : 'text-muted-foreground'" />
+                </div>
+                <DsMeterTrack>
+                  <DsMeterIndicator :class="isAtGithubLimit ? 'bg-destructive' : ''" />
+                </DsMeterTrack>
+                <p v-if="isAtGithubLimit" class="text-xs text-destructive">
+                  {{ t('teams.manage.usage.limitReached') }}
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  {{ t('teams.manage.usage.githubDescription') }}
+                </p>
+              </DsMeter>
+            </dd>
+          </div>
+
+          <!-- Allow GitHub MCP Servers -->
+          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+            <dt class="text-sm/6 font-medium text-gray-900 flex items-center gap-2">
+              <Lock class="h-4 w-4 text-muted-foreground" />
+              {{ t('teams.manage.usage.allowGithubMcp') }}
             </dt>
             <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
               <div class="space-y-1">
                 <span class="font-medium" :class="usageData.limits.allow_github_mcp ? 'text-green-600' : 'text-gray-500'">
-                  {{ usageData.limits.allow_github_mcp ? 'Enabled' : 'Disabled' }}
+                  {{ usageData.limits.allow_github_mcp ? t('teams.manage.usage.enabled') : t('teams.manage.usage.disabled') }}
                 </span>
                 <p class="text-xs text-muted-foreground">
-                  Install MCP servers directly from GitHub repositories
+                  {{ t('teams.manage.usage.allowGithubMcpDescription') }}
                 </p>
               </div>
             </dd>
@@ -215,32 +254,16 @@ onMounted(() => {
           <!-- Allow Private GitHub Repositories -->
           <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
             <dt class="text-sm/6 font-medium text-gray-900 flex items-center gap-2">
-              <Lock class="h-4 w-4 text-muted-foreground" />
-              Allow Private GitHub Repositories
+              <Hash class="h-4 w-4 text-muted-foreground" />
+              {{ t('teams.manage.usage.allowPrivateGithubRepos') }}
             </dt>
             <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
               <div class="space-y-1">
                 <span class="font-medium" :class="usageData.limits.allow_private_github_repos ? 'text-green-600' : 'text-gray-500'">
-                  {{ usageData.limits.allow_private_github_repos ? 'Enabled' : 'Disabled' }}
+                  {{ usageData.limits.allow_private_github_repos ? t('teams.manage.usage.enabled') : t('teams.manage.usage.disabled') }}
                 </span>
                 <p class="text-xs text-muted-foreground">
-                  Install MCP servers from private GitHub repositories
-                </p>
-              </div>
-            </dd>
-          </div>
-
-          <!-- GitHub MCP Server Limit -->
-          <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-            <dt class="text-sm/6 font-medium text-gray-900 flex items-center gap-2">
-              <Hash class="h-4 w-4 text-muted-foreground" />
-              GitHub MCP Server Limit
-            </dt>
-            <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-              <div class="space-y-1">
-                <span class="font-medium">{{ usageData.limits.github_mcp_limit }}</span>
-                <p class="text-xs text-muted-foreground">
-                  Maximum number of MCP servers from GitHub repositories
+                  {{ t('teams.manage.usage.allowPrivateGithubReposDescription') }}
                 </p>
               </div>
             </dd>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { onMounted, onUnmounted, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import NavbarLayout from '@/components/NavbarLayout.vue'
@@ -8,15 +8,18 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import { useInstallationsStream } from '@/composables/mcp-server'
+import { useTeamContext } from '@/composables/useTeamContext'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
 import McpInstallationsEmptyState from '@/components/mcp-server/McpInstallationsEmptyState.vue'
 import { McpInstallationService } from '@/services/mcpInstallationService'
-import { TeamService, type Team } from '@/services/teamService'
 import TeamUsageIndicator from '@/components/teams/TeamUsageIndicator.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const eventBus = useEventBus()
+
+// Team context using composable
+const { selectedTeam } = useTeamContext()
 
 // SSE Stream for installations
 const {
@@ -27,74 +30,16 @@ const {
   disconnect: disconnectInstallationsStream
 } = useInstallationsStream()
 
-// Team context using event bus storage
-const selectedTeam = ref<Team | null>(null)
-
 // Computed
 const hasInstallations = computed(() => installations.value.length > 0)
 
-// Initialize selected team from storage
-const initializeSelectedTeam = async () => {
-  try {
-    const userTeams = await TeamService.getUserTeams()
-    if (userTeams.length > 0) {
-      const storedTeamId = eventBus.getState<string>('selected_team_id')
-
-      if (storedTeamId) {
-        // Try to find the stored team in available teams
-        const storedTeam = userTeams.find(team => team.id === storedTeamId)
-        if (storedTeam) {
-          selectedTeam.value = storedTeam
-        } else {
-          // Stored team not found, fallback to default team
-          const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
-          if (defaultTeam) {
-            selectedTeam.value = defaultTeam
-            eventBus.setState('selected_team_id', defaultTeam.id)
-          }
-        }
-      } else {
-        // No stored team, use default team
-        const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
-        if (defaultTeam) {
-          selectedTeam.value = defaultTeam
-          eventBus.setState('selected_team_id', defaultTeam.id)
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error initializing selected team:', error)
+// Watch for team changes to reconnect stream
+watch(selectedTeam, (newTeam) => {
+  if (newTeam) {
+    const url = McpInstallationService.getStreamUrl(newTeam.id)
+    connectInstallationsStream(url)
   }
-}
-
-// Handle team selection from sidebar
-const handleTeamSelected = async (data: { teamId: string; teamName: string }) => {
-  // Find the full team object with role information
-  try {
-    const userTeams = await TeamService.getUserTeams()
-    const fullTeam = userTeams.find(t => t.id === data.teamId)
-    if (fullTeam) {
-      selectedTeam.value = fullTeam
-    } else {
-      selectedTeam.value = { id: data.teamId, name: data.teamName } as Team
-    }
-
-    // Reconnect stream for new team
-    if (selectedTeam.value) {
-      const url = McpInstallationService.getStreamUrl(selectedTeam.value.id)
-      connectInstallationsStream(url)
-    }
-  } catch (error) {
-    console.error('Error handling team selection:', error)
-    selectedTeam.value = { id: data.teamId, name: data.teamName } as Team
-
-    // Reconnect stream for new team even if team fetch failed
-    if (selectedTeam.value) {
-      const url = McpInstallationService.getStreamUrl(selectedTeam.value.id)
-      connectInstallationsStream(url)
-    }
-  }
-}
+})
 
 const handleInstallServer = () => {
   router.push('/mcp-server/install')
@@ -208,10 +153,7 @@ const checkForPendingNotification = () => {
 
 // Lifecycle
 onMounted(async () => {
-  // Initialize team context first
-  await initializeSelectedTeam()
-
-  // Connect SSE stream
+  // Connect SSE stream (watch on selectedTeam handles reconnections)
   if (selectedTeam.value) {
     const url = McpInstallationService.getStreamUrl(selectedTeam.value.id)
     connectInstallationsStream(url)
@@ -219,9 +161,6 @@ onMounted(async () => {
 
   // Check for pending notifications from storage
   checkForPendingNotification()
-
-  // Listen for team selection events from sidebar
-  eventBus.on('team-selected', handleTeamSelected)
 
   // Listen for installation updates
   eventBus.on('mcp-installations-updated', handleInstallationsUpdate)
@@ -238,7 +177,6 @@ onUnmounted(() => {
   disconnectInstallationsStream()
 
   // Clean up event listeners to prevent memory leaks
-  eventBus.off('team-selected', handleTeamSelected)
   eventBus.off('mcp-installations-updated', handleInstallationsUpdate)
   eventBus.off('notification-show', handleNotificationShow)
   eventBus.off('storage-changed', handleStorageChange)

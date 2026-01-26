@@ -164,6 +164,39 @@ export default async function updateTeamAdminRoute(server: FastifyInstance) {
         }
       }
 
+      // Cross-field validation: mcp_server_limit >= non_http_mcp_limit + github_mcp_limit
+      if (
+        updateData.non_http_mcp_limit !== undefined ||
+        updateData.github_mcp_limit !== undefined ||
+        updateData.mcp_server_limit !== undefined
+      ) {
+        // Determine final values (use updated value if provided, else use existing)
+        const finalNonHttpLimit = updateData.non_http_mcp_limit !== undefined
+          ? updateData.non_http_mcp_limit
+          : existingTeam.non_http_mcp_limit;
+
+        const finalGithubLimit = updateData.github_mcp_limit !== undefined
+          ? updateData.github_mcp_limit
+          : existingTeam.github_mcp_limit;
+
+        const finalMcpServerLimit = updateData.mcp_server_limit !== undefined
+          ? updateData.mcp_server_limit
+          : existingTeam.mcp_server_limit;
+
+        // Calculate minimum required limit
+        const minimumRequired = finalNonHttpLimit + finalGithubLimit;
+
+        // Validate constraint
+        if (finalMcpServerLimit < minimumRequired) {
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: `mcp_server_limit (${finalMcpServerLimit}) must be at least ${minimumRequired} (non_http_mcp_limit: ${finalNonHttpLimit} + github_mcp_limit: ${finalGithubLimit})`
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
       // Update the team
       const updatedTeam = await TeamService.updateTeam(id, updateData);
 

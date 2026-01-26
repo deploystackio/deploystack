@@ -35,6 +35,7 @@ import { GlobalSettings } from './global-settings/helpers';
 import { GlobalSettingsCache } from './global-settings/cache';
 import { GlobalSettingsService } from './services/globalSettingsService'; // Import the service
 import { RoleSyncService } from './services/roleSyncService'; // Import the role sync service
+import { TemplateRenderer } from './email/templateRenderer'; // Import for cache clearing
 import type { Pool } from 'pg'; // For PostgreSQL connection pool cleanup in onClose
 import type { FastifyInstance } from 'fastify'
 
@@ -155,6 +156,22 @@ export async function initializeDatabaseDependentServices(
         }, '❌ MCP User Configuration Service failed to initialize:');
         // Don't throw - continue with startup but log the error
         server.log.warn('⚠️ Continuing without MCP User Configuration Service due to error');
+      }
+
+      // Register deployment notification listener
+      try {
+        server.log.debug('🔄 Registering deployment notification listener...');
+        const { registerDeploymentListener } = await import('./events/listeners/deploymentNotificationListener');
+        registerDeploymentListener(server.eventBus, dbInstance, server.log);
+        server.log.debug('✅ Deployment notification listener registered');
+      } catch (deploymentListenerError) {
+        server.log.error({
+          error: deploymentListenerError,
+          message: deploymentListenerError instanceof Error ? deploymentListenerError.message : 'Unknown error',
+          stack: deploymentListenerError instanceof Error ? deploymentListenerError.stack : 'No stack trace'
+        }, '❌ Deployment notification listener failed to register:');
+        // Don't throw - continue with startup but log the error
+        server.log.warn('⚠️ Continuing without deployment notification listener due to error');
       }
 
       // Initialize and start Job Queue System
@@ -431,6 +448,10 @@ export const createServer = async () => {
       }
     }
   })
+
+  // Clear email template cache on startup to prevent stale path issues
+  TemplateRenderer.clearCache();
+  server.log.info('Email template cache cleared on startup');
 
   // Add global error handler for validation errors
   server.setErrorHandler(async (error, request, reply) => {

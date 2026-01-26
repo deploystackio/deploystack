@@ -3,6 +3,7 @@ import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { getSchema } from '../db';
 import { JobQueueService } from './jobQueueService';
+import { GlobalSettings } from '../global-settings/helpers';
 
 /**
  * Service for sending email notifications when MCP servers are installed or removed
@@ -49,6 +50,10 @@ export class McpInstallationNotificationService {
         return;
       }
 
+      // Get frontend URL from global settings
+      const frontendUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173');
+      const dashboardUrl = `${frontendUrl}/dashboard`;
+
       // Queue email for each team member
       for (const member of teamMembers) {
         await this.jobQueueService.createJob('send_email', {
@@ -60,7 +65,7 @@ export class McpInstallationNotificationService {
             serverName: serverInfo.name,
             serverDescription: serverInfo.description || '',
             teamName: teamInfo.name,
-            dashboardUrl: 'https://cloud.deploystack.io/dashboard'
+            dashboardUrl
           }
         });
       }

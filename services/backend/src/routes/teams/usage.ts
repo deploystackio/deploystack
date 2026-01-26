@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { TeamService } from '../../services/teamService';
 import { checkUserPermission } from '../../middleware/roleMiddleware';
 import { getDb, getSchema } from '../../db';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and } from 'drizzle-orm';
 import {
   ERROR_RESPONSE_SCHEMA,
   TEAM_ID_PARAMS_SCHEMA,
@@ -32,6 +32,10 @@ const TEAM_USAGE_DATA_SCHEMA = {
       type: 'number',
       description: 'Number of HTTP MCP servers (http/sse transport)'
     },
+    github_mcp_servers: {
+      type: 'number',
+      description: 'Current number of GitHub-deployed MCP servers'
+    },
     limits: {
       type: 'object',
       properties: {
@@ -59,7 +63,7 @@ const TEAM_USAGE_DATA_SCHEMA = {
       required: ['mcp_server_limit', 'non_http_mcp_limit', 'allow_github_mcp', 'allow_private_github_repos', 'github_mcp_limit']
     }
   },
-  required: ['is_default_team', 'total_installed_mcp_servers', 'non_http_mcp_servers', 'http_mcp_servers', 'limits']
+  required: ['is_default_team', 'total_installed_mcp_servers', 'non_http_mcp_servers', 'http_mcp_servers', 'github_mcp_servers', 'limits']
 } as const;
 
 const TEAM_USAGE_SUCCESS_RESPONSE_SCHEMA = {
@@ -92,6 +96,7 @@ interface TeamUsageData {
   total_installed_mcp_servers: number;
   non_http_mcp_servers: number;
   http_mcp_servers: number;
+  github_mcp_servers: number;
   limits: TeamUsageLimits;
 }
 
@@ -231,13 +236,30 @@ export default async function getTeamUsageRoute(server: FastifyInstance) {
         }
       }
 
+      // Count GitHub-deployed MCP servers
+      const githubInstallations = await db
+        .select({
+          count: sql<number>`COUNT(*)`.as('count')
+        })
+        .from(mcpServerInstallations)
+        .leftJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
+        .where(
+          and(
+            eq(mcpServerInstallations.team_id, teamId),
+            eq(mcpServers.source, 'github')
+          )
+        );
+
+      const githubCount = Number(githubInstallations[0]?.count ?? 0);
+
       request.log.info({
         operation: 'get_team_usage',
         teamId,
         userId: request.user.id,
         totalInstalled,
         nonHttpCount,
-        httpCount
+        httpCount,
+        githubCount
       }, 'Retrieved team usage statistics');
 
       const successResponse: TeamUsageSuccessResponse = {
@@ -247,6 +269,7 @@ export default async function getTeamUsageRoute(server: FastifyInstance) {
           total_installed_mcp_servers: totalInstalled,
           non_http_mcp_servers: nonHttpCount,
           http_mcp_servers: httpCount,
+          github_mcp_servers: githubCount,
           limits
         }
       };

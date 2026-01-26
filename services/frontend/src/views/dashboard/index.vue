@@ -8,6 +8,7 @@ import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
 import { useInstallationsStream } from '@/composables/mcp-server'
+import { useTeamContext } from '@/composables/useTeamContext'
 import McpInstallationsCard from '@/components/mcp-server/McpInstallationsCard.vue'
 import McpInstallationsEmptyState from '@/components/mcp-server/McpInstallationsEmptyState.vue'
 import McpClientConnectionsCard from '@/components/mcp-server/McpClientConnectionsCard.vue'
@@ -16,7 +17,6 @@ import ClientConfigurationModal from '@/components/gateway-config/ClientConfigur
 import UserWalkthroughPopover from '@/components/walkthrough/UserWalkthroughPopover.vue'
 import TeamUsageIndicator from '@/components/teams/TeamUsageIndicator.vue'
 import { McpInstallationService } from '@/services/mcpInstallationService'
-import { TeamService, type Team } from '@/services/teamService'
 import { GlobalSettingsService } from '@/services/globalSettingsService'
 import { UserPreferencesService } from '@/services/userPreferencesService'
 
@@ -34,14 +34,14 @@ const {
   disconnect: disconnectInstallationsStream
 } = useInstallationsStream()
 
+// Team context using composable
+const { selectedTeam } = useTeamContext()
+
 // Walkthrough state
 const showUserWalkthrough = ref(false)
 const walkthroughStep = ref(1)
 const showWalkthroughStep2 = ref(false)
 const showStep2ButtonHighZIndex = ref(false)
-
-// Team context using event bus storage
-const selectedTeam = ref<Team | null>(null)
 
 // Gateway configuration modal state
 const isConfigModalOpen = ref(false)
@@ -49,70 +49,15 @@ const isConfigModalOpen = ref(false)
 // Computed
 const hasInstallations = computed(() => installations.value.length > 0)
 
-// Initialize selected team from storage
-const initializeSelectedTeam = async () => {
-  try {
-    const userTeams = await TeamService.getUserTeams()
-    if (userTeams.length > 0) {
-      const storedTeamId = eventBus.getState<string>('selected_team_id')
-
-      if (storedTeamId) {
-        // Try to find the stored team in available teams
-        const storedTeam = userTeams.find(team => team.id === storedTeamId)
-        if (storedTeam) {
-          selectedTeam.value = storedTeam
-        } else {
-          // Stored team not found, fallback to default team
-          const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
-          if (defaultTeam) {
-            selectedTeam.value = defaultTeam
-            eventBus.setState('selected_team_id', defaultTeam.id)
-          }
-        }
-      } else {
-        // No stored team, use default team
-        const defaultTeam = userTeams.find(team => team.is_default) || userTeams[0]
-        if (defaultTeam) {
-          selectedTeam.value = defaultTeam
-          eventBus.setState('selected_team_id', defaultTeam.id)
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error initializing selected team:', error)
+// Watch for team changes to reconnect stream
+watch(selectedTeam, (newTeam) => {
+  if (newTeam) {
+    const url = McpInstallationService.getStreamUrl(newTeam.id)
+    connectInstallationsStream(url)
   }
-}
+})
 
-// Handle team selection from sidebar
-const handleTeamSelected = async (data: { teamId: string; teamName: string }) => {
-  // Find the full team object with role information
-  try {
-    const userTeams = await TeamService.getUserTeams()
-    const fullTeam = userTeams.find(t => t.id === data.teamId)
-    if (fullTeam) {
-      selectedTeam.value = fullTeam
-    } else {
-      selectedTeam.value = { id: data.teamId, name: data.teamName } as Team
-    }
-
-    // Reconnect stream for new team
-    if (selectedTeam.value) {
-      const url = McpInstallationService.getStreamUrl(selectedTeam.value.id)
-      connectInstallationsStream(url)
-    }
-  } catch (error) {
-    console.error('Error handling team selection:', error)
-    selectedTeam.value = { id: data.teamId, name: data.teamName } as Team
-
-    // Reconnect stream for new team even if team fetch failed
-    if (selectedTeam.value) {
-      const url = McpInstallationService.getStreamUrl(selectedTeam.value.id)
-      connectInstallationsStream(url)
-    }
-  }
-}
-
-// UPDATED: Check walkthrough setting and user completion status
+// Check walkthrough setting and user completion status
 const checkWalkthroughSetting = async (): Promise<boolean> => {
   try {
     // Step 1: Check if walkthrough is globally enabled
@@ -372,10 +317,7 @@ onMounted(async () => {
   // Set breadcrumbs
   setBreadcrumbs([{ label: t('sidebar.navigation.dashboard') }])
 
-  // Initialize team context first
-  await initializeSelectedTeam()
-
-  // Connect SSE stream
+  // Connect SSE stream (watch on selectedTeam handles reconnections)
   if (selectedTeam.value) {
     const url = McpInstallationService.getStreamUrl(selectedTeam.value.id)
     connectInstallationsStream(url)
@@ -383,9 +325,6 @@ onMounted(async () => {
 
   // Check for pending notifications from storage
   checkForPendingNotification()
-
-  // Listen for team selection events from sidebar
-  eventBus.on('team-selected', handleTeamSelected)
 
   // Listen for installation updates
   eventBus.on('mcp-installations-updated', handleInstallationsUpdate)
@@ -406,7 +345,6 @@ onUnmounted(() => {
   disconnectInstallationsStream()
 
   // Clean up event listeners to prevent memory leaks
-  eventBus.off('team-selected', handleTeamSelected)
   eventBus.off('mcp-installations-updated', handleInstallationsUpdate)
   eventBus.off('notification-show', handleNotificationShow)
   eventBus.off('storage-changed', handleStorageChange)

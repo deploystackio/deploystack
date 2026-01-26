@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import NavbarLayout from '@/components/NavbarLayout.vue'
@@ -14,12 +14,14 @@ import ValidatingDeploymentStep from '@/components/deploy/steps/ValidatingDeploy
 import StreamingLogsStep from '@/components/deploy/steps/StreamingLogsStep.vue'
 import DeploymentSuccessStep from '@/components/deploy/steps/DeploymentSuccessStep.vue'
 import { DeploymentService } from '@/services/deploymentService'
-import { useEventBus } from '@/composables/useEventBus'
+import { useTeamContext } from '@/composables/useTeamContext'
 import { toast } from 'vue-sonner'
 
 const { t } = useI18n()
 const router = useRouter()
-const eventBus = useEventBus()
+
+// Team context using composable
+const { selectedTeam, teamId, isLoading: isLoadingTeam, allowGithubMcp } = useTeamContext()
 
 const currentStep = ref(0)
 const completedSteps = ref<number[]>([])
@@ -109,8 +111,7 @@ function handleGitHubConnected() {
 
 async function handleDeploy() {
   try {
-    const teamId = eventBus.getState<string>('selected_team_id')
-    if (!teamId) {
+    if (!teamId.value) {
       toast.error('No team selected')
       return
     }
@@ -121,7 +122,7 @@ async function handleDeploy() {
     deploymentError.value = null
 
     // Call synchronous deployment endpoint
-    const result = await DeploymentService.createDeployment(teamId, {
+    const result = await DeploymentService.createDeployment(teamId.value, {
       repository_url: formData.value.repository.url,
       branch: formData.value.repository.branch,
       satellite_id: formData.value.satellite.satellite_id,
@@ -164,29 +165,62 @@ function handleCancelStreaming() {
 }
 
 onMounted(async () => {
-  // Check if user has team selected
-  const teamId = eventBus.getState<string>('selected_team_id')
-  if (!teamId) {
-    toast.error('Please select a team first')
-    router.push('/deploy')
-    return
-  }
+  // Wait for team context to initialize
+  const stopWatch = watch(
+    () => isLoadingTeam.value,
+    async (loading) => {
+      if (!loading) {
+        // Team finished loading
+        stopWatch() // Stop watching immediately
 
-  // Check if deployment feature is enabled
-  try {
-    await DeploymentService.checkConnection(teamId)
-    // If we get here without error, feature is enabled
-    featureDisabled.value = false
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : ''
-    if (errorMessage.includes('not enabled')) {
+        if (!teamId.value) {
+          toast.error('Please select a team first')
+          router.push('/deploy')
+          return
+        }
+
+        // Check team permission first
+        if (!allowGithubMcp.value) {
+          featureDisabled.value = true
+          isCheckingFeature.value = false
+          return
+        }
+
+        // Check if deployment feature is enabled globally
+        try {
+          await DeploymentService.checkConnection(teamId.value)
+          // If we get here without error, feature is enabled
+          featureDisabled.value = false
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : ''
+          if (errorMessage.includes('not enabled')) {
+            featureDisabled.value = true
+          } else {
+            // Other errors can continue to wizard (will show in ConnectGitHubStep)
+            featureDisabled.value = false
+          }
+        } finally {
+          isCheckingFeature.value = false
+        }
+      }
+    },
+    { immediate: true }
+  )
+})
+
+// Watch for team changes and re-check permissions
+watch(selectedTeam, (newTeam) => {
+  if (newTeam) {
+    // Reset wizard state when team changes
+    currentStep.value = 0
+    completedSteps.value = []
+
+    // Check if new team has GitHub MCP permission
+    if (!allowGithubMcp.value) {
       featureDisabled.value = true
     } else {
-      // Other errors can continue to wizard (will show in ConnectGitHubStep)
       featureDisabled.value = false
     }
-  } finally {
-    isCheckingFeature.value = false
   }
 })
 </script>
@@ -202,22 +236,32 @@ onMounted(async () => {
         </p>
       </div>
 
+      <!-- Loading State - Show while checking team OR feature -->
+      <div v-if="isLoadingTeam || isCheckingFeature" class="flex items-center justify-center py-24">
+        <div class="flex flex-col items-center gap-4">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p class="text-muted-foreground">
+            {{ isLoadingTeam ? 'Loading team...' : 'Checking deployment feature...' }}
+          </p>
+        </div>
+      </div>
+
       <!-- Feature Disabled State -->
-      <Empty v-if="featureDisabled" class="py-12">
+      <Empty v-else-if="featureDisabled" class="py-12">
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <Settings />
           </EmptyMedia>
-          <EmptyTitle>Deployment Feature Disabled</EmptyTitle>
+          <EmptyTitle>GitHub Deployments Not Allowed</EmptyTitle>
           <EmptyDescription>
-            The GitHub deployment feature is not enabled. Please contact your DeployStack administrator to enable this feature in Global Settings.
+            GitHub MCP deployments are not enabled for this team. Please contact your team administrator or upgrade your team plan to enable this feature.
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
 
       <!-- Wizard Progress Steps -->
       <DsProgressSteps
-        v-else
+        v-else-if="!isLoadingTeam && !isCheckingFeature"
         :steps="progressSteps"
         :current-step="currentProgressStep"
         :completed-steps="completedSteps"

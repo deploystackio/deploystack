@@ -218,9 +218,17 @@ export default {
         totalMcpServers: 'Total MCP Servers',
         nonHttpMcpServers: 'Non-HTTP MCP Servers',
         httpMcpServers: 'HTTP MCP Servers',
+        githubMcpServers: 'GitHub MCP Servers',
+        allowGithubMcp: 'Allow GitHub Deployments',
+        allowPrivateGithubRepos: 'Allow Private Repositories',
         limitReached: 'You have reached the limit for this resource.',
         nonHttpDescription: 'Stdio transport servers that run as local processes on the satellite.',
-        httpDescription: 'HTTP/SSE transport servers that connect to remote endpoints.'
+        httpDescription: 'HTTP/SSE transport servers that connect to remote endpoints.',
+        githubDescription: 'Self-deployed MCP servers from GitHub repositories (always stdio transport).',
+        allowGithubMcpDescription: 'Install MCP servers directly from GitHub repositories',
+        allowPrivateGithubReposDescription: 'Install MCP servers from private GitHub repositories',
+        enabled: 'Enabled',
+        disabled: 'Disabled'
       },
       fields: {
         name: {

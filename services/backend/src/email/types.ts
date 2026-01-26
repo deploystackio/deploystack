@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { FastifyBaseLogger } from 'fastify';
 
 // Zod schemas for validation
 export const EmailAddressSchema = z.string().email('Invalid email address');
@@ -60,6 +61,7 @@ export interface TemplateRenderOptions {
   template: string;
   variables: Record<string, unknown>;
   layout?: string;
+  logger?: FastifyBaseLogger; // Add optional logger parameter
 }
 
 export interface SmtpConfiguration {
@@ -191,6 +193,26 @@ export interface GlobalAdminUserDemotedNotificationVariables {
   dashboardUrl?: string;
 }
 
+export interface DeploymentSuccessEmailVariables {
+  userName: string;
+  serverName: string;
+  repositoryUrl: string;
+  branch: string;
+  commitSha: string;
+  deployedAt: string;
+  installationUrl?: string;
+}
+
+export interface DeploymentFailureEmailVariables {
+  userName: string;
+  serverName: string;
+  repositoryUrl: string;
+  branch: string;
+  commitSha: string;
+  deployedAt: string;
+  installationUrl?: string;
+}
+
 // Template registry for type safety
 export interface TemplateVariableMap {
   welcome: WelcomeEmailVariables;
@@ -207,6 +229,8 @@ export interface TemplateVariableMap {
   'global-admin-demoted': GlobalAdminDemotedEmailVariables;
   'global-admin-user-promoted-notification': GlobalAdminUserPromotedNotificationVariables;
   'global-admin-user-demoted-notification': GlobalAdminUserDemotedNotificationVariables;
+  'deployment-success': DeploymentSuccessEmailVariables;
+  'deployment-failure': DeploymentFailureEmailVariables;
 }
 
 export type TemplateNames = keyof TemplateVariableMap;

@@ -2711,6 +2711,18 @@
                           "is_owner": {
                             "type": "boolean",
                             "description": "Whether the current user owns this team"
+                          },
+                          "allow_remote_mcp": {
+                            "type": "boolean",
+                            "description": "Whether remote MCP servers are allowed for this team"
+                          },
+                          "allow_github_mcp": {
+                            "type": "boolean",
+                            "description": "Whether GitHub MCP deployments are allowed for this team"
+                          },
+                          "allow_private_github_repos": {
+                            "type": "boolean",
+                            "description": "Whether private GitHub repositories are allowed for MCP deployments"
                           }
                         },
                         "required": [
@@ -2720,7 +2732,10 @@
                           "owner_id",
                           "is_default",
                           "role",
-                          "is_owner"
+                          "is_owner",
+                          "allow_remote_mcp",
+                          "allow_github_mcp",
+                          "allow_private_github_repos"
                         ],
                         "additionalProperties": false
                       },
@@ -10133,6 +10148,10 @@
                           "type": "number",
                           "description": "Number of HTTP MCP servers (http/sse transport)"
                         },
+                        "github_mcp_servers": {
+                          "type": "number",
+                          "description": "Current number of GitHub-deployed MCP servers"
+                        },
                         "limits": {
                           "type": "object",
                           "properties": {
@@ -10171,6 +10190,7 @@
                         "total_installed_mcp_servers",
                         "non_http_mcp_servers",
                         "http_mcp_servers",
+                        "github_mcp_servers",
                         "limits"
                       ]
                     }
@@ -15601,6 +15621,34 @@
                     "error"
                   ],
                   "description": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Team not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "step": {
+                      "type": "string",
+                      "description": "The validation step that failed (e.g., validate_package_json)"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Team not found"
                 }
               }
             }
@@ -41819,6 +41867,14 @@
                           "user_slug": {
                             "type": "string",
                             "description": "User ID used in processId for this specific instance"
+                          },
+                          "language": {
+                            "type": "string",
+                            "description": "Programming language (e.g., \"typescript\", \"python\", \"go\")"
+                          },
+                          "runtime": {
+                            "type": "string",
+                            "description": "Runtime environment (e.g., \"node\", \"python\", \"docker\")"
                           },
                           "secret_metadata": {
                             "type": "object",

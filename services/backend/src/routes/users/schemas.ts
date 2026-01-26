@@ -177,9 +177,21 @@ export const TEAM_ITEM_SCHEMA = {
     is_owner: {
       type: 'boolean',
       description: 'Whether the current user owns this team'
+    },
+    allow_remote_mcp: {
+      type: 'boolean',
+      description: 'Whether remote MCP servers are allowed for this team'
+    },
+    allow_github_mcp: {
+      type: 'boolean',
+      description: 'Whether GitHub MCP deployments are allowed for this team'
+    },
+    allow_private_github_repos: {
+      type: 'boolean',
+      description: 'Whether private GitHub repositories are allowed for MCP deployments'
     }
   },
-  required: ['id', 'name', 'slug', 'owner_id', 'is_default', 'role', 'is_owner'],
+  required: ['id', 'name', 'slug', 'owner_id', 'is_default', 'role', 'is_owner', 'allow_remote_mcp', 'allow_github_mcp', 'allow_private_github_repos'],
   additionalProperties: false
 } as const;
 
@@ -423,6 +435,9 @@ export interface TeamItem {
   updated_at: string | null;
   role: string;
   is_owner: boolean;
+  allow_remote_mcp: boolean;
+  allow_github_mcp: boolean;
+  allow_private_github_repos: boolean;
 }
 
 export interface UpdateUserRequest {

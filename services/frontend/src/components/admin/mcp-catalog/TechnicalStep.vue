@@ -152,6 +152,46 @@ watch(() => localData.value.transport_type, (newTransportType) => {
 
 const isUpdatingFromStorage = ref(false)
 
+// Hardcoded dropdown options for languages and runtimes
+const languageOptions = ref<string[]>([
+  'typescript',
+  'javascript',
+  'python',
+  'go',
+  'rust',
+  'java',
+  'csharp',
+  'cpp',
+  'ruby',
+  'php',
+  'swift',
+  'kotlin',
+  'scala',
+  'elixir',
+  'clojure',
+  'haskell',
+  'lua',
+  'dart',
+  'r',
+  'perl',
+  'shell'
+])
+
+const runtimeOptions = ref<string[]>([
+  'node',
+  'deno',
+  'bun',
+  'python',
+  'docker',
+  'http',
+  'go',
+  'java',
+  'dotnet',
+  'ruby',
+  'php',
+  'native'
+])
+
 // Load data from storage
 const loadFromStorage = () => {
   const storedData = eventBus.getState<TechnicalFormData>(STORAGE_KEY)
@@ -195,6 +235,32 @@ const saveToStorage = () => {
 const updateField = <K extends keyof TechnicalFormData>(field: K, value: TechnicalFormData[K]) => {
   localData.value[field] = value
   saveToStorage()
+}
+
+// Format language label for display
+const formatLanguageLabel = (lang: string): string => {
+  const labelMap: Record<string, string> = {
+    'typescript': 'TypeScript',
+    'javascript': 'JavaScript',
+    'python': 'Python',
+    'go': 'Go',
+    'rust': 'Rust',
+    'java': 'Java',
+    'csharp': 'C#',
+    'http': 'HTTP/Remote Server'
+  }
+  return labelMap[lang] || lang.charAt(0).toUpperCase() + lang.slice(1)
+}
+
+// Format runtime label for display
+const formatRuntimeLabel = (runtime: string): string => {
+  const labelMap: Record<string, string> = {
+    'node': 'Node.js',
+    'python': 'Python',
+    'docker': 'Docker',
+    'http': 'HTTP/Remote'
+  }
+  return labelMap[runtime] || runtime.charAt(0).toUpperCase() + runtime.slice(1)
 }
 
 // Listen for storage changes from other components
@@ -679,20 +745,29 @@ onUnmounted(() => {
   <!-- Structured Form Fields -->
   <div>
     <dl class="divide-y divide-gray-100">
-      <!-- Runtime (Read-only in edit mode) -->
-      <div v-if="isEditMode" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-        <dt class="text-sm/6 font-medium text-gray-900">Runtime</dt>
+      <!-- Runtime -->
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.technical.runtime.label') }}</dt>
         <dd class="mt-1 sm:col-span-2 sm:mt-0">
-          <div class="flex items-center gap-2">
-            <Badge variant="outline" class="text-base">
-              {{ localData.runtime }}
-            </Badge>
-            <span class="text-sm text-muted-foreground">
-              {{ isHttpRuntime ? '(Remote MCP Server)' : '(Local MCP Server)' }}
-            </span>
-          </div>
+          <Select
+            :model-value="localData.runtime"
+            @update:model-value="(value: any) => updateField('runtime', String(value || ''))"
+          >
+            <SelectTrigger>
+              <SelectValue :placeholder="t('mcpCatalog.form.technical.runtime.placeholder')" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                v-for="runtime in runtimeOptions"
+                :key="runtime"
+                :value="runtime"
+              >
+                {{ formatRuntimeLabel(runtime) }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
           <p class="text-xs text-muted-foreground mt-1">
-            Runtime determines available transport types and configuration options
+            {{ t('mcpCatalog.form.technical.runtime.description') }}
           </p>
         </dd>
       </div>
@@ -709,27 +784,18 @@ onUnmounted(() => {
               <SelectValue :placeholder="t('mcpCatalog.form.technical.language.placeholder')" />
             </SelectTrigger>
             <SelectContent>
-              <!-- HTTP option only shown when runtime is http -->
+              <!-- HTTP option shown only for http runtime -->
               <SelectItem v-if="isHttpRuntime" value="http">
                 HTTP/Remote Server
               </SelectItem>
-              <SelectItem value="javascript">
-                {{ t('mcpCatalog.form.technical.language.options.javascript') }}
-              </SelectItem>
-              <SelectItem value="typescript">
-                {{ t('mcpCatalog.form.technical.language.options.typescript') }}
-              </SelectItem>
-              <SelectItem value="python">
-                {{ t('mcpCatalog.form.technical.language.options.python') }}
-              </SelectItem>
-              <SelectItem value="go">
-                {{ t('mcpCatalog.form.technical.language.options.go') }}
-              </SelectItem>
-              <SelectItem value="csharp">
-                {{ t('mcpCatalog.form.technical.language.options.csharp') }}
-              </SelectItem>
-              <SelectItem value="cpp">
-                {{ t('mcpCatalog.form.technical.language.options.cpp') }}
+
+              <!-- Dynamic language options from API -->
+              <SelectItem
+                v-for="lang in languageOptions"
+                :key="lang"
+                :value="lang"
+              >
+                {{ formatLanguageLabel(lang) }}
               </SelectItem>
             </SelectContent>
           </Select>

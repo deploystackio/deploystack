@@ -264,6 +264,9 @@ export class TeamService {
         is_default: schema.teams.is_default,
         created_at: schema.teams.created_at,
         updated_at: schema.teams.updated_at,
+        allow_remote_mcp: schema.teams.allow_remote_mcp,
+        allow_github_mcp: schema.teams.allow_github_mcp,
+        allow_private_github_repos: schema.teams.allow_private_github_repos,
       })
       .from(schema.teams)
       .innerJoin(

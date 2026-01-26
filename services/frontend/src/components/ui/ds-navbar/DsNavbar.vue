@@ -60,33 +60,41 @@ const teamsError = ref('')
 const showFeedbackModal = ref(false)
 
 // Navigation items
-const navigationItems = computed<NavItem[]>(() => [
-  {
-    title: t('sidebar.navigation.dashboard'),
-    icon: LayoutDashboard,
-    url: '/dashboard',
-  },
-  {
-    title: t('sidebar.navigation.mcpServer'),
-    icon: Server,
-    url: '/mcp-server',
-  },
-  {
-    title: t('sidebar.navigation.deploy'),
-    icon: GitBranch,
-    url: '/deploy',
-  },
-  {
-    title: t('sidebar.navigation.clientConfiguration'),
-    icon: Bot,
-    url: '/client-configuration',
-  },
-  {
-    title: t('sidebar.navigation.statistics'),
-    icon: BarChart3,
-    url: '/statistics',
-  },
-])
+const navigationItems = computed<NavItem[]>(() => {
+  const items: NavItem[] = [
+    {
+      title: t('sidebar.navigation.dashboard'),
+      icon: LayoutDashboard,
+      url: '/dashboard',
+    },
+    {
+      title: t('sidebar.navigation.mcpServer'),
+      icon: Server,
+      url: '/mcp-server',
+    },
+    {
+      title: t('sidebar.navigation.clientConfiguration'),
+      icon: Bot,
+      url: '/client-configuration',
+    },
+    {
+      title: t('sidebar.navigation.statistics'),
+      icon: BarChart3,
+      url: '/statistics',
+    },
+  ]
+
+  // Only show Deploy if team has GitHub MCP permission
+  if (selectedTeam.value?.allow_github_mcp === true) {
+    items.splice(2, 0, {
+      title: t('sidebar.navigation.deploy'),
+      icon: GitBranch,
+      url: '/deploy',
+    })
+  }
+
+  return items
+})
 
 // Button visibility based on user display settings
 const showDiscordButton = computed(() => {

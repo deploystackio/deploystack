@@ -12,7 +12,7 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <Empty>
+  <Empty class="border border-solid">
     <EmptyHeader>
       <EmptyMedia variant="icon">
         <Package />

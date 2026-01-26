@@ -30,10 +30,20 @@ export class EmailService {
         throw new Error('SMTP configuration is not available or invalid');
       }
 
-      // Render the email template
+      // Structured trace logging
+      logger.trace({
+        operation: 'rendering_template',
+        template: validatedOptions.template,
+        recipient: validatedOptions.to,
+        hasVariables: !!validatedOptions.variables,
+        variableCount: validatedOptions.variables ? Object.keys(validatedOptions.variables).length : 0
+      }, `Rendering email template: ${validatedOptions.template}`);
+
+      // Render the email template (pass logger for debug visibility)
       const html = await TemplateRenderer.render({
         template: validatedOptions.template,
         variables: validatedOptions.variables || {},
+        logger
       });
 
       // Prepare email options

@@ -132,4 +132,106 @@ export async function handle(
     userId: data.user_id,
     newStatus: data.status
   }, 'Instance status updated successfully');
+
+  // Check if deployment email should be sent (GitHub deployments only)
+  await handleDeploymentEmail(
+    data.installation_id,
+    data.user_id,
+    data.status,
+    db,
+    logger
+  );
+}
+
+/**
+ * Handle deployment success/failure email notifications
+ *
+ * Only sends emails for deployments tracked in cache (GitHub deployments).
+ * The cache is populated by the deployment listener when MCP_DEPLOYMENT_CREATED fires.
+ *
+ * Status triggers:
+ * - 'online' → Success email
+ * - 'error' or 'permanently_failed' → Failure email
+ */
+async function handleDeploymentEmail(
+  installationId: string,
+  userId: string,
+  status: string,
+  db: AnyDatabase,
+  logger: FastifyBaseLogger
+): Promise<void> {
+  // Only process success or failure statuses
+  if (status !== 'online' && status !== 'error' && status !== 'permanently_failed') {
+    return;
+  }
+
+  // Check if this is a tracked deployment (from cache)
+  const { getDeploymentFromCache, removeDeploymentFromCache } = await import('../listeners/deploymentNotificationListener');
+  const deploymentInfo = getDeploymentFromCache(installationId, userId);
+
+  if (!deploymentInfo) {
+    // Not a tracked deployment (either not GitHub, or cache expired, or status already processed)
+    return;
+  }
+
+  logger.info({
+    installationId,
+    userId,
+    status,
+    serverName: deploymentInfo.serverName
+  }, 'Deployment found in cache - sending email');
+
+  // Determine email template and subject based on status
+  const isSuccess = status === 'online';
+  const template = isSuccess ? 'deployment-success' : 'deployment-failure';
+  const subject = isSuccess
+    ? `GitHub Deployment Successful - ${deploymentInfo.serverName}`
+    : `GitHub Deployment Failed - ${deploymentInfo.serverName}`;
+
+  // Queue deployment email
+  try {
+    // Get frontend URL from global settings
+    const { GlobalSettings } = await import('../../global-settings/helpers');
+    const frontendUrl = await GlobalSettings.get('global.page_url', 'http://localhost:5173');
+    const installationUrl = `${frontendUrl}/mcp-server/installation/${installationId}/general`;
+
+    // Import JobQueueService
+    const { JobQueueService } = await import('../../services/jobQueueService');
+    const jobQueueService = new JobQueueService(db, logger);
+
+    await jobQueueService.createJob('send_email', {
+      to: deploymentInfo.userEmail,
+      subject,
+      template,
+      variables: {
+        userName: deploymentInfo.userName,
+        serverName: deploymentInfo.serverName,
+        repositoryUrl: deploymentInfo.repositoryUrl,
+        branch: deploymentInfo.branch,
+        commitSha: deploymentInfo.commitSha.substring(0, 7),
+        deployedAt: deploymentInfo.deployedAt.toISOString(),
+        installationUrl
+      }
+    });
+
+    // Remove from cache (email sent)
+    removeDeploymentFromCache(installationId, userId);
+
+    logger.info({
+      installationId,
+      userId,
+      status,
+      template,
+      email: deploymentInfo.userEmail
+    }, 'Deployment email queued successfully');
+  } catch (error) {
+    logger.error({
+      installationId,
+      userId,
+      status,
+      error: error instanceof Error ? error.message : String(error)
+    }, 'Failed to queue deployment email');
+    // Don't throw - email failure shouldn't break status update
+    // Note: deployment stays in cache and will expire after TTL
+  }
 }
