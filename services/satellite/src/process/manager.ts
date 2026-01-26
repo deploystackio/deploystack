@@ -608,10 +608,10 @@ export class ProcessManager extends EventEmitter {
         await this.extractTarball(tarballBuffer, tempDir);
 
         // Install dependencies
-        await this.installDependencies(tempDir);
+        await this.installDependencies(tempDir, config.installation_id, config.team_id, config.user_id);
 
         // Build package if build script exists
-        await this.buildPackage(tempDir);
+        await this.buildPackage(tempDir, config.installation_id, config.team_id, config.user_id);
 
         // Resolve package entry point
         const entryPoint = await this.resolvePackageEntry(tempDir);
@@ -665,7 +665,17 @@ export class ProcessManager extends EventEmitter {
           process_id: processId,
           pid: childProcess.pid
         }, `MCP server ready: ${config.installation_name}`);
-        
+
+        // Emit user-visible startup confirmation log
+        this.bufferLogEntry({
+          installation_id: config.installation_id,
+          team_id: config.team_id,
+          user_id: config.user_id,
+          level: 'info',
+          message: 'MCP Server started successfully',
+          timestamp: new Date().toISOString()
+        });
+
         // Emit mcp.server.started event
         const spawnDuration = Date.now() - processInfo.startTime;
         try {
@@ -1721,22 +1731,55 @@ export class ProcessManager extends EventEmitter {
   /**
    * Install dependencies in extracted repository
    */
-  private async installDependencies(tempDir: string): Promise<void> {
+  private async installDependencies(
+    tempDir: string,
+    installationId: string,
+    teamId: string,
+    userId?: string
+  ): Promise<void> {
     this.logger.debug({
       operation: 'npm_install_start',
       temp_dir: tempDir
-    }, 'Installing dependencies with npm install --production');
+    }, 'Installing dependencies with npm install --omit=dev');
 
     return new Promise((resolve, reject) => {
-      const npmInstall = spawn('npm', ['install', '--production'], {
+      const npmInstall = spawn('npm', ['install', '--omit=dev'], {
         cwd: tempDir,
         stdio: 'pipe'
       });
 
       let stderr = '';
 
+      // Capture and emit stdout to backend
+      npmInstall.stdout.on('data', (data) => {
+        const output = data.toString().trim();
+        if (output) {
+          this.bufferLogEntry({
+            installation_id: installationId,
+            team_id: teamId,
+            user_id: userId,
+            level: 'info',
+            message: `[npm install] ${output}`,
+            timestamp: new Date().toISOString()
+          });
+        }
+      });
+
       npmInstall.stderr.on('data', (data) => {
-        stderr += data.toString();
+        const output = data.toString().trim();
+        stderr += output;
+
+        // Also emit stderr as warn logs
+        if (output) {
+          this.bufferLogEntry({
+            installation_id: installationId,
+            team_id: teamId,
+            user_id: userId,
+            level: 'warn',
+            message: `[npm install] ${output}`,
+            timestamp: new Date().toISOString()
+          });
+        }
       });
 
       npmInstall.on('exit', (code) => {
@@ -1773,7 +1816,12 @@ export class ProcessManager extends EventEmitter {
   /**
    * Build package if build script exists
    */
-  private async buildPackage(tempDir: string): Promise<void> {
+  private async buildPackage(
+    tempDir: string,
+    installationId: string,
+    teamId: string,
+    userId?: string
+  ): Promise<void> {
     try {
       // Read package.json to check for build script
       const packageJsonPath = path.join(tempDir, 'package.json');
@@ -1786,6 +1834,17 @@ export class ProcessManager extends EventEmitter {
           operation: 'npm_build_skip',
           temp_dir: tempDir
         }, 'No build script found, skipping build');
+
+        // Emit log to backend so users know build was skipped
+        this.bufferLogEntry({
+          installation_id: installationId,
+          team_id: teamId,
+          user_id: userId,
+          level: 'info',
+          message: '[npm build] No build script found, skipping build',
+          timestamp: new Date().toISOString()
+        });
+
         return;
       }
 
@@ -1802,8 +1861,36 @@ export class ProcessManager extends EventEmitter {
 
         let stderr = '';
 
+        // Capture and emit stdout to backend
+        npmBuild.stdout.on('data', (data) => {
+          const output = data.toString().trim();
+          if (output) {
+            this.bufferLogEntry({
+              installation_id: installationId,
+              team_id: teamId,
+              user_id: userId,
+              level: 'info',
+              message: `[npm build] ${output}`,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+
         npmBuild.stderr.on('data', (data) => {
-          stderr += data.toString();
+          const output = data.toString().trim();
+          stderr += output;
+
+          // Also emit stderr as warn logs
+          if (output) {
+            this.bufferLogEntry({
+              installation_id: installationId,
+              team_id: teamId,
+              user_id: userId,
+              level: 'warn',
+              message: `[npm build] ${output}`,
+              timestamp: new Date().toISOString()
+            });
+          }
         });
 
         npmBuild.on('exit', (code) => {
