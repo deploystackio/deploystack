@@ -3,8 +3,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { DynamicConfigManager, DynamicMcpServersConfig, ConfigurationChanges } from './dynamic-config-manager';
 import { RemoteToolDiscoveryManager } from './remote-tool-discovery-manager';
 import { StdioToolDiscoveryManager } from './stdio-tool-discovery-manager';
-import { ProcessManager } from '../process/manager';
-import { RuntimeState } from '../process/runtime-state';
+import { ProcessManager, RuntimeState } from '../process';
 
 /**
  * Server availability status for tool filtering (OAuth support)

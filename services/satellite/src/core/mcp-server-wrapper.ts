@@ -10,7 +10,7 @@ import { FastifyBaseLogger, FastifyRequest, FastifyReply, FastifyInstance } from
 import { randomUUID } from 'crypto';
 import { AsyncLocalStorage } from 'async_hooks';
 import { UnifiedToolDiscoveryManager } from '../services/unified-tool-discovery-manager';
-import { ProcessManager } from '../process/manager';
+import { ProcessManager } from '../process';
 import { ToolSearchService } from '../services/tool-search-service';
 import { DynamicConfigManager } from '../services/dynamic-config-manager';
 import { OAuthTokenService } from '../services/oauth-token-service';

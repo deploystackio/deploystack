@@ -11,8 +11,7 @@ import { HttpProxyManager } from './services/http-proxy-manager';
 import { RemoteToolDiscoveryManager } from './services/remote-tool-discovery-manager';
 import { StdioToolDiscoveryManager } from './services/stdio-tool-discovery-manager';
 import { UnifiedToolDiscoveryManager } from './services/unified-tool-discovery-manager';
-import { ProcessManager } from './process/manager';
-import { RuntimeState } from './process/runtime-state';
+import { ProcessManager, RuntimeState } from './process';
 import { CommandPollingService, ConfigurationUpdate } from './services/command-polling-service';
 import { DynamicConfigManager } from './services/dynamic-config-manager';
 import { CommandProcessor } from './services/command-processor';
@@ -980,9 +979,9 @@ export async function createServer() {
       server.log.info({ operation: 'about_to_configure_services' }, 'About to configure services with EventBus...');
       
       // Now that EventBus is initialized, update services to use it
-      // Update ProcessManager with EventBus
-      (processManager as any).eventBus = eventBus;
-      server.log.debug({ operation: 'process_manager_event_bus_set' }, 'ProcessManager configured with EventBus');
+      // Update ProcessManager with EventBus (propagates to LogBuffer, RestartHandler, DormantManager)
+      processManager.setEventBus(eventBus);
+      server.log.debug({ operation: 'process_manager_event_bus_set' }, 'ProcessManager and composed handlers configured with EventBus');
       
       // Note: SessionManager removed - now using MCP SDK for session management
       

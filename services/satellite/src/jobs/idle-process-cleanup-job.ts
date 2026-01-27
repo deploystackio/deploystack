@@ -1,6 +1,5 @@
 import { Job, JobStats } from './base-job';
-import { ProcessManager } from '../process/manager';
-import { RuntimeState } from '../process/runtime-state';
+import { ProcessManager, RuntimeState } from '../process';
 import { IDLE_TIMEOUT_MS, SPAWN_GRACE_PERIOD_MS } from '../config/process';
 import { FastifyBaseLogger } from 'fastify';
 

@@ -1,6 +1,5 @@
 import { Logger } from 'pino';
-import { ProcessManager } from '../process/manager';
-import { RuntimeState } from '../process/runtime-state';
+import { ProcessManager, RuntimeState } from '../process';
 import { UnifiedToolDiscoveryManager } from './unified-tool-discovery-manager';
 import { DynamicConfigManager } from './dynamic-config-manager';
 import { TeamIsolationService } from './team-isolation-service';

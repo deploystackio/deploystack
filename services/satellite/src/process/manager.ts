@@ -1,88 +1,45 @@
-import { spawn } from 'child_process';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import { Logger } from 'pino';
-import { mkdir, rm } from 'fs/promises';
-import { existsSync } from 'fs';
-import { Octokit } from '@octokit/rest';
-import * as tar from 'tar';
-import * as path from 'path';
-import * as fs from 'fs';
+import { rm } from 'fs/promises';
 import { MCPServerConfig, ProcessInfo } from './types';
 import type { EventBus } from '../services/event-bus';
 import type { RuntimeState } from './runtime-state';
 import type { BackendClient } from '../services/backend-client';
-import { nsjailConfig, mcpCacheBaseDir, BLOCKED_ENV_VARS } from '../config/nsjail';
+
+// Import composed handlers
+import { LogBuffer, parseNsjailLog, inferMcpLogLevel } from './log-buffer';
+import { ProcessSpawner } from './nsjail-spawner';
+import { GitHubDeploymentHandler } from './github-deployment';
+import { RestartHandler } from './restart-handler';
+import { DormantManager } from './dormant-manager';
 
 /**
  * Process Manager for MCP server subprocesses
  * Handles spawning, communication, and lifecycle management of stdio-based MCP servers
  * Adapted from gateway for multi-tenant satellite architecture
+ *
+ * This class composes several specialized handlers:
+ * - LogBuffer: Batches log entries for efficient emission
+ * - ProcessSpawner: Handles direct/nsjail process spawning
+ * - GitHubDeploymentHandler: Downloads and prepares GitHub repos
+ * - RestartHandler: Manages crash detection and auto-restart
+ * - DormantManager: Handles idle process termination and respawning
  */
-/**
- * Buffered log entry for batching
- */
-interface BufferedLogEntry {
-  installation_id: string;
-  team_id: string;
-  user_id?: string;
-  level: 'info' | 'warn' | 'error' | 'debug';
-  message: string;
-  metadata?: Record<string, unknown>;
-  timestamp: string;
-}
-
-/**
- * nsjail log pattern: [I|W|E|F][timestamp] message
- * Example: [I][2026-01-17T21:02:01+0100] Mode: STANDALONE_ONCE
- */
-const NSJAIL_LOG_REGEX = /^\[([IWEF])\]\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}\]\s*(.*)$/;
-
-/**
- * Parse nsjail log line to extract level and message
- * Returns null if line is not an nsjail log
- */
-function parseNsjailLog(line: string): { level: string; message: string } | null {
-  const match = line.match(NSJAIL_LOG_REGEX);
-  if (!match) return null;
-  return { level: match[1], message: match[2] };
-}
-
-/**
- * Infer log level from MCP server log message content
- */
-function inferMcpLogLevel(message: string): 'info' | 'warn' | 'error' | 'debug' {
-  const lower = message.toLowerCase();
-  if (lower.includes('error') || lower.includes('fatal') || lower.includes('exception') || lower.includes('failed')) {
-    return 'error';
-  }
-  if (lower.includes('warn')) {
-    return 'warn';
-  }
-  if (lower.includes('debug') || lower.includes('trace')) {
-    return 'debug';
-  }
-  return 'info';
-}
-
 export class ProcessManager extends EventEmitter {
   private processes = new Map<string, ProcessInfo>();
   private processIdsByName = new Map<string, string>();
   private logger: Logger;
-  private restartAttempts = new Map<string, number[]>(); // installationName -> crash timestamps
   private eventBus?: EventBus;
   private runtimeState?: RuntimeState;
-  private respawningProcesses = new Map<string, Promise<ProcessInfo>>(); // installationName -> respawn promise
-  private backendClient?: BackendClient; // BackendClient for GitHub token fetching
+  private backendClient?: BackendClient;
 
-  // Log batching for mcp.server.logs events
-  private logBuffer: BufferedLogEntry[] = [];
-  private logFlushTimeout: NodeJS.Timeout | null = null;
-  private readonly LOG_BATCH_INTERVAL_MS = 3000; // 3 seconds
-  private readonly LOG_BATCH_MAX_SIZE = 20; // Max logs before forced flush
-
-  // Backend status tracking callback
-  private backendStatusCallback?: (installationId: string, status: string, statusMessage?: string) => void;
+  // Composed handlers
+  private logBuffer: LogBuffer;
+  private spawner: ProcessSpawner;
+  private githubHandler: GitHubDeploymentHandler;
+  private restartHandler: RestartHandler;
+  private dormantManager: DormantManager;
 
   constructor(logger: Logger, eventBus?: EventBus, runtimeState?: RuntimeState, backendClient?: BackendClient) {
     super();
@@ -91,6 +48,13 @@ export class ProcessManager extends EventEmitter {
     this.runtimeState = runtimeState;
     this.backendClient = backendClient;
 
+    // Initialize composed handlers
+    this.logBuffer = new LogBuffer(eventBus, logger);
+    this.spawner = new ProcessSpawner(logger);
+    this.githubHandler = new GitHubDeploymentHandler(logger, this.logBuffer, backendClient);
+    this.restartHandler = new RestartHandler(logger, eventBus);
+    this.dormantManager = new DormantManager(logger, runtimeState, eventBus);
+
     // Listen for process exits to detect crashes and attempt restart
     this.on('processExit', (processInfo, code, signal) => {
       this.handleProcessExit(processInfo, code, signal);
@@ -98,378 +62,44 @@ export class ProcessManager extends EventEmitter {
   }
 
   /**
-   * Buffer a log entry for batch emission
-   */
-  private bufferLogEntry(entry: BufferedLogEntry): void {
-    this.logBuffer.push(entry);
-
-    // If buffer is full, flush immediately
-    if (this.logBuffer.length >= this.LOG_BATCH_MAX_SIZE) {
-      this.flushLogBuffer();
-    } else {
-      this.scheduleLogFlush();
-    }
-  }
-
-  /**
-   * Schedule a log buffer flush after the batch interval
-   */
-  private scheduleLogFlush(): void {
-    if (!this.logFlushTimeout) {
-      this.logFlushTimeout = setTimeout(() => {
-        this.flushLogBuffer();
-      }, this.LOG_BATCH_INTERVAL_MS);
-    }
-  }
-
-  /**
-   * Flush buffered logs, grouped by installation_id
-   */
-  private flushLogBuffer(): void {
-    if (this.logFlushTimeout) {
-      clearTimeout(this.logFlushTimeout);
-      this.logFlushTimeout = null;
-    }
-
-    if (this.logBuffer.length === 0 || !this.eventBus) {
-      return;
-    }
-
-    // Group logs by installation_id
-    const grouped = new Map<string, BufferedLogEntry[]>();
-    for (const entry of this.logBuffer) {
-      const key = entry.installation_id;
-      if (!grouped.has(key)) {
-        grouped.set(key, []);
-      }
-      grouped.get(key)!.push(entry);
-    }
-
-    // Emit one event per installation
-    for (const [installationId, logs] of grouped) {
-      const teamId = logs[0].team_id;
-      const userId = logs[0].user_id;
-
-      this.eventBus.emit('mcp.server.logs', {
-        installation_id: installationId,
-        team_id: teamId,
-        user_id: userId,
-        logs: logs.map(log => ({
-          level: log.level,
-          message: log.message,
-          metadata: log.metadata,
-          timestamp: log.timestamp
-        }))
-      });
-
-      this.logger.debug({
-        operation: 'server_logs_flushed',
-        installation_id: installationId,
-        log_count: logs.length
-      }, `Flushed ${logs.length} server logs for ${installationId}`);
-    }
-
-    // Clear the buffer
-    this.logBuffer = [];
-  }
-
-  /**
    * Set callback for tracking backend status emissions
    */
   setBackendStatusCallback(callback: (installationId: string, status: string, statusMessage?: string) => void): void {
-    this.backendStatusCallback = callback;
+    this.restartHandler.setBackendStatusCallback(callback);
   }
 
   /**
-   * Sanitize environment variables by removing dangerous entries
-   * Prevents library injection (LD_PRELOAD), code injection (NODE_OPTIONS, PYTHONSTARTUP), etc.
-   * @param env - User-provided environment variables
-   * @param installationName - For logging blocked vars
-   * @returns Array of nsjail -E arguments with safe env vars only
+   * Set the EventBus reference for this manager and all composed handlers
+   * Called after backend registration when EventBus becomes available
    */
-  private sanitizeEnvVars(env: Record<string, string>, installationName: string): string[] {
-    const sanitized: string[] = [];
-    const blocked: string[] = [];
-
-    for (const [key, value] of Object.entries(env)) {
-      // Check against blocklist (case-insensitive for safety)
-      if (BLOCKED_ENV_VARS.has(key) || BLOCKED_ENV_VARS.has(key.toUpperCase())) {
-        blocked.push(key);
-        continue;
-      }
-      sanitized.push('-E', `${key}=${value}`);
-    }
-
-    // Log blocked vars for security auditing
-    if (blocked.length > 0) {
-      this.logger.warn({
-        operation: 'env_vars_blocked',
-        installation_name: installationName,
-        blocked_vars: blocked,
-        blocked_count: blocked.length
-      }, `Blocked ${blocked.length} dangerous env var(s) for security: ${blocked.join(', ')}`);
-    }
-
-    return sanitized;
+  setEventBus(eventBus: EventBus): void {
+    this.eventBus = eventBus;
+    this.logBuffer.setEventBus(eventBus);
+    this.restartHandler.setEventBus(eventBus);
+    this.dormantManager.setEventBus(eventBus);
   }
 
   /**
-   * Resolve command to full path for nsjail execution
-   * nsjail has limited PATH, so we need full paths for common commands
-   */
-  private resolveCommandPath(command: string): string {
-    // Map of common commands to their full paths
-    const commandPaths: Record<string, string> = {
-      'npx': '/usr/bin/npx',
-      'node': '/usr/bin/node',
-      'python': '/usr/bin/python',
-      'python3': '/usr/bin/python3'
-    };
-    
-    // If command is in our map, return full path
-    if (commandPaths[command]) {
-      return commandPaths[command];
-    }
-    
-    // If command already starts with /, assume it's a full path
-    if (command.startsWith('/')) {
-      return command;
-    }
-    
-    // Otherwise, try /usr/bin/ as default
-    return `/usr/bin/${command}`;
-  }
-
-  /**
-   * Handle process exit - determine if crash and attempt restart
+   * Handle process exit - delegates to RestartHandler
    */
   private async handleProcessExit(
     processInfo: ProcessInfo,
     code: number | null,
     signal: NodeJS.Signals | null
   ): Promise<void> {
-    const uptime = Date.now() - processInfo.startTime;
-    const installationName = processInfo.config.installation_name;
-    
-    // Check if this is an intentional dormant shutdown (skip crash detection)
-    if (processInfo.isDormantShutdown) {
-      this.logger.info({
-        operation: 'process_exit_dormant',
-        installation_name: installationName,
-        team_id: processInfo.config.team_id,
-        exit_code: code,
-        signal: signal,
-        uptime_ms: uptime
-      }, `Process terminated for dormancy (not a crash): ${installationName}`);
-      return;
-    }
-    
-    // Check if this is an intentional uninstall shutdown (skip crash detection)
-    if (processInfo.isUninstallShutdown) {
-      this.logger.info({
-        operation: 'process_exit_uninstall',
-        installation_name: installationName,
-        team_id: processInfo.config.team_id,
-        exit_code: code,
-        signal: signal,
-        uptime_ms: uptime
-      }, `Process terminated for uninstall (not a crash): ${installationName}`);
-      return;
-    }
-    
-    // Determine if this was a crash (non-zero exit code) or intentional shutdown
-    const wasCrash = code !== 0 && code !== null && processInfo.status !== 'terminating';
-    
-    if (!wasCrash) {
-      this.logger.debug({
-        operation: 'process_exit_normal',
-        installation_name: installationName,
-        exit_code: code,
-        signal: signal
-      }, 'Process exited normally (not a crash)');
-      return;
-    }
-
-    // This was a crash
-    this.logger.error({
-      operation: 'process_crashed',
-      installation_name: installationName,
-      team_id: processInfo.config.team_id,
-      exit_code: code,
-      signal: signal,
-      uptime_ms: uptime
-    }, `MCP process crashed: ${installationName}`);
-
-    // Emit mcp.server.crashed event
-    const crashCount = (this.restartAttempts.get(installationName) || []).length;
-    const canRestart = this.shouldAttemptRestart(installationName, uptime);
-    
-    try {
-      this.eventBus?.emit('mcp.server.crashed', {
-        server_id: processInfo.config.installation_id,
-        server_slug: processInfo.config.installation_name,
-        team_id: processInfo.config.team_id,
-        user_id: processInfo.config.user_id,
-        process_id: processInfo.process.pid || 0,
-        exit_code: code || 0,
-        signal: signal || 'none',
-        uptime_seconds: Math.round(uptime / 1000),
-        crash_count: crashCount + 1,
-        will_restart: canRestart
-      });
-    } catch (error) {
-      this.logger.warn({ error }, 'Failed to emit mcp.server.crashed event (non-fatal)');
-    }
-
-    // Check if we should attempt restart
-    
-    if (!canRestart) {
-      this.logger.error({
-        operation: 'restart_limit_exceeded',
-        installation_name: installationName,
-        team_id: processInfo.config.team_id,
-        max_attempts: 3
-      }, `Max restart attempts (3) exceeded for ${installationName} - marking as permanently failed`);
-      
-      // Emit mcp.server.permanently_failed event
-      try {
-        this.eventBus?.emit('mcp.server.permanently_failed', {
-          server_id: processInfo.config.installation_id,
-          server_slug: processInfo.config.installation_name,
-          team_id: processInfo.config.team_id,
-          user_id: processInfo.config.user_id,
-          total_crashes: (this.restartAttempts.get(installationName) || []).length,
-          last_error: `Exit code: ${code}, signal: ${signal}`,
-          failed_at: new Date().toISOString()
-        });
-      } catch (error) {
-        this.logger.warn({ error }, 'Failed to emit mcp.server.permanently_failed event (non-fatal)');
-      }
-
-      // Also emit mcp.server.status_changed so backend updates installation status
-      try {
-        this.eventBus?.emit('mcp.server.status_changed', {
-          installation_id: processInfo.config.installation_id,
-          team_id: processInfo.config.team_id,
-          user_id: processInfo.config.user_id || 'unknown',
-          status: 'permanently_failed',
-          status_message: `Process crashed ${(this.restartAttempts.get(installationName) || []).length} times in 5 minutes. Manual restart required.`,
-          timestamp: new Date().toISOString()
-        });
-
-        // Track backend status emission
-        if (this.backendStatusCallback) {
-          this.backendStatusCallback(
-            processInfo.config.installation_id,
-            'permanently_failed',
-            `Process crashed ${(this.restartAttempts.get(installationName) || []).length} times in 5 minutes. Manual restart required.`
-          );
-        }
-      } catch (error) {
-        this.logger.warn({ error }, 'Failed to emit mcp.server.status_changed event (non-fatal)');
-      }
-
-      // Mark as permanently failed (process already removed from maps in exit handler)
-      // Emit event so RuntimeState can update status
-      this.emit('restartLimitExceeded', processInfo);
-      return;
-    }
-
-    // Calculate restart delay
-    const delay = this.calculateRestartDelay(installationName, uptime);
-    
-    this.logger.info({
-      operation: 'restart_scheduled',
-      installation_name: installationName,
-      team_id: processInfo.config.team_id,
-      delay_ms: delay,
-      attempt_number: (this.restartAttempts.get(installationName) || []).length
-    }, `Scheduling automatic restart in ${delay}ms`);
-
-    // Wait for backoff period
-    if (delay > 0) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-
-    // Attempt restart
-    try {
-      this.logger.info({
-        operation: 'restart_attempt',
-        installation_name: installationName,
-        team_id: processInfo.config.team_id
-      }, `Attempting automatic restart of ${installationName}`);
-
-      const newProcessInfo = await this.spawnProcess(processInfo.config);
-      
-      this.logger.info({
-        operation: 'restart_success',
-        installation_name: installationName,
-        team_id: processInfo.config.team_id,
-        new_pid: newProcessInfo.process.pid
-      }, `Automatic restart successful for ${installationName}`);
-
-      // Emit mcp.server.restarted event
-      try {
-        this.eventBus?.emit('mcp.server.restarted', {
-          server_id: processInfo.config.installation_id,
-          server_slug: processInfo.config.installation_name,
-          team_id: processInfo.config.team_id,
-          user_id: processInfo.config.user_id,
-          old_process_id: processInfo.process.pid || 0,
-          new_process_id: newProcessInfo.process.pid || 0,
-          restart_reason: 'crash',
-          attempt_number: (this.restartAttempts.get(installationName) || []).length
-        });
-      } catch (error) {
-        this.logger.warn({ error }, 'Failed to emit mcp.server.restarted event (non-fatal)');
-      }
-
-      this.emit('processRestarted', newProcessInfo, processInfo);
-      
-    } catch (error) {
-      this.logger.error({
-        operation: 'restart_failed',
-        installation_name: installationName,
-        team_id: processInfo.config.team_id,
-        error: error instanceof Error ? error.message : String(error)
-      }, `Automatic restart failed for ${installationName}`);
-      
-      this.emit('restartFailed', processInfo, error);
-    }
-  }
-
-  /**
-   * Check if restart should be attempted (max 3 attempts in 5 minutes)
-   */
-  private shouldAttemptRestart(installationName: string, _uptime: number): boolean {
-    const now = Date.now();
-    const attempts = this.restartAttempts.get(installationName) || [];
-    
-    // Filter to attempts in last 5 minutes
-    const recentAttempts = attempts.filter(ts => now - ts < 5 * 60 * 1000);
-    
-    // Add this attempt
-    recentAttempts.push(now);
-    this.restartAttempts.set(installationName, recentAttempts);
-
-    // Max 3 attempts in 5 minutes
-    return recentAttempts.length <= 3;
-  }
-
-  /**
-   * Calculate restart delay based on crash timing
-   */
-  private calculateRestartDelay(installationName: string, uptime: number): number {
-    // If process ran for > 60 seconds before crash, restart immediately
-    if (uptime > 60 * 1000) {
-      return 0;
-    }
-
-    // Process crashed quickly - use exponential backoff
-    const attempts = (this.restartAttempts.get(installationName) || []).length;
-    const delays = [1000, 5000, 15000]; // 1s, 5s, 15s
-    
-    return delays[Math.min(attempts - 1, delays.length - 1)] || 0;
+    await this.restartHandler.handleProcessExit(
+      processInfo,
+      code,
+      signal,
+      // Spawn callback
+      (config) => this.spawnProcess(config),
+      // On restart limit exceeded
+      (pi) => this.emit('restartLimitExceeded', pi),
+      // On restarted
+      (newProcess, oldProcess) => this.emit('processRestarted', newProcess, oldProcess),
+      // On restart failed
+      (pi, error) => this.emit('restartFailed', pi, error)
+    );
   }
 
   /**
@@ -521,7 +151,7 @@ export class ProcessManager extends EventEmitter {
     pid?: number;
   } {
     const processInfo = this.getProcessByName(installationName);
-    
+
     if (!processInfo) {
       return { exists: false };
     }
@@ -554,86 +184,13 @@ export class ProcessManager extends EventEmitter {
     }, `Spawning MCP server: ${config.installation_name}`);
 
     try {
-      // STEP 1: Handle GitHub repository deployments via Octokit
-      if (config.source === 'github' && config.command === 'npx' && this.backendClient) {
-        this.logger.info({
-          operation: 'github_deployment_detected',
-          installation_name: config.installation_name,
-          installation_id: config.installation_id,
-          command: config.command,
-          args: config.args
-        }, 'GitHub deployment detected, downloading repository via Octokit');
-
-        // Parse GitHub URL from NPX arguments
-        const githubInfo = this.parseGitHubUrl(config.command, config.args || []);
-        if (!githubInfo) {
-          throw new Error('Failed to parse GitHub URL from NPX arguments');
-        }
-
-        this.logger.debug({
-          operation: 'github_url_parsed',
-          owner: githubInfo.owner,
-          repo: githubInfo.repo,
-          ref: githubInfo.ref
-        }, `Parsed GitHub URL: ${githubInfo.owner}/${githubInfo.repo}#${githubInfo.ref}`);
-
-        // Fetch GitHub App installation token
-        const tokenResult = await this.backendClient.fetchGitHubToken(config.installation_id);
-        if (!tokenResult || !tokenResult.token) {
-          throw new Error('Failed to fetch GitHub token for private repository deployment');
-        }
-
-        this.logger.debug({
-          operation: 'github_token_fetched',
-          installation_id: config.installation_id,
-          expires_at: tokenResult.expires_at
-        }, 'GitHub token fetched successfully');
-
-        // Download repository as tarball
-        const tarballBuffer = await this.downloadGitHubRepository(
-          githubInfo.owner,
-          githubInfo.repo,
-          githubInfo.ref,
-          tokenResult.token
-        );
-
-        // Create temp directory
-        const tempDir = `/tmp/mcp-${uuidv4()}`;
-        this.logger.debug({
-          operation: 'temp_dir_created',
-          temp_dir: tempDir
-        }, `Created temp directory: ${tempDir}`);
-
-        // Extract tarball
-        await this.extractTarball(tarballBuffer, tempDir);
-
-        // Install dependencies
-        await this.installDependencies(tempDir, config.installation_id, config.team_id, config.user_id);
-
-        // Build package if build script exists
-        await this.buildPackage(tempDir, config.installation_id, config.team_id, config.user_id);
-
-        // Resolve package entry point
-        const entryPoint = await this.resolvePackageEntry(tempDir);
-
-        // Update config to run from local directory
-        config.command = 'node';
-        config.args = [entryPoint];
-        config.temp_dir = tempDir;
-
-        this.logger.info({
-          operation: 'github_deployment_ready',
-          installation_name: config.installation_name,
-          temp_dir: tempDir,
-          entry_point: entryPoint
-        }, 'GitHub repository downloaded and ready to spawn');
+      // Handle GitHub repository deployments
+      if (this.githubHandler.isGitHubDeployment(config)) {
+        config = await this.githubHandler.prepareDeployment(config);
       }
 
-      // STEP 2: Determine isolation mode based on environment
-      const useNsjail = this.shouldUseNsjail();
-      const childProcess = useNsjail
-        ? await this.spawnWithNsjail(config)
-        : this.spawnDirect(config);
+      // Spawn the process (direct or nsjail based on environment)
+      const childProcess = await this.spawner.spawn(config);
 
       const processInfo: ProcessInfo = {
         id: processId,
@@ -650,13 +207,14 @@ export class ProcessManager extends EventEmitter {
       this.processes.set(processId, processInfo);
       this.processIdsByName.set(config.installation_name, processId);
 
+      // Setup process handlers (inline - critical for correct behavior)
       this.setupProcessHandlers(processInfo);
-      
+
       // Perform MCP handshake with timeout
       try {
         await this.performMCPHandshake(processInfo);
         processInfo.status = 'running';
-        
+
         this.logger.info({
           operation: 'mcp_server_spawn_success',
           installation_name: config.installation_name,
@@ -667,7 +225,7 @@ export class ProcessManager extends EventEmitter {
         }, `MCP server ready: ${config.installation_name}`);
 
         // Emit user-visible startup confirmation log
-        this.bufferLogEntry({
+        this.logBuffer.add({
           installation_id: config.installation_id,
           team_id: config.team_id,
           user_id: config.user_id,
@@ -694,7 +252,7 @@ export class ProcessManager extends EventEmitter {
         }
       } catch (error) {
         processInfo.status = 'failed';
-        
+
         const errorMessage = error instanceof Error ? error.message : String(error);
         this.logger.error({
           operation: 'mcp_server_handshake_failed',
@@ -703,7 +261,7 @@ export class ProcessManager extends EventEmitter {
           team_id: config.team_id,
           error: errorMessage
         }, `MCP handshake failed for ${config.installation_name}`);
-        
+
         // Clean up failed process
         await this.terminateProcess(processInfo, 1000);
         throw new Error(`Server ${config.installation_name} not available: ${errorMessage}`);
@@ -725,452 +283,7 @@ export class ProcessManager extends EventEmitter {
   }
 
   /**
-   * Get process by installation name
-   */
-  getProcessByName(installationName: string): ProcessInfo | null {
-    const processId = this.processIdsByName.get(installationName);
-    if (!processId) return null;
-    return this.processes.get(processId) || null;
-  }
-
-  /**
-   * Get all active processes
-   */
-  getAllProcesses(): ProcessInfo[] {
-    return Array.from(this.processes.values());
-  }
-
-  /**
-   * Get all dormant process names from RuntimeState
-   */
-  getAllDormantProcessNames(): string[] {
-    if (!this.runtimeState) {
-      return [];
-    }
-    return this.runtimeState.getAllDormantProcessNames();
-  }
-
-  /**
-   * Remove a server completely (handles both active and dormant states)
-   * This is the method to call when a server is being uninstalled
-   * Returns info about what was removed
-   */
-  async removeServerCompletely(
-    installationName: string,
-    timeout: number = 10000
-  ): Promise<{ active: boolean; dormant: boolean }> {
-    this.logger.info({ operation: 'remove_server_completely_start',
-      installation_name: installationName
-    }, `Removing server completely: ${installationName}`);
-
-    const result = { active: false, dormant: false };
-
-    // Check if active process exists and terminate it
-    const processInfo = this.getProcessByName(installationName);
-    if (processInfo) {
-      this.logger.info({
-        operation: 'remove_server_terminating_active',
-        installation_name: installationName,
-        process_id: processInfo.id,
-        status: processInfo.status
-      }, `Terminating active process: ${installationName}`);
-
-      // Mark as intentional uninstall shutdown to skip crash detection
-      processInfo.isUninstallShutdown = true;
-
-      await this.terminateProcess(processInfo, timeout);
-      result.active = true;
-    }
-
-    // Check if dormant config exists and remove it
-    if (this.runtimeState) {
-      const dormantConfig = this.runtimeState.getDormantConfig(installationName);
-      if (dormantConfig) {
-        this.logger.info({
-          operation: 'remove_server_clearing_dormant',
-          installation_name: installationName,
-          team_id: dormantConfig.team_id
-        }, `Clearing dormant config: ${installationName}`);
-
-        this.runtimeState.removeDormantConfig(installationName);
-        result.dormant = true;
-      }
-    }
-
-    // Clean up restart attempts tracking
-    this.restartAttempts.delete(installationName);
-
-    this.logger.info({
-      operation: 'remove_server_completely_success',
-      installation_name: installationName,
-      removed_active: result.active,
-      removed_dormant: result.dormant
-    }, `Server removed completely: ${installationName} (active: ${result.active}, dormant: ${result.dormant})`);
-
-    return result;
-  }
-
-  /**
-   * Get or respawn a process if it's dormant
-   * This method checks active processes first, then dormant configs, and respawns if needed
-   * Prevents concurrent respawn attempts for the same process
-   */
-  async getOrRespawnProcess(installationName: string): Promise<ProcessInfo> {
-    // Check if process is already active
-    const existingProcess = this.getProcessByName(installationName);
-    if (existingProcess && existingProcess.status === 'running') {
-      return existingProcess;
-    }
-
-    // Check if process is currently being respawned
-    const respawningPromise = this.respawningProcesses.get(installationName);
-    if (respawningPromise) {
-      this.logger.debug({
-        operation: 'dormant_process_respawn_waiting',
-        installation_name: installationName
-      }, `Waiting for in-progress respawn: ${installationName}`);
-      return await respawningPromise;
-    }
-
-    // Check if process config exists in dormant map
-    if (!this.runtimeState) {
-      throw new Error(`Process ${installationName} not found and RuntimeState not available`);
-    }
-
-    const dormantConfig = this.runtimeState.getDormantConfig(installationName);
-    if (!dormantConfig) {
-      throw new Error(`Process ${installationName} not found in active or dormant maps`);
-    }
-
-    // Start respawning process
-    const respawnStartTime = Date.now();
-    this.logger.info({
-      operation: 'dormant_process_respawn_start',
-      installation_name: installationName,
-      team_id: dormantConfig.team_id
-    }, `Respawning dormant process: ${installationName}`);
-
-    // Create respawn promise to prevent concurrent attempts
-    const respawnPromise = (async () => {
-      try {
-        // Spawn the process
-        const processInfo = await this.spawnProcess(dormantConfig);
-        
-        // Remove from dormant map
-        this.runtimeState!.removeDormantConfig(installationName);
-        
-        const dormantDuration = respawnStartTime - (processInfo.startTime - 1000); // Approximate
-        
-        this.logger.info({
-          operation: 'dormant_process_respawned',
-          installation_name: installationName,
-          team_id: dormantConfig.team_id,
-          respawn_duration_ms: Date.now() - respawnStartTime,
-          dormant_duration_ms: dormantDuration,
-          pid: processInfo.process.pid
-        }, `Dormant process respawned successfully: ${installationName}`);
-        
-        // Emit mcp.server.respawned event
-        try {
-          this.eventBus?.emit('mcp.server.respawned', {
-            server_id: dormantConfig.installation_id,
-            server_slug: installationName,
-            team_id: dormantConfig.team_id,
-            user_id: dormantConfig.user_id,
-            process_id: processInfo.process.pid || 0,
-            dormant_duration_seconds: Math.round(dormantDuration / 1000),
-            respawn_duration_ms: Date.now() - respawnStartTime
-          });
-        } catch (error) {
-          this.logger.warn({ error }, 'Failed to emit mcp.server.respawned event (non-fatal)');
-        }
-        
-        this.emit('processRespawned', processInfo);
-        return processInfo;
-        
-      } finally {
-        // Remove from respawning map
-        this.respawningProcesses.delete(installationName);
-      }
-    })();
-
-    // Store respawn promise
-    this.respawningProcesses.set(installationName, respawnPromise);
-    
-    return await respawnPromise;
-  }
-
-  /**
-   * Terminate a process and mark it as dormant for later respawning
-   */
-  async terminateAndMarkDormant(installationName: string, timeout: number = 10000): Promise<void> {
-    const processInfo = this.getProcessByName(installationName);
-    if (!processInfo) {
-      this.logger.warn({
-        operation: 'terminate_dormant_not_found',
-        installation_name: installationName
-      }, `Process not found for dormant marking: ${installationName}`);
-      return;
-    }
-
-    if (!this.runtimeState) {
-      this.logger.error({
-        operation: 'terminate_dormant_no_runtime_state',
-        installation_name: installationName
-      }, 'Cannot mark process as dormant: RuntimeState not available');
-      return;
-    }
-
-    const idleDuration = Date.now() - processInfo.lastActivity;
-    
-    this.logger.info({
-      operation: 'process_marked_dormant_start',
-      installation_name: installationName,
-      team_id: processInfo.config.team_id,
-      idle_duration_ms: idleDuration,
-      last_activity: new Date(processInfo.lastActivity).toISOString()
-    }, `Marking process as dormant due to inactivity: ${installationName}`);
-
-    // Store config in dormant map before terminating
-    this.runtimeState.markProcessDormant(installationName, processInfo.config);
-    
-    // Emit mcp.server.dormant event
-    try {
-      this.eventBus?.emit('mcp.server.dormant', {
-        server_id: processInfo.config.installation_id,
-        server_slug: installationName,
-        team_id: processInfo.config.team_id,
-        user_id: processInfo.config.user_id,
-        process_id: processInfo.process.pid || 0,
-        idle_duration_seconds: Math.round(idleDuration / 1000),
-        last_activity_at: new Date(processInfo.lastActivity).toISOString()
-      });
-    } catch (error) {
-      this.logger.warn({ error }, 'Failed to emit mcp.server.dormant event (non-fatal)');
-    }
-    
-    // Terminate the process
-    await this.terminateProcess(processInfo, timeout);
-    
-    this.logger.info({
-      operation: 'process_marked_dormant_success',
-      installation_name: installationName,
-      team_id: processInfo.config.team_id
-    }, `Process marked as dormant and terminated: ${installationName}`);
-  }
-
-  /**
-   * Send message to MCP server process via stdin
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async sendMessage(processInfo: ProcessInfo, message: any, timeout: number = 30000): Promise<any> {
-    return new Promise((resolve, reject) => {
-      // Allow messages during 'starting' phase for handshake, but not if failed/terminated
-      if (processInfo.status === 'failed' || processInfo.status === 'terminated' || processInfo.status === 'terminating') {
-        reject(new Error(`Process ${processInfo.config.installation_name} is not running (status: ${processInfo.status})`));
-        return;
-      }
-
-      // Check if the actual child process is still alive
-      if (!processInfo.process || processInfo.process.killed || processInfo.process.exitCode !== null) {
-        reject(new Error(`Process ${processInfo.config.installation_name} child process has died`));
-        return;
-      }
-
-      const requestId = message.id;
-      if (!requestId) {
-        // Notification - no response expected
-        const messageStr = JSON.stringify(message) + '\n';
-        processInfo.process.stdin?.write(messageStr);
-        
-        this.logger.debug({
-          operation: 'mcp_notification_sent',
-          installation_name: processInfo.config.installation_name,
-          method: message.method
-        }, `Sent notification: ${message.method}`);
-        
-        resolve(null);
-        return;
-      }
-
-      // Set up response handler
-      const timeoutHandle = setTimeout(() => {
-        processInfo.activeRequests.delete(requestId);
-        
-        this.logger.error({
-          operation: 'mcp_request_timeout',
-          installation_name: processInfo.config.installation_name,
-          request_id: requestId,
-          method: message.method,
-          timeout_ms: timeout
-        }, `Request timeout: ${requestId}`);
-        
-        reject(new Error(`Request timeout: ${requestId}`));
-      }, timeout);
-
-      processInfo.activeRequests.set(requestId, {
-        resolve,
-        reject,
-        timeout: timeoutHandle,
-        startTime: Date.now()
-      });
-
-      // Send message
-      const messageStr = JSON.stringify(message) + '\n';
-      processInfo.process.stdin?.write(messageStr, (error) => {
-        if (error) {
-          processInfo.activeRequests.delete(requestId);
-          clearTimeout(timeoutHandle);
-          
-          this.logger.error({
-            operation: 'mcp_message_send_failed',
-            installation_name: processInfo.config.installation_name,
-            request_id: requestId,
-            error: error.message
-          }, `Failed to send message: ${requestId}`);
-          
-          reject(error);
-        }
-      });
-
-      processInfo.messageCount++;
-      processInfo.lastActivity = Date.now();
-      
-      this.logger.debug({
-        operation: 'mcp_request_sent',
-        installation_name: processInfo.config.installation_name,
-        request_id: requestId,
-        method: message.method
-      }, `Sent request: ${requestId}`);
-    });
-  }
-
-  /**
-   * Terminate a process gracefully (SIGTERM → SIGKILL)
-   */
-  async terminateProcess(processInfo: ProcessInfo, timeout: number = 10000): Promise<void> {
-    if (processInfo.status === 'terminated') {
-      return;
-    }
-
-    this.logger.info({
-      operation: 'mcp_server_terminate_start',
-      installation_name: processInfo.config.installation_name,
-      process_id: processInfo.id,
-      pid: processInfo.process.pid
-    }, `Terminating MCP server: ${processInfo.config.installation_name}`);
-
-    processInfo.status = 'terminating';
-
-    // Cancel active requests
-    for (const [, request] of processInfo.activeRequests) {
-      clearTimeout(request.timeout);
-      request.reject(new Error('Process terminating'));
-    }
-    processInfo.activeRequests.clear();
-
-    // Try graceful shutdown first
-    if (processInfo.process && !processInfo.process.killed) {
-      processInfo.process.kill('SIGTERM');
-      
-      this.logger.debug({
-        operation: 'mcp_server_sigterm_sent',
-        installation_name: processInfo.config.installation_name,
-        pid: processInfo.process.pid
-      }, `Sent SIGTERM to ${processInfo.config.installation_name}`);
-      
-      // Wait for graceful exit
-      await new Promise<void>((resolve) => {
-        const forceTimeout = setTimeout(() => {
-          if (processInfo.process && !processInfo.process.killed) {
-            this.logger.warn({
-              operation: 'mcp_server_force_kill',
-              installation_name: processInfo.config.installation_name,
-              pid: processInfo.process.pid
-            }, `Force killing ${processInfo.config.installation_name} after timeout`);
-            
-            processInfo.process.kill('SIGKILL');
-          }
-          resolve();
-        }, timeout);
-
-        processInfo.process.once('exit', () => {
-          clearTimeout(forceTimeout);
-          resolve();
-        });
-      });
-    }
-
-    processInfo.status = 'terminated';
-    this.processes.delete(processInfo.id);
-    this.processIdsByName.delete(processInfo.config.installation_name);
-
-    // Cleanup temp directory if this was a GitHub deployment
-    if (processInfo.config.temp_dir) {
-      try {
-        this.logger.debug({
-          operation: 'temp_dir_cleanup_start',
-          installation_name: processInfo.config.installation_name,
-          temp_dir: processInfo.config.temp_dir
-        }, `Cleaning up temp directory: ${processInfo.config.temp_dir}`);
-
-        await rm(processInfo.config.temp_dir, { recursive: true, force: true });
-
-        this.logger.debug({
-          operation: 'temp_dir_cleanup_success',
-          installation_name: processInfo.config.installation_name,
-          temp_dir: processInfo.config.temp_dir
-        }, 'Temp directory cleaned up successfully');
-      } catch (error) {
-        this.logger.warn({
-          operation: 'temp_dir_cleanup_failed',
-          installation_name: processInfo.config.installation_name,
-          temp_dir: processInfo.config.temp_dir,
-          error: error instanceof Error ? error.message : String(error)
-        }, 'Failed to cleanup temp directory (non-fatal)');
-      }
-    }
-
-    this.logger.info({
-      operation: 'mcp_server_terminate_success',
-      installation_name: processInfo.config.installation_name,
-      process_id: processInfo.id
-    }, `Terminated MCP server: ${processInfo.config.installation_name}`);
-
-    this.emit('processTerminated', processInfo);
-  }
-
-  /**
-   * Terminate all processes
-   */
-  async terminateAllProcesses(): Promise<void> {
-    const processes = Array.from(this.processes.values());
-    
-    this.logger.info({
-      operation: 'mcp_terminate_all_start',
-      process_count: processes.length
-    }, `Terminating all ${processes.length} MCP server processes`);
-    
-    const terminationPromises = processes.map(processInfo => 
-      this.terminateProcess(processInfo).catch(error => {
-        this.logger.error({
-          operation: 'mcp_terminate_failed',
-          installation_name: processInfo.config.installation_name,
-          error: error instanceof Error ? error.message : String(error)
-        }, `Failed to terminate process ${processInfo.config.installation_name}`);
-      })
-    );
-    
-    await Promise.all(terminationPromises);
-    
-    this.logger.info({
-      operation: 'mcp_terminate_all_success',
-      process_count: processes.length
-    }, `Terminated all ${processes.length} MCP server processes`);
-  }
-
-  /**
-   * Setup process event handlers
+   * Setup process event handlers for stdout, stderr, exit, and error
    */
   private setupProcessHandlers(processInfo: ProcessInfo): void {
     const { process: childProcess, config } = processInfo;
@@ -1228,7 +341,7 @@ export class ProcessManager extends EventEmitter {
             }
             // Keep nsjail WARNING/ERROR/FATAL logs with correct level mapping
             const level: 'warn' | 'error' = nsjailLog.level === 'W' ? 'warn' : 'error';
-            this.bufferLogEntry({
+            this.logBuffer.add({
               installation_id: config.installation_id,
               team_id: config.team_id,
               user_id: config.user_id,
@@ -1238,7 +351,7 @@ export class ProcessManager extends EventEmitter {
             });
           } else {
             // MCP server log - infer level from content
-            this.bufferLogEntry({
+            this.logBuffer.add({
               installation_id: config.installation_id,
               team_id: config.team_id,
               user_id: config.user_id,
@@ -1256,7 +369,7 @@ export class ProcessManager extends EventEmitter {
       processInfo.status = 'terminated';
       this.processes.delete(processInfo.id);
       this.processIdsByName.delete(config.installation_name);
-      
+
       this.logger.info({
         operation: 'mcp_server_exit',
         installation_name: config.installation_name,
@@ -1266,7 +379,7 @@ export class ProcessManager extends EventEmitter {
         exit_code: code,
         signal: signal
       }, `MCP server exited: ${config.installation_name} (code: ${code}, signal: ${signal})`);
-      
+
       this.emit('processExit', processInfo, code, signal);
     });
 
@@ -1274,7 +387,7 @@ export class ProcessManager extends EventEmitter {
     childProcess.on('error', (error) => {
       processInfo.status = 'failed';
       processInfo.errorCount++;
-      
+
       this.logger.error({
         operation: 'mcp_server_error',
         installation_name: config.installation_name,
@@ -1283,7 +396,7 @@ export class ProcessManager extends EventEmitter {
         process_id: processInfo.id,
         error: error.message
       }, `MCP server error: ${config.installation_name}`);
-      
+
       this.emit('processError', processInfo, error);
     });
   }
@@ -1302,7 +415,7 @@ export class ProcessManager extends EventEmitter {
       processInfo.activeRequests.delete(message.id);
 
       const duration = Date.now() - request.startTime;
-      
+
       if (message.error) {
         this.logger.error({
           operation: 'mcp_request_error',
@@ -1311,7 +424,7 @@ export class ProcessManager extends EventEmitter {
           error: message.error.message || 'Unknown MCP error',
           duration_ms: duration
         }, `MCP request failed: ${message.id}`);
-        
+
         request.reject(new Error(message.error.message || 'MCP server error'));
       } else {
         this.logger.debug({
@@ -1320,7 +433,7 @@ export class ProcessManager extends EventEmitter {
           request_id: message.id,
           duration_ms: duration
         }, `MCP request succeeded: ${message.id}`);
-        
+
         request.resolve(message.result || message);
       }
     } else if (message.method) {
@@ -1330,169 +443,9 @@ export class ProcessManager extends EventEmitter {
         installation_name: processInfo.config.installation_name,
         method: message.method
       }, `Received notification from ${processInfo.config.installation_name}: ${message.method}`);
-      
+
       this.emit('serverNotification', processInfo, message);
     }
-  }
-
-  /**
-   * Determine if nsjail should be used for process isolation
-   */
-  private shouldUseNsjail(): boolean {
-    const isProduction = process.env.NODE_ENV === 'production';
-    const isLinux = process.platform === 'linux';
-    
-    // Use nsjail only in production on Linux
-    const shouldUse = isProduction && isLinux;
-    
-    this.logger.debug({
-      operation: 'isolation_mode_check',
-      use_nsjail: shouldUse,
-      node_env: process.env.NODE_ENV,
-      platform: process.platform
-    }, `Isolation mode: ${shouldUse ? 'nsjail' : 'direct spawn'}`);
-    
-    return shouldUse;
-  }
-
-  /**
-   * Spawn process directly without isolation (development mode)
-   */
-  private spawnDirect(config: MCPServerConfig) {
-    this.logger.info({
-      operation: 'spawn_direct',
-      installation_name: config.installation_name,
-      team_id: config.team_id
-    }, 'Spawning process directly (no isolation - development mode)');
-
-    return spawn(config.command, config.args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, ...config.env },
-      cwd: process.cwd()
-    });
-  }
-
-  /**
-   * Ensure team-specific cache directory exists
-   */
-  private async ensureCacheDirectory(teamId: string): Promise<string> {
-    const cacheDir = `${mcpCacheBaseDir}/mcp-cache/${teamId}`;
-    
-    if (!existsSync(cacheDir)) {
-      this.logger.info({
-        operation: 'create_cache_directory',
-        team_id: teamId,
-        cache_dir: cacheDir
-      }, `Creating team cache directory: ${cacheDir}`);
-      
-      try {
-        await mkdir(cacheDir, { recursive: true });
-        
-        this.logger.info({
-          operation: 'cache_directory_created',
-          team_id: teamId,
-          cache_dir: cacheDir
-        }, `Team cache directory created successfully`);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.logger.error({
-          operation: 'cache_directory_creation_failed',
-          team_id: teamId,
-          cache_dir: cacheDir,
-          error: errorMessage
-        }, `Failed to create team cache directory`);
-        throw new Error(`Failed to create cache directory: ${errorMessage}`);
-      }
-    }
-    
-    return cacheDir;
-  }
-
-  /**
-   * Spawn process with nsjail isolation (production mode on Linux)
-   * 
-   * Configuration based on empirical testing with npx and Node.js:
-   * - Memory: 2048MB (V8 minimum requirement)
-   * - Processes: 1000 (npm spawns many child processes)
-   * - File descriptors: 1024 (adequate for I/O operations)
-   * - File size: 50MB (prevents oversized downloads)
-   * - /dev files: Required for Node.js crypto and I/O operations
-   * - --proc_rw: Required for pthread_create and thread management
-   */
-  private async spawnWithNsjail(config: MCPServerConfig) {
-    // Ensure team-specific cache directory exists before mounting
-    const cacheDir = await this.ensureCacheDirectory(config.team_id);
-    
-    this.logger.info({
-      operation: 'spawn_nsjail',
-      installation_name: config.installation_name,
-      team_id: config.team_id,
-      cache_dir: cacheDir,
-      memory_limit_mb: nsjailConfig.memoryLimitMB,
-      cpu_time_limit_seconds: nsjailConfig.cpuTimeLimitSeconds,
-      max_processes: nsjailConfig.maxProcesses,
-      max_open_files: nsjailConfig.maxOpenFiles,
-      max_file_size_mb: nsjailConfig.maxFileSizeMB,
-      tmpfs_size: nsjailConfig.tmpfsSize
-    }, 'Spawning process with nsjail isolation');
-
-    // Get current user UID and GID (deploystack user in production)
-    const uid = process.getuid ? process.getuid() : 1000;
-    const gid = process.getgid ? process.getgid() : 1000;
-
-    // Resolve command to full path (nsjail requires full paths)
-    const fullCommandPath = this.resolveCommandPath(config.command);
-    
-    this.logger.debug({
-      operation: 'command_path_resolved',
-      original_command: config.command,
-      resolved_command: fullCommandPath
-    }, `Resolved command path: ${config.command} -> ${fullCommandPath}`);
-
-    // Build nsjail arguments based on working production configuration
-    const nsjailArgs = [
-      '-Mo',                                    // Mount mode: once, don't remount
-      '--proc_rw',                              // CRITICAL: Required for Node.js pthread_create
-      '--user', String(uid),                    // Use current user (deploystack)
-      '--group', String(gid),                   // Use current group (deploystack)
-      '--rlimit_as', String(nsjailConfig.memoryLimitMB), // Memory limit (MB) - 2048 minimum for V8
-      '--rlimit_cpu', String(nsjailConfig.cpuTimeLimitSeconds), // CPU time limit (seconds)
-      '--rlimit_nproc', String(nsjailConfig.maxProcesses), // Max processes - 1000 for npm
-      '--rlimit_nofile', String(nsjailConfig.maxOpenFiles), // Max file descriptors
-      '--rlimit_fsize', String(nsjailConfig.maxFileSizeMB), // Max file size (MB)
-      '--time_limit', '0',                      // No wall-clock time limit
-      '-R', '/usr',                             // Read-only mount: /usr
-      '-R', '/lib',                             // Read-only mount: /lib
-      '-R', '/lib64',                           // Read-only mount: /lib64
-      '-R', '/bin',                             // Read-only mount: /bin
-      '-R', '/sbin',                            // Read-only mount: /sbin
-      '-R', '/etc',                             // Read-only mount: /etc (includes resolv.conf)
-      '-T', `/tmp:size=${nsjailConfig.tmpfsSize}`, // Writable temp with size limit (100M)
-      '-B', `${cacheDir}:/home/npx`,           // Team-specific cache directory mount
-      '--bindmount', '/dev/null:/dev/null',    // Required for I/O redirection
-      '--bindmount', '/dev/urandom:/dev/urandom', // Required for crypto operations
-      '--bindmount', '/dev/zero:/dev/zero',    // Required for memory allocation
-      '--symlink', '/proc/self/fd:/dev/fd',    // Required for file descriptor management
-      '-E', 'HOME=/home/npx',                  // Set HOME for npx cache
-      '-E', 'PATH=/usr/bin:/bin:/usr/local/bin', // Set PATH
-      '-E', 'NPM_CONFIG_CACHE=/home/npx/.npm', // npm cache location
-      '-E', 'NPM_CONFIG_PREFIX=/home/npx/.npm-global', // npm global prefix
-      '-E', 'NPM_CONFIG_UPDATE_NOTIFIER=false', // Disable update notifier
-      '-E', 'NO_UPDATE_NOTIFIER=1',            // Disable update notifier (alternative)
-      // Inject user-provided environment variables (sanitized)
-      ...this.sanitizeEnvVars(config.env, config.installation_name),
-      '--disable_clone_newnet',                // Allow network access (required for npm downloads)
-      '--disable_clone_newcgroup',             // Disable cgroup namespace (causes clone() errors on some kernels)
-      '--disable_no_new_privs',                // May be needed for some packages
-      '--hostname', `mcp-${config.team_id}`,   // Team-specific hostname
-      '--',                                     // End of nsjail args
-      fullCommandPath,                          // MCP server command with full path (e.g., /usr/bin/npx)
-      ...config.args                            // MCP server arguments
-    ];
-
-    return spawn('nsjail', nsjailArgs, {
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
   }
 
   /**
@@ -1521,10 +474,10 @@ export class ProcessManager extends EventEmitter {
         operation: 'mcp_handshake_start',
         installation_name: processInfo.config.installation_name
       }, `Performing MCP handshake with ${processInfo.config.installation_name}`);
-      
+
       // Increase timeout to 30 seconds for MCP servers that need to download packages via npx
       const response = await this.sendMessage(processInfo, initMessage, 30000);
-      
+
       if (!response || !response.serverInfo) {
         throw new Error(`Invalid initialization response: ${JSON.stringify(response)}`);
       }
@@ -1543,7 +496,7 @@ export class ProcessManager extends EventEmitter {
       };
 
       await this.sendMessage(processInfo, initializedNotification);
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error({
@@ -1551,462 +504,330 @@ export class ProcessManager extends EventEmitter {
         installation_name: processInfo.config.installation_name,
         error: errorMessage
       }, `MCP handshake failed for ${processInfo.config.installation_name}`);
-      
+
       throw new Error(`MCP handshake failed: ${errorMessage}`);
     }
   }
 
   /**
-   * Parse GitHub URL from NPX arguments
-   * Supports: github:owner/repo#ref
+   * Get process by installation name
    */
-  private parseGitHubUrl(command: string, args: string[]): { owner: string; repo: string; ref: string } | null {
-    // Check if this is an NPX command with GitHub shorthand
-    if (command !== 'npx') {
-      return null;
-    }
-
-    // Find the github: argument (skip -y or other flags)
-    const githubArg = args.find(arg => arg.startsWith('github:'));
-    if (!githubArg) {
-      return null;
-    }
-
-    // Parse github:owner/repo#ref
-    const match = githubArg.match(/^github:([^/]+)\/([^#]+)#(.+)$/);
-    if (!match) {
-      this.logger.warn({
-        operation: 'github_url_parse_failed',
-        github_arg: githubArg
-      }, 'Failed to parse GitHub URL from NPX arguments');
-      return null;
-    }
-
-    return {
-      owner: match[1],
-      repo: match[2],
-      ref: match[3]
-    };
+  getProcessByName(installationName: string): ProcessInfo | null {
+    const processId = this.processIdsByName.get(installationName);
+    if (!processId) return null;
+    return this.processes.get(processId) || null;
   }
 
   /**
-   * Download GitHub repository as tarball using Octokit
-   * Includes retry logic with exponential backoff
+   * Get all active processes
    */
-  private async downloadGitHubRepository(
-    owner: string,
-    repo: string,
-    ref: string,
-    token: string,
-    maxRetries = 3
-  ): Promise<Buffer> {
-    const octokit = new Octokit({ auth: token });
+  getAllProcesses(): ProcessInfo[] {
+    return Array.from(this.processes.values());
+  }
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        this.logger.debug({
-          operation: 'github_tarball_download_start',
-          owner,
-          repo,
-          ref,
-          attempt,
-          max_retries: maxRetries
-        }, `Downloading GitHub repository tarball (attempt ${attempt}/${maxRetries})`);
+  /**
+   * Get all dormant process names from RuntimeState
+   */
+  getAllDormantProcessNames(): string[] {
+    return this.dormantManager.getAllDormantProcessNames();
+  }
 
-        const response = await octokit.request('GET /repos/{owner}/{repo}/tarball/{ref}', {
-          owner,
-          repo,
-          ref,
-          request: {
-            parseSuccessResponseBody: false // Get raw response
-          }
-        });
+  /**
+   * Remove a server completely (handles both active and dormant states)
+   * This is the method to call when a server is being uninstalled
+   * Returns info about what was removed
+   */
+  async removeServerCompletely(
+    installationName: string,
+    timeout: number = 10000
+  ): Promise<{ active: boolean; dormant: boolean }> {
+    this.logger.info({
+      operation: 'remove_server_completely_start',
+      installation_name: installationName
+    }, `Removing server completely: ${installationName}`);
 
-        // Response.data is a ReadableStream - convert to Buffer
-        let buffer: Buffer;
+    const result = { active: false, dormant: false };
 
-        if (response.data instanceof ReadableStream) {
-          // Convert ReadableStream to Buffer
-          const reader = response.data.getReader();
-          const chunks: Uint8Array[] = [];
+    // Check if active process exists and terminate it
+    const processInfo = this.getProcessByName(installationName);
+    if (processInfo) {
+      this.logger.info({
+        operation: 'remove_server_terminating_active',
+        installation_name: installationName,
+        process_id: processInfo.id,
+        status: processInfo.status
+      }, `Terminating active process: ${installationName}`);
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            chunks.push(value);
-          }
+      // Mark as intentional uninstall shutdown to skip crash detection
+      processInfo.isUninstallShutdown = true;
 
-          buffer = Buffer.concat(chunks);
-        } else if (response.data instanceof ArrayBuffer) {
-          buffer = Buffer.from(response.data);
-        } else if (Buffer.isBuffer(response.data)) {
-          buffer = response.data;
-        } else {
-          throw new Error(`Unexpected response data type: ${typeof response.data}`);
-        }
+      await this.terminateProcess(processInfo, timeout);
+      result.active = true;
+    }
 
+    // Check if dormant config exists and remove it
+    if (this.runtimeState) {
+      const dormantConfig = this.runtimeState.getDormantConfig(installationName);
+      if (dormantConfig) {
         this.logger.info({
-          operation: 'github_tarball_download_success',
-          owner,
-          repo,
-          ref,
-          size_bytes: buffer.length,
-          attempt
-        }, `Downloaded GitHub repository tarball (${(buffer.length / 1024).toFixed(2)} KB)`);
+          operation: 'remove_server_clearing_dormant',
+          installation_name: installationName,
+          team_id: dormantConfig.team_id
+        }, `Clearing dormant config: ${installationName}`);
 
-        return buffer;
-
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-
-        this.logger.error({
-          operation: 'github_tarball_download_failed',
-          owner,
-          repo,
-          ref,
-          attempt,
-          max_retries: maxRetries,
-          error: errorMessage
-        }, `Failed to download GitHub repository tarball (attempt ${attempt}/${maxRetries})`);
-
-        if (attempt === maxRetries) {
-          throw new Error(`Failed to download GitHub repository after ${maxRetries} attempts: ${errorMessage}`);
-        }
-
-        // Exponential backoff: 1s, 2s, 4s
-        const backoffMs = Math.pow(2, attempt - 1) * 1000;
-        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        this.runtimeState.removeDormantConfig(installationName);
+        result.dormant = true;
       }
     }
 
-    throw new Error('Unreachable: maxRetries exhausted');
+    // Clean up restart attempts tracking
+    this.restartHandler.clearRestartAttempts(installationName);
+
+    this.logger.info({
+      operation: 'remove_server_completely_success',
+      installation_name: installationName,
+      removed_active: result.active,
+      removed_dormant: result.dormant
+    }, `Server removed completely: ${installationName} (active: ${result.active}, dormant: ${result.dormant})`);
+
+    return result;
   }
 
   /**
-   * Extract tarball to temporary directory
+   * Get or respawn a process if it's dormant
+   * This method checks active processes first, then dormant configs, and respawns if needed
+   * Prevents concurrent respawn attempts for the same process
    */
-  private async extractTarball(tarballBuffer: Buffer, tempDir: string): Promise<void> {
-    this.logger.debug({
-      operation: 'tarball_extract_start',
-      temp_dir: tempDir,
-      tarball_size: tarballBuffer.length
-    }, 'Extracting tarball to temporary directory');
+  async getOrRespawnProcess(installationName: string): Promise<ProcessInfo> {
+    const processInfo = await this.dormantManager.getOrRespawnProcess(
+      installationName,
+      (name) => this.getProcessByName(name),
+      (config) => this.spawnProcess(config)
+    );
 
-    try {
-      // Create temp directory
-      await mkdir(tempDir, { recursive: true });
+    this.emit('processRespawned', processInfo);
+    return processInfo;
+  }
 
-      // Write tarball to temp file (tar.extract needs a file path)
-      const tarballPath = path.join(tempDir, 'repo.tar.gz');
-      await fs.promises.writeFile(tarballPath, tarballBuffer);
+  /**
+   * Terminate a process and mark it as dormant for later respawning
+   */
+  async terminateAndMarkDormant(installationName: string, timeout: number = 10000): Promise<void> {
+    await this.dormantManager.terminateAndMarkDormant(
+      installationName,
+      (name) => this.getProcessByName(name),
+      (processInfo, t) => this.terminateProcess(processInfo, t),
+      timeout
+    );
+  }
 
-      // Extract tarball (GitHub tarballs have a root directory, so strip it)
-      await tar.extract({
-        file: tarballPath,
-        cwd: tempDir,
-        strip: 1 // Remove the root directory from GitHub tarball
+  /**
+   * Send message to MCP server process via stdin
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async sendMessage(processInfo: ProcessInfo, message: any, timeout: number = 30000): Promise<any> {
+    return new Promise((resolve, reject) => {
+      // Allow messages during 'starting' phase for handshake, but not if failed/terminated
+      if (processInfo.status === 'failed' || processInfo.status === 'terminated' || processInfo.status === 'terminating') {
+        reject(new Error(`Process ${processInfo.config.installation_name} is not running (status: ${processInfo.status})`));
+        return;
+      }
+
+      // Check if the actual child process is still alive
+      if (!processInfo.process || processInfo.process.killed || processInfo.process.exitCode !== null) {
+        reject(new Error(`Process ${processInfo.config.installation_name} child process has died`));
+        return;
+      }
+
+      const requestId = message.id;
+      if (!requestId) {
+        // Notification - no response expected
+        const messageStr = JSON.stringify(message) + '\n';
+        processInfo.process.stdin?.write(messageStr);
+
+        this.logger.debug({
+          operation: 'mcp_notification_sent',
+          installation_name: processInfo.config.installation_name,
+          method: message.method
+        }, `Sent notification: ${message.method}`);
+
+        resolve(null);
+        return;
+      }
+
+      // Set up response handler
+      const timeoutHandle = setTimeout(() => {
+        processInfo.activeRequests.delete(requestId);
+
+        this.logger.error({
+          operation: 'mcp_request_timeout',
+          installation_name: processInfo.config.installation_name,
+          request_id: requestId,
+          method: message.method,
+          timeout_ms: timeout
+        }, `Request timeout: ${requestId}`);
+
+        reject(new Error(`Request timeout: ${requestId}`));
+      }, timeout);
+
+      processInfo.activeRequests.set(requestId, {
+        resolve,
+        reject,
+        timeout: timeoutHandle,
+        startTime: Date.now()
       });
 
-      // Remove the tarball file
-      await fs.promises.unlink(tarballPath);
+      // Send message
+      const messageStr = JSON.stringify(message) + '\n';
+      processInfo.process.stdin?.write(messageStr, (error) => {
+        if (error) {
+          processInfo.activeRequests.delete(requestId);
+          clearTimeout(timeoutHandle);
+
+          this.logger.error({
+            operation: 'mcp_message_send_failed',
+            installation_name: processInfo.config.installation_name,
+            request_id: requestId,
+            error: error.message
+          }, `Failed to send message: ${requestId}`);
+
+          reject(error);
+        }
+      });
+
+      processInfo.messageCount++;
+      processInfo.lastActivity = Date.now();
 
       this.logger.debug({
-        operation: 'tarball_extract_success',
-        temp_dir: tempDir
-      }, 'Tarball extracted successfully');
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      this.logger.error({
-        operation: 'tarball_extract_failed',
-        temp_dir: tempDir,
-        error: errorMessage
-      }, 'Failed to extract tarball');
-
-      throw new Error(`Failed to extract tarball: ${errorMessage}`);
-    }
-  }
-
-  /**
-   * Install dependencies in extracted repository
-   */
-  private async installDependencies(
-    tempDir: string,
-    installationId: string,
-    teamId: string,
-    userId?: string
-  ): Promise<void> {
-    this.logger.debug({
-      operation: 'npm_install_start',
-      temp_dir: tempDir
-    }, 'Installing dependencies with npm install --omit=dev');
-
-    return new Promise((resolve, reject) => {
-      const npmInstall = spawn('npm', ['install', '--omit=dev'], {
-        cwd: tempDir,
-        stdio: 'pipe'
-      });
-
-      let stderr = '';
-
-      // Capture and emit stdout to backend
-      npmInstall.stdout.on('data', (data) => {
-        const output = data.toString().trim();
-        if (output) {
-          this.bufferLogEntry({
-            installation_id: installationId,
-            team_id: teamId,
-            user_id: userId,
-            level: 'info',
-            message: `[npm install] ${output}`,
-            timestamp: new Date().toISOString()
-          });
-        }
-      });
-
-      npmInstall.stderr.on('data', (data) => {
-        const output = data.toString().trim();
-        stderr += output;
-
-        // Also emit stderr as warn logs
-        if (output) {
-          this.bufferLogEntry({
-            installation_id: installationId,
-            team_id: teamId,
-            user_id: userId,
-            level: 'warn',
-            message: `[npm install] ${output}`,
-            timestamp: new Date().toISOString()
-          });
-        }
-      });
-
-      npmInstall.on('exit', (code) => {
-        if (code === 0) {
-          this.logger.info({
-            operation: 'npm_install_success',
-            temp_dir: tempDir
-          }, 'Dependencies installed successfully');
-          resolve();
-        } else {
-          this.logger.error({
-            operation: 'npm_install_failed',
-            temp_dir: tempDir,
-            exit_code: code,
-            stderr: stderr.substring(0, 500) // Limit stderr output
-          }, `npm install failed with code ${code}`);
-
-          reject(new Error(`npm install failed with code ${code}: ${stderr.substring(0, 200)}`));
-        }
-      });
-
-      npmInstall.on('error', (error) => {
-        this.logger.error({
-          operation: 'npm_install_error',
-          temp_dir: tempDir,
-          error: error.message
-        }, 'npm install process error');
-
-        reject(new Error(`npm install process error: ${error.message}`));
-      });
+        operation: 'mcp_request_sent',
+        installation_name: processInfo.config.installation_name,
+        request_id: requestId,
+        method: message.method
+      }, `Sent request: ${requestId}`);
     });
   }
 
   /**
-   * Build package if build script exists
+   * Terminate a process gracefully (SIGTERM → SIGKILL)
    */
-  private async buildPackage(
-    tempDir: string,
-    installationId: string,
-    teamId: string,
-    userId?: string
-  ): Promise<void> {
-    try {
-      // Read package.json to check for build script
-      const packageJsonPath = path.join(tempDir, 'package.json');
-      const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
-      const packageJson = JSON.parse(packageJsonContent);
+  async terminateProcess(processInfo: ProcessInfo, timeout: number = 10000): Promise<void> {
+    if (processInfo.status === 'terminated') {
+      return;
+    }
 
-      // Check if there's a build script
-      if (!packageJson.scripts?.build) {
-        this.logger.debug({
-          operation: 'npm_build_skip',
-          temp_dir: tempDir
-        }, 'No build script found, skipping build');
+    this.logger.info({
+      operation: 'mcp_server_terminate_start',
+      installation_name: processInfo.config.installation_name,
+      process_id: processInfo.id,
+      pid: processInfo.process.pid
+    }, `Terminating MCP server: ${processInfo.config.installation_name}`);
 
-        // Emit log to backend so users know build was skipped
-        this.bufferLogEntry({
-          installation_id: installationId,
-          team_id: teamId,
-          user_id: userId,
-          level: 'info',
-          message: '[npm build] No build script found, skipping build',
-          timestamp: new Date().toISOString()
-        });
+    processInfo.status = 'terminating';
 
-        return;
-      }
+    // Cancel active requests
+    for (const [, request] of processInfo.activeRequests) {
+      clearTimeout(request.timeout);
+      request.reject(new Error('Process terminating'));
+    }
+    processInfo.activeRequests.clear();
+
+    // Try graceful shutdown first
+    if (processInfo.process && !processInfo.process.killed) {
+      processInfo.process.kill('SIGTERM');
 
       this.logger.debug({
-        operation: 'npm_build_start',
-        temp_dir: tempDir
-      }, 'Building package with npm run build');
+        operation: 'mcp_server_sigterm_sent',
+        installation_name: processInfo.config.installation_name,
+        pid: processInfo.process.pid
+      }, `Sent SIGTERM to ${processInfo.config.installation_name}`);
 
-      return new Promise((resolve, reject) => {
-        const npmBuild = spawn('npm', ['run', 'build'], {
-          cwd: tempDir,
-          stdio: 'pipe'
-        });
+      // Wait for graceful exit
+      await new Promise<void>((resolve) => {
+        const forceTimeout = setTimeout(() => {
+          if (processInfo.process && !processInfo.process.killed) {
+            this.logger.warn({
+              operation: 'mcp_server_force_kill',
+              installation_name: processInfo.config.installation_name,
+              pid: processInfo.process.pid
+            }, `Force killing ${processInfo.config.installation_name} after timeout`);
 
-        let stderr = '';
-
-        // Capture and emit stdout to backend
-        npmBuild.stdout.on('data', (data) => {
-          const output = data.toString().trim();
-          if (output) {
-            this.bufferLogEntry({
-              installation_id: installationId,
-              team_id: teamId,
-              user_id: userId,
-              level: 'info',
-              message: `[npm build] ${output}`,
-              timestamp: new Date().toISOString()
-            });
+            processInfo.process.kill('SIGKILL');
           }
-        });
+          resolve();
+        }, timeout);
 
-        npmBuild.stderr.on('data', (data) => {
-          const output = data.toString().trim();
-          stderr += output;
-
-          // Also emit stderr as warn logs
-          if (output) {
-            this.bufferLogEntry({
-              installation_id: installationId,
-              team_id: teamId,
-              user_id: userId,
-              level: 'warn',
-              message: `[npm build] ${output}`,
-              timestamp: new Date().toISOString()
-            });
-          }
-        });
-
-        npmBuild.on('exit', (code) => {
-          if (code === 0) {
-            this.logger.info({
-              operation: 'npm_build_success',
-              temp_dir: tempDir
-            }, 'Package built successfully');
-            resolve();
-          } else {
-            this.logger.error({
-              operation: 'npm_build_failed',
-              temp_dir: tempDir,
-              exit_code: code,
-              stderr: stderr.substring(0, 500)
-            }, `npm run build failed with code ${code}`);
-
-            reject(new Error(`npm run build failed with code ${code}: ${stderr.substring(0, 200)}`));
-          }
-        });
-
-        npmBuild.on('error', (error) => {
-          this.logger.error({
-            operation: 'npm_build_error',
-            temp_dir: tempDir,
-            error: error.message
-          }, 'npm run build process error');
-
-          reject(new Error(`npm run build process error: ${error.message}`));
+        processInfo.process.once('exit', () => {
+          clearTimeout(forceTimeout);
+          resolve();
         });
       });
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      this.logger.error({
-        operation: 'npm_build_check_failed',
-        temp_dir: tempDir,
-        error: errorMessage
-      }, 'Failed to check for build script');
-
-      throw new Error(`Failed to check for build script: ${errorMessage}`);
     }
+
+    processInfo.status = 'terminated';
+    this.processes.delete(processInfo.id);
+    this.processIdsByName.delete(processInfo.config.installation_name);
+
+    // Cleanup temp directory if this was a GitHub deployment
+    if (processInfo.config.temp_dir) {
+      try {
+        this.logger.debug({
+          operation: 'temp_dir_cleanup_start',
+          installation_name: processInfo.config.installation_name,
+          temp_dir: processInfo.config.temp_dir
+        }, `Cleaning up temp directory: ${processInfo.config.temp_dir}`);
+
+        await rm(processInfo.config.temp_dir, { recursive: true, force: true });
+
+        this.logger.debug({
+          operation: 'temp_dir_cleanup_success',
+          installation_name: processInfo.config.installation_name,
+          temp_dir: processInfo.config.temp_dir
+        }, 'Temp directory cleaned up successfully');
+      } catch (error) {
+        this.logger.warn({
+          operation: 'temp_dir_cleanup_failed',
+          installation_name: processInfo.config.installation_name,
+          temp_dir: processInfo.config.temp_dir,
+          error: error instanceof Error ? error.message : String(error)
+        }, 'Failed to cleanup temp directory (non-fatal)');
+      }
+    }
+
+    this.logger.info({
+      operation: 'mcp_server_terminate_success',
+      installation_name: processInfo.config.installation_name,
+      process_id: processInfo.id
+    }, `Terminated MCP server: ${processInfo.config.installation_name}`);
+
+    this.emit('processTerminated', processInfo);
   }
 
   /**
-   * Resolve package entry point from package.json
+   * Terminate all processes
    */
-  private async resolvePackageEntry(tempDir: string): Promise<string> {
-    this.logger.debug({
-      operation: 'package_entry_resolve_start',
-      temp_dir: tempDir
-    }, 'Resolving package entry point from package.json');
+  async terminateAllProcesses(): Promise<void> {
+    const processes = Array.from(this.processes.values());
 
-    try {
-      const packageJsonPath = path.join(tempDir, 'package.json');
-      const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
-      const packageJson = JSON.parse(packageJsonContent);
+    this.logger.info({
+      operation: 'mcp_terminate_all_start',
+      process_count: processes.length
+    }, `Terminating all ${processes.length} MCP server processes`);
 
-      // Check for bin field (can be string or object)
-      if (packageJson.bin) {
-        let entryPoint: string;
+    const terminationPromises = processes.map(processInfo =>
+      this.terminateProcess(processInfo).catch(error => {
+        this.logger.error({
+          operation: 'mcp_terminate_failed',
+          installation_name: processInfo.config.installation_name,
+          error: error instanceof Error ? error.message : String(error)
+        }, `Failed to terminate process ${processInfo.config.installation_name}`);
+      })
+    );
 
-        if (typeof packageJson.bin === 'string') {
-          // bin: "dist/index.js"
-          entryPoint = packageJson.bin;
-        } else if (typeof packageJson.bin === 'object') {
-          // bin: { "server-name": "dist/index.js" }
-          // Use the first entry
-          const binEntries = Object.values(packageJson.bin);
-          if (binEntries.length === 0) {
-            throw new Error('bin field is empty object');
-          }
-          entryPoint = binEntries[0] as string;
-        } else {
-          throw new Error(`Invalid bin field type: ${typeof packageJson.bin}`);
-        }
+    await Promise.all(terminationPromises);
 
-        const absolutePath = path.join(tempDir, entryPoint);
-
-        this.logger.info({
-          operation: 'package_entry_resolved',
-          temp_dir: tempDir,
-          entry_point: entryPoint,
-          absolute_path: absolutePath
-        }, `Resolved package entry point: ${entryPoint}`);
-
-        return absolutePath;
-      }
-
-      // Fallback to main field
-      if (packageJson.main) {
-        const absolutePath = path.join(tempDir, packageJson.main);
-
-        this.logger.info({
-          operation: 'package_entry_resolved_main',
-          temp_dir: tempDir,
-          main: packageJson.main,
-          absolute_path: absolutePath
-        }, `Using main field as entry point: ${packageJson.main}`);
-
-        return absolutePath;
-      }
-
-      throw new Error('No bin or main field found in package.json');
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      this.logger.error({
-        operation: 'package_entry_resolve_failed',
-        temp_dir: tempDir,
-        error: errorMessage
-      }, 'Failed to resolve package entry point');
-
-      throw new Error(`Failed to resolve package entry point: ${errorMessage}`);
-    }
+    this.logger.info({
+      operation: 'mcp_terminate_all_success',
+      process_count: processes.length
+    }, `Terminated all ${processes.length} MCP server processes`);
   }
 }

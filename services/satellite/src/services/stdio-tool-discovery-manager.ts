@@ -1,6 +1,5 @@
 import { Logger } from 'pino';
-import { ProcessManager } from '../process/manager';
-import { RuntimeState } from '../process/runtime-state';
+import { ProcessManager, RuntimeState } from '../process';
 import type { EventBus } from './event-bus';
 
 /**

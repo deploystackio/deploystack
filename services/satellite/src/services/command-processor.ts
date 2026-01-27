@@ -1,12 +1,10 @@
 import { FastifyBaseLogger } from 'fastify';
 import { SatelliteCommand, CommandResult } from './command-polling-service';
 import { DynamicConfigManager } from './dynamic-config-manager';
-import { ProcessManager } from '../process/manager';
-import { RuntimeState } from '../process/runtime-state';
+import { ProcessManager, RuntimeState, MCPServerConfig } from '../process';
 import { StdioToolDiscoveryManager } from './stdio-tool-discovery-manager';
 import { UnifiedToolDiscoveryManager } from './unified-tool-discovery-manager';
 import { RemoteToolDiscoveryManager } from './remote-tool-discovery-manager';
-import { MCPServerConfig } from '../process/types';
 import { maskUrlForLogging } from '../utils/log-masker';
 import type { EventBus } from './event-bus';
 
