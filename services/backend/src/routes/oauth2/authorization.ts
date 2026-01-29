@@ -14,6 +14,10 @@ import {
   type OAuth2ErrorResponse
 } from './schemas';
 
+// Default scopes when client doesn't provide scope parameter
+// This matches scopes_supported in discovery endpoints
+const DEFAULT_OAUTH_SCOPES = 'mcp:read mcp:tools:execute offline_access';
+
 // Reusable Schema Constants
 const AUTHORIZATION_QUERY_SCHEMA = {
   type: 'object',
@@ -32,7 +36,7 @@ const AUTHORIZATION_QUERY_SCHEMA = {
     },
     scope: {
       ...SCOPE_SCHEMA,
-      description: 'Space-separated list of requested scopes'
+      description: 'Space-separated list of requested scopes (optional, defaults to all supported scopes)'
     },
     state: STATE_SCHEMA,
     code_challenge: CODE_CHALLENGE_SCHEMA,
@@ -40,9 +44,13 @@ const AUTHORIZATION_QUERY_SCHEMA = {
     team: {
       type: 'string',
       description: 'Team ID for team-scoped OAuth flow (optional, defaults to user team)'
+    },
+    resource: {
+      type: 'string',
+      description: 'RFC 8707 Resource Indicator - target MCP server URI (optional, used for audience binding)'
     }
   },
-  required: ['response_type', 'client_id', 'redirect_uri', 'scope', 'state', 'code_challenge', 'code_challenge_method'],
+  required: ['response_type', 'client_id', 'redirect_uri', 'state', 'code_challenge', 'code_challenge_method'],
   additionalProperties: false
 } as const;
 
@@ -51,11 +59,12 @@ interface AuthorizationQuery {
   response_type: 'code';
   client_id: string;
   redirect_uri: string;
-  scope: string;
+  scope?: string;
   state: string;
   code_challenge: string;
   code_challenge_method: 'S256';
   team?: string;
+  resource?: string;
 }
 
 export default async function authorizationRoute(server: FastifyInstance) {
@@ -70,15 +79,16 @@ export default async function authorizationRoute(server: FastifyInstance) {
         properties: {
           client_id: { type: 'string' },
           redirect_uri: { type: 'string' },
-          scope: { type: 'string' },
+          scope: { type: 'string', description: 'Optional, defaults to all supported scopes' },
           state: { type: 'string' },
           code_challenge: { type: 'string' },
           code_challenge_method: { type: 'string' },
           response_type: { type: 'string' },
           team_id: { type: 'string' },
-          consent: { type: 'string', enum: ['true', 'false'] }
+          consent: { type: 'string', enum: ['true', 'false'] },
+          resource: { type: 'string', description: 'RFC 8707 Resource Indicator (optional)' }
         },
-        required: ['client_id', 'redirect_uri', 'scope', 'state', 'code_challenge', 'code_challenge_method', 'response_type', 'team_id', 'consent'],
+        required: ['client_id', 'redirect_uri', 'state', 'code_challenge', 'code_challenge_method', 'response_type', 'team_id', 'consent'],
         additionalProperties: false
       },
       response: {
@@ -94,17 +104,22 @@ export default async function authorizationRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     try {
-      const { client_id, redirect_uri, scope, state, code_challenge, code_challenge_method, response_type, team_id, consent } = request.body as {
+      const body = request.body as {
         client_id: string;
         redirect_uri: string;
-        scope: string;
+        scope?: string;
         state: string;
         code_challenge: string;
         code_challenge_method: string;
         response_type: string;
         team_id: string;
         consent: string;
+        resource?: string;
       };
+      const { client_id, redirect_uri, state, code_challenge, code_challenge_method, response_type, team_id, consent } = body;
+
+      // Use default scopes if not provided
+      const scope = body.scope || DEFAULT_OAUTH_SCOPES;
 
       // Check user authentication
       if (!request.user) {
@@ -242,16 +257,29 @@ export default async function authorizationRoute(server: FastifyInstance) {
     }
   }, async (request, reply) => {
     try {
+      const query = request.query as AuthorizationQuery;
       const {
         response_type,
         client_id,
         redirect_uri,
-        scope,
         state,
         code_challenge,
         code_challenge_method,
-        team
-      } = request.query as AuthorizationQuery;
+        team,
+        resource
+      } = query;
+
+      // Use default scopes if not provided (MCP clients may not send scope)
+      const scope = query.scope || DEFAULT_OAUTH_SCOPES;
+
+      if (!query.scope) {
+        request.log.debug({
+          operation: 'oauth2_authorization',
+          clientId: client_id,
+          defaultScope: scope,
+          resource,
+        }, 'No scope provided, using default MCP scopes');
+      }
 
       // Check if user is authenticated first
       if (!request.user) {
