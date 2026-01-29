@@ -5,6 +5,7 @@ import { McpInstallationService } from '../../../services/mcpInstallationService
 import { McpUserConfigurationService } from '../../../services/mcpUserConfigurationService';
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { McpInstallationNotificationService } from '../../../services/mcpInstallationNotificationService';
+import { SatelliteValidationService } from '../../../services/satelliteValidationService';
 import { getDb } from '../../../db';
 import {
   TEAM_ID_PARAM_SCHEMA,
@@ -90,12 +91,39 @@ export default async function createInstallationRoute(server: FastifyInstance) {
 
     try {
       const db = getDb();
+
+      // Validate satellite using shared validation service
+      const satelliteValidationService = new SatelliteValidationService(db, request.log);
+
+      const validationResult = await satelliteValidationService.validateSatellite({
+        satelliteId: installationData.satellite_id,
+        teamId,
+        autoSelect: true
+      });
+
+      if (!validationResult.valid) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: validationResult.error!
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        // Map httpStatus to allowed status codes (400, 403 are the only ones we use)
+        const statusCode = validationResult.httpStatus === 403 ? 403 : 400;
+        return reply.status(statusCode).type('application/json').send(jsonString);
+      }
+
+      // Use validated satellite_id
+      const validatedInstallationData = {
+        ...installationData,
+        satellite_id: validationResult.satelliteId
+      };
+
       const installationService = new McpInstallationService(db, request.log);
-      
+
       const installation = await installationService.createInstallation(
         teamId,
         userId,
-        installationData
+        validatedInstallationData
       ) as InstallationData;
 
       request.log.info({

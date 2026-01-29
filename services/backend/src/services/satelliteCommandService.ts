@@ -1,5 +1,5 @@
 import { eq, and } from 'drizzle-orm';
-import { satellites, satelliteCommands } from '../db/schema';
+import { satellites, satelliteCommands, mcpServerInstallations } from '../db/schema';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
@@ -266,12 +266,27 @@ export class SatelliteCommandService {
 
   /**
    * Convenience method for MCP installation events
-   * Creates immediate priority configure commands for all global satellites
+   * Sends configure command to the installation's assigned satellite, or broadcasts to all global satellites if no specific satellite
    */
   async notifyMcpInstallation(installationId: string, teamId: string, userId?: string): Promise<SatelliteCommand[]> {
-    return await this.createCommandForAllGlobalSatellites({
-      commandType: 'configure',
-      priority: 'immediate',
+    // Query the installation to get its satellite_id
+    const installation = await this.db
+      .select({
+        satellite_id: mcpServerInstallations.satellite_id
+      })
+      .from(mcpServerInstallations)
+      .where(eq(mcpServerInstallations.id, installationId))
+      .limit(1);
+
+    if (!installation || installation.length === 0) {
+      throw new Error(`Installation not found: ${installationId}`);
+    }
+
+    const satelliteId = installation[0].satellite_id;
+
+    const commandPayload = {
+      commandType: 'configure' as const,
+      priority: 'immediate' as const,
       payload: {
         event: 'mcp_installation_created',
         installation_id: installationId,
@@ -281,17 +296,55 @@ export class SatelliteCommandService {
       targetTeamId: teamId,
       expiresInMinutes: 5,
       createdBy: userId
-    });
+    };
+
+    // If satellite_id is specified, send to that specific satellite
+    if (satelliteId) {
+      this.logger.info({
+        installationId,
+        satelliteId,
+        teamId
+      }, 'Sending configure command to specific satellite');
+
+      const command = await this.createCommandForSpecificSatellite(
+        satelliteId,
+        commandPayload
+      );
+      return [command];
+    }
+
+    // Otherwise, broadcast to all global satellites (backward compatibility)
+    this.logger.info({
+      installationId,
+      teamId
+    }, 'Sending configure command to all global satellites (no specific satellite set)');
+
+    return await this.createCommandForAllGlobalSatellites(commandPayload);
   }
 
   /**
    * Convenience method for MCP update events
-   * Creates immediate priority configure commands for all global satellites
+   * Sends configure command to the installation's assigned satellite, or broadcasts to all global satellites if no specific satellite
    */
   async notifyMcpUpdate(installationId: string, teamId: string, userId?: string): Promise<SatelliteCommand[]> {
-    return await this.createCommandForAllGlobalSatellites({
-      commandType: 'configure',
-      priority: 'immediate',
+    // Query the installation to get its satellite_id
+    const installation = await this.db
+      .select({
+        satellite_id: mcpServerInstallations.satellite_id
+      })
+      .from(mcpServerInstallations)
+      .where(eq(mcpServerInstallations.id, installationId))
+      .limit(1);
+
+    if (!installation || installation.length === 0) {
+      throw new Error(`Installation not found: ${installationId}`);
+    }
+
+    const satelliteId = installation[0].satellite_id;
+
+    const commandPayload = {
+      commandType: 'configure' as const,
+      priority: 'immediate' as const,
       payload: {
         event: 'mcp_installation_updated',
         installation_id: installationId,
@@ -300,12 +353,35 @@ export class SatelliteCommandService {
       targetTeamId: teamId,
       expiresInMinutes: 5,
       createdBy: userId
-    });
+    };
+
+    // If satellite_id is specified, send to that specific satellite
+    if (satelliteId) {
+      this.logger.info({
+        installationId,
+        satelliteId,
+        teamId
+      }, 'Sending configure command (update) to specific satellite');
+
+      const command = await this.createCommandForSpecificSatellite(
+        satelliteId,
+        commandPayload
+      );
+      return [command];
+    }
+
+    // Otherwise, broadcast to all global satellites (backward compatibility)
+    this.logger.info({
+      installationId,
+      teamId
+    }, 'Sending configure command (update) to all global satellites (no specific satellite set)');
+
+    return await this.createCommandForAllGlobalSatellites(commandPayload);
   }
 
   /**
    * Notify satellites that an MCP server has recovered and needs tool rediscovery
-   * Creates high priority configure commands for all global satellites
+   * Sends configure command to the installation's assigned satellite, or broadcasts to all global satellites if no specific satellite
    */
   async notifyMcpRecovery(installationId: string, teamId: string): Promise<SatelliteCommand[]> {
     this.logger.info({
@@ -314,9 +390,24 @@ export class SatelliteCommandService {
       teamId
     }, `Notifying satellites of MCP server recovery for installation ${installationId}`);
 
-    return await this.createCommandForAllGlobalSatellites({
-      commandType: 'configure',
-      priority: 'high',
+    // Query the installation to get its satellite_id
+    const installation = await this.db
+      .select({
+        satellite_id: mcpServerInstallations.satellite_id
+      })
+      .from(mcpServerInstallations)
+      .where(eq(mcpServerInstallations.id, installationId))
+      .limit(1);
+
+    if (!installation || installation.length === 0) {
+      throw new Error(`Installation not found: ${installationId}`);
+    }
+
+    const satelliteId = installation[0].satellite_id;
+
+    const commandPayload = {
+      commandType: 'configure' as const,
+      priority: 'high' as const,
       payload: {
         event: 'mcp_recovery',
         installation_id: installationId,
@@ -324,7 +415,30 @@ export class SatelliteCommandService {
       },
       targetTeamId: teamId,
       expiresInMinutes: 5
-    });
+    };
+
+    // If satellite_id is specified, send to that specific satellite
+    if (satelliteId) {
+      this.logger.info({
+        installationId,
+        satelliteId,
+        teamId
+      }, 'Sending configure command (recovery) to specific satellite');
+
+      const command = await this.createCommandForSpecificSatellite(
+        satelliteId,
+        commandPayload
+      );
+      return [command];
+    }
+
+    // Otherwise, broadcast to all global satellites (backward compatibility)
+    this.logger.info({
+      installationId,
+      teamId
+    }, 'Sending configure command (recovery) to all global satellites (no specific satellite set)');
+
+    return await this.createCommandForAllGlobalSatellites(commandPayload);
   }
 
   /**

@@ -28,6 +28,7 @@ export default {
         validate: 'Validate',
         streaming: 'Deploy',
         success: 'Complete',
+        deployProgress: 'Deploy',
       },
 
       stepDescriptions: {
@@ -52,6 +53,8 @@ export default {
 
       selectRepository: {
         title: 'Select Repository',
+        repositoryLabel: 'Repository',
+        repositoryPlaceholder: 'Select a repository...',
         searchPlaceholder: 'Search repositories...',
         loading: 'Loading repositories...',
         error: 'Failed to load repositories',
@@ -68,16 +71,16 @@ export default {
         branchLabel: 'Branch',
 
         envVars: {
-          title: 'Environment Variables (Team-wide)',
+          title: 'Environment Variables',
           description: 'These variables will be available to all team members using this MCP server',
-          keyPlaceholder: 'KEY',
+          keyPlaceholder: 'key',
           valuePlaceholder: 'value',
           add: '+ Add Variable',
           remove: 'Remove',
         },
 
         templateArgs: {
-          title: 'Template Arguments (Optional)',
+          title: 'Arguments',
           description: 'Additional arguments to pass to the MCP server (e.g., --verbose, --debug)',
           placeholder: '--verbose',
           add: '+ Add Argument',
@@ -106,8 +109,21 @@ export default {
           tryAgain: 'Try Again',
         },
         success: {
-          title: 'Validation Complete!',
-          description: 'Installation created. Streaming logs...',
+          title: 'Repository Validated Successfully',
+          description: 'Review the details below before proceeding to configure your deployment',
+          overallStatus: 'Overall Status',
+          statusSuccess: 'Success',
+          statusFailed: 'Failed',
+          packageName: 'Package Name',
+          version: 'Version',
+          runtime: 'Runtime',
+          mcpSdk: 'MCP SDK',
+          buildScript: 'Build Script',
+          startScript: 'Start Script',
+          repositoryDetails: 'Repository Details',
+          buildCommands: 'Build Commands',
+          name: 'Name',
+          noBuildScripts: 'No build or start scripts detected',
         },
       },
 
@@ -115,6 +131,25 @@ export default {
         title: 'Deployment in Progress',
         status: 'Status',
         waitingForLogs: 'Waiting for logs...',
+      },
+
+      deployProgress: {
+        status: 'Deployment Status',
+        repository: 'Repository',
+        branch: 'Branch',
+        commitSha: 'Commit SHA',
+        editServer: 'MCP Server',
+        deploying: 'Deploying...',
+        online: 'Online',
+        logs: 'Deployment Logs',
+        viewInstallation: 'View Installation',
+      },
+
+      deployment: {
+        error: {
+          title: 'Deployment Failed',
+          tryAgain: 'Try Again',
+        },
       },
 
       success: {

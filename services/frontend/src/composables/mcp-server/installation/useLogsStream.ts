@@ -54,51 +54,55 @@ export function useLogsStream(
     window.addEventListener('beforeunload', handleBeforeUnload)
   }
 
+  // Named event handlers for proper cleanup
+  const handleSnapshot = (event: MessageEvent) => {
+    try {
+      const data = JSON.parse(event.data)
+      logs.value = data.logs || []
+      error.value = null
+      isLoading.value = false
+      isConnected.value = true
+    } catch (err) {
+      console.error('useLogsStream: Failed to parse snapshot data:', err)
+    }
+  }
+
+  const handleLog = (event: MessageEvent) => {
+    try {
+      const newLog = JSON.parse(event.data) as McpLog
+      // Prepend new log and limit to maxLogs
+      logs.value = [newLog, ...logs.value].slice(0, maxLogs)
+    } catch (err) {
+      console.error('useLogsStream: Failed to parse log data:', err)
+    }
+  }
+
+  const handleError = (event: Event) => {
+    try {
+      const messageEvent = event as MessageEvent
+      if (messageEvent.data) {
+        const parsed = JSON.parse(messageEvent.data)
+        error.value = parsed.error || 'Stream error'
+      }
+    } catch {
+      // Not a JSON error event
+    }
+  }
+
   function connect(url: string) {
     currentUrl = url
     disconnect()
+    logs.value = []  // Clear stale logs from previous connections
     isLoading.value = true
     error.value = null
 
     try {
       eventSource = new EventSource(url, { withCredentials })
 
-      // Handle initial snapshot of logs
-      eventSource.addEventListener('snapshot', (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data)
-          logs.value = data.logs || []
-          error.value = null
-          isLoading.value = false
-          isConnected.value = true
-        } catch (err) {
-          console.error('useLogsStream: Failed to parse snapshot data:', err)
-        }
-      })
-
-      // Handle new individual log entries
-      eventSource.addEventListener('log', (event: MessageEvent) => {
-        try {
-          const newLog = JSON.parse(event.data) as McpLog
-          // Prepend new log and limit to maxLogs
-          logs.value = [newLog, ...logs.value].slice(0, maxLogs)
-        } catch (err) {
-          console.error('useLogsStream: Failed to parse log data:', err)
-        }
-      })
-
-      // Handle error events from the server
-      eventSource.addEventListener('error', (event: Event) => {
-        try {
-          const messageEvent = event as MessageEvent
-          if (messageEvent.data) {
-            const parsed = JSON.parse(messageEvent.data)
-            error.value = parsed.error || 'Stream error'
-          }
-        } catch {
-          // Not a JSON error event
-        }
-      })
+      // Attach named event handlers
+      eventSource.addEventListener('snapshot', handleSnapshot)
+      eventSource.addEventListener('log', handleLog)
+      eventSource.addEventListener('error', handleError)
 
       eventSource.onopen = () => {
         isConnected.value = true
@@ -129,6 +133,10 @@ export function useLogsStream(
 
   function disconnect() {
     if (eventSource) {
+      // Remove all event listeners before closing to prevent ghost listeners
+      eventSource.removeEventListener('snapshot', handleSnapshot)
+      eventSource.removeEventListener('log', handleLog)
+      eventSource.removeEventListener('error', handleError)
       eventSource.close()
       eventSource = null
     }

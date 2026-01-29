@@ -1,23 +1,21 @@
 import type { FastifyInstance } from 'fastify';
 import deployGitHubRoutes from './github';
 import deployRoutes from './deploy';
+import validateRoutes from './validate';
 
 /**
  * Deployment Routes (GitHub Integration)
  *
- * Current Implementation (Phase 3):
+ * Routes:
  * - GitHub App integration for repository access
  * - Repository and branch browsing
- * - Deployment endpoint stub (full implementation in Phase 4)
- *
- * Phase 4 will add:
- * - Synchronous deployment flow (no job queue)
- * - Direct MCP server creation from GitHub repositories
- * - Real-time deployment status
+ * - Validation endpoint (lightweight repository validation)
+ * - Deployment endpoint (full deployment with database creation)
  */
 export default async function deploymentRoutes(server: FastifyInstance) {
   // Always register all deployment routes
   // Each individual route will check if deployment.enabled is true
   await server.register(deployGitHubRoutes);
+  await server.register(validateRoutes);
   await server.register(deployRoutes);
 }

@@ -1,54 +1,79 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Spinner } from '@/components/ui/spinner'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { AlertCircle } from 'lucide-vue-next'
 
 interface EnvironmentConfig {
   teamEnv: Record<string, string>
   templateArgs: string[]
 }
 
+interface EnvVar {
+  id: number
+  key: string
+  value: string
+}
+
 const props = defineProps<{
   modelValue?: EnvironmentConfig
   repositoryName: string
   branch: string
+  error?: { error: string; step: string } | null
 }>()
+
+const hasError = computed(() => props.error !== null)
 
 const emit = defineEmits<{
   'update:modelValue': [value: EnvironmentConfig]
-  'back': []
-  'deploy': []
 }>()
 
 const { t } = useI18n()
 
-const teamEnv = ref<Record<string, string>>({})
-const templateArgs = ref<string[]>([])
-const isDeploying = ref(false)
+const envVars = ref<EnvVar[]>([])
+let envIdCounter = 0
 
-const repoPath = computed(() => {
-  const url = props.repositoryName
-  const match = url.match(/github\.com[/:]([\w-]+\/[\w-]+)/)
-  return match?.[1]?.replace('.git', '') ?? props.repositoryName
+const teamEnv = computed(() => {
+  const result: Record<string, string> = {}
+  envVars.value.forEach(env => {
+    if (env.key.trim()) {
+      result[env.key] = env.value
+    }
+  })
+  return result
 })
 
+const templateArgs = ref<string[]>([])
+
+const cleanedTemplateArgs = computed(() => {
+  return templateArgs.value
+    .map(arg => arg.trim())
+    .filter(arg => arg.length > 0)
+})
+
+// Watch and emit changes
+watch([teamEnv, cleanedTemplateArgs], () => {
+  emit('update:modelValue', {
+    teamEnv: teamEnv.value,
+    templateArgs: cleanedTemplateArgs.value
+  })
+}, { deep: true })
+
 function addEnv() {
-  const newKey = `ENV_${Object.keys(teamEnv.value).length + 1}`
-  teamEnv.value[newKey] = ''
+  envVars.value.push({
+    id: envIdCounter++,
+    key: '',
+    value: ''
+  })
 }
 
-function removeEnv(key: string) {
-  delete teamEnv.value[key]
-}
-
-function updateEnvKey(oldKey: string, newKey: string) {
-  if (oldKey === newKey) return
-  const value = teamEnv.value[oldKey]
-  delete teamEnv.value[oldKey]
-  if (value !== undefined) {
-    teamEnv.value[newKey] = value
+function removeEnv(id: number) {
+  const index = envVars.value.findIndex(env => env.id === id)
+  if (index !== -1) {
+    envVars.value.splice(index, 1)
   }
 }
 
@@ -59,66 +84,48 @@ function addArg() {
 function removeArg(index: number) {
   templateArgs.value.splice(index, 1)
 }
-
-async function handleDeploy() {
-  isDeploying.value = true
-
-  emit('update:modelValue', {
-    teamEnv: teamEnv.value,
-    templateArgs: templateArgs.value.filter(arg => arg.trim() !== '')
-  })
-
-  try {
-    emit('deploy')
-  } finally {
-    isDeploying.value = false
-  }
-}
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div>
-      <h2 class="text-xl font-bold mb-2">{{ t('deployments.wizard.configureEnvironment.title') }}</h2>
+  <div>
+    <!-- Error State -->
+    <div v-if="hasError" class="mb-6">
+      <Alert variant="destructive">
+        <AlertCircle class="h-4 w-4" />
+        <AlertTitle>{{ t('deployments.wizard.deployment.error.title') }}</AlertTitle>
+        <AlertDescription>
+          {{ error!.error }}
+        </AlertDescription>
+      </Alert>
     </div>
 
-    <!-- Repository Info -->
-    <div class="bg-muted p-4 rounded-lg">
-      <div class="space-y-1">
-        <div class="text-sm text-muted-foreground">{{ t('deployments.wizard.configureEnvironment.repositoryLabel') }}</div>
-        <div class="font-semibold">{{ repositoryName }}</div>
-      </div>
-      <div class="space-y-1 mt-2">
-        <div class="text-sm text-muted-foreground">{{ t('deployments.wizard.configureEnvironment.branchLabel') }}</div>
-        <div class="font-mono text-sm">{{ branch }}</div>
-      </div>
-    </div>
-
+    <div class="space-y-12">
     <!-- Team Environment Variables -->
     <div class="space-y-3">
       <div>
-        <h3 class="font-semibold mb-1">{{ t('deployments.wizard.configureEnvironment.envVars.title') }}</h3>
+        <div class="flex items-center gap-2 mb-1">
+          <h3 class="font-semibold">{{ t('deployments.wizard.configureEnvironment.envVars.title') }}</h3>
+          <Badge variant="secondary">Team-wide</Badge>
+          <Badge variant="outline">Optional</Badge>
+        </div>
         <p class="text-sm text-muted-foreground">
           {{ t('deployments.wizard.configureEnvironment.envVars.description') }}
         </p>
       </div>
 
-      <div v-for="(value, key) in teamEnv" :key="key" class="flex gap-2">
+      <div v-for="env in envVars" :key="env.id" class="flex gap-2">
         <Input
-          :value="key"
-          @input="updateEnvKey(key, ($event.target as HTMLInputElement).value)"
+          v-model="env.key"
           :placeholder="t('deployments.wizard.configureEnvironment.envVars.keyPlaceholder')"
           class="flex-1 font-mono text-sm"
         />
         <Input
-          v-model="teamEnv[key]"
+          v-model="env.value"
           :placeholder="t('deployments.wizard.configureEnvironment.envVars.valuePlaceholder')"
           class="flex-1 font-mono text-sm"
         />
         <Button
-          variant="ghost"
-          @click="removeEnv(key)"
-          class="text-destructive hover:text-destructive"
+          @click="removeEnv(env.id)"
         >
           {{ t('deployments.wizard.configureEnvironment.envVars.remove') }}
         </Button>
@@ -137,7 +144,11 @@ async function handleDeploy() {
     <!-- Template Arguments -->
     <div class="space-y-3">
       <div>
-        <h3 class="font-semibold mb-1">{{ t('deployments.wizard.configureEnvironment.templateArgs.title') }}</h3>
+        <div class="flex items-center gap-2 mb-1">
+          <h3 class="font-semibold">{{ t('deployments.wizard.configureEnvironment.templateArgs.title') }}</h3>
+          <Badge variant="secondary">Team-wide</Badge>
+          <Badge variant="outline">Optional</Badge>
+        </div>
         <p class="text-sm text-muted-foreground">
           {{ t('deployments.wizard.configureEnvironment.templateArgs.description') }}
         </p>
@@ -150,9 +161,7 @@ async function handleDeploy() {
           class="flex-1 font-mono text-sm"
         />
         <Button
-          variant="ghost"
           @click="removeArg(index)"
-          class="text-destructive hover:text-destructive"
         >
           {{ t('deployments.wizard.configureEnvironment.templateArgs.remove') }}
         </Button>
@@ -167,32 +176,6 @@ async function handleDeploy() {
         {{ t('deployments.wizard.configureEnvironment.templateArgs.add') }}
       </Button>
     </div>
-
-    <!-- Command Preview -->
-    <div class="bg-gray-900 dark:bg-gray-950 text-gray-100 p-4 rounded-lg font-mono text-sm">
-      <div class="text-gray-400 mb-2">{{ t('deployments.wizard.configureEnvironment.commandPreview.comment') }}</div>
-      <div class="text-green-400">npx -y github:{{ repoPath }}#{'{commit_sha}'}</div>
-      <div v-if="templateArgs.length" class="mt-3">
-        <div class="text-gray-400 mb-1">{{ t('deployments.wizard.configureEnvironment.commandPreview.withArgs') }}</div>
-        <div v-for="arg in templateArgs.filter(a => a.trim())" :key="arg" class="ml-4 text-blue-400">
-          {{ arg }}
-        </div>
-      </div>
-    </div>
-
-    <!-- Navigation Buttons -->
-    <div class="flex justify-between pt-4">
-      <Button variant="outline" @click="$emit('back')" :disabled="isDeploying">
-        {{ t('deployments.wizard.buttons.back') }}
-      </Button>
-      <Button
-        @click="handleDeploy"
-        :disabled="isDeploying"
-        class="bg-green-600 hover:bg-green-700 text-white"
-      >
-        <Spinner v-if="isDeploying" class="mr-2 h-4 w-4" />
-        {{ isDeploying ? t('deployments.wizard.buttons.deploying') : t('deployments.wizard.buttons.deploy') }}
-      </Button>
     </div>
   </div>
 </template>

@@ -206,6 +206,9 @@ export default async function getInstallationLogsStreamRoute(server: FastifyInst
 					}
 
 					if (newLogs.length > 0) {
+						// Store the newest timestamp BEFORE reversing the array
+						const newestTimestamp = newLogs[0].created_at;
+
 						for (const log of newLogs.reverse()) { // Reverse to send oldest first
 							// Check connection before each send in loop
 							if (!reply.sse.isConnected) {
@@ -228,7 +231,8 @@ export default async function getInstallationLogsStreamRoute(server: FastifyInst
 							});
 						}
 
-						lastSentTimestamp = newLogs[0].created_at;
+						// Update to the newest timestamp (captured before reversal)
+						lastSentTimestamp = newestTimestamp;
 
 						request.log.debug(
 							{

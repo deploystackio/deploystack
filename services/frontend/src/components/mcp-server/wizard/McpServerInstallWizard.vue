@@ -3,9 +3,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
-import { DsProgressSteps, type ProgressStep } from '@/components/ui/ds-progress-steps'
+import { DsProgressSteps, DsProgressStepsFooter, type ProgressStep } from '@/components/ui/ds-progress-steps'
 import { toast } from 'vue-sonner'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { SatelliteService, type TeamSatellite } from '@/services/satelliteService'
@@ -165,10 +163,6 @@ const previousStep = () => {
   if (currentStep.value > 0) {
     currentStep.value--
   }
-}
-
-const handleCancel = () => {
-  emit('cancel')
 }
 
 // Fetch available satellites for the team
@@ -489,35 +483,20 @@ onUnmounted(() => {
       :current-step="currentProgressStep"
       :completed-steps="completedSteps"
       max-width="max-w-3xl"
+      :hide-footer="true"
     >
       <!-- Step Content 0: Satellite Selection if shown, otherwise Environment/OAuth -->
       <template #step-content-0>
         <!-- Satellite Selection (only if multiple satellites) -->
-        <div v-if="shouldShowSatelliteStep">
-          <SatelliteSelectionStep
-            v-model="formData.platform.satellite_id"
-            :satellites="satellites"
-            :is-loading="isFetchingSatellites"
-          />
-
-          <!-- Navigation Buttons for Satellite Step -->
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
-            <Button variant="outline" @click="handleCancel" class="w-full sm:w-auto">
-              {{ t('navigation.cancel') }}
-            </Button>
-
-            <Button
-              @click="nextStep"
-              :disabled="!formData.platform.satellite_id"
-              class="w-full sm:w-auto"
-            >
-              {{ t('navigation.next') }}
-            </Button>
-          </div>
-        </div>
+        <SatelliteSelectionStep
+          v-if="shouldShowSatelliteStep"
+          v-model="formData.platform.satellite_id"
+          :satellites="satellites"
+          :is-loading="isFetchingSatellites"
+        />
 
         <!-- Environment/OAuth Step (when satellite step is hidden) -->
-        <div v-else>
+        <template v-else>
           <!-- OAuth Authorization Step (if OAuth required) -->
           <OAuthAuthorizationStep
             v-if="requiresOAuth"
@@ -533,38 +512,45 @@ onUnmounted(() => {
             :server-data="serverData"
             @validation-change="handleValidationChange"
           />
+        </template>
+      </template>
 
-          <!-- Navigation Buttons -->
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
-            <Button variant="outline" @click="handleCancel" class="w-full sm:w-auto">
-              {{ t('navigation.cancel') }}
-            </Button>
+      <!-- Footer for Step 0 -->
+      <template #step-footer-0>
+        <!-- If satellite step is shown, show Cancel + Next -->
+        <DsProgressStepsFooter
+          v-if="shouldShowSatelliteStep"
+          :show-back-button="true"
+          back-button-text="Cancel"
+          back-button-to="/mcp-server"
+          :next-button-text="t('navigation.next')"
+          :is-next-disabled="!formData.platform.satellite_id"
+          @next="nextStep"
+        />
 
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
-              <!-- OAuth: "Authorize & Install" button -->
-              <Button
-                v-if="requiresOAuth"
-                @click="handleOAuthAuthorization"
-                :disabled="isSubmitting"
-                class="w-full sm:w-auto"
-              >
-                <Spinner v-if="isSubmitting" class="mr-2" />
-                {{ t('mcpInstallations.wizard.authorizeAndInstall') }}
-              </Button>
+        <!-- If satellite step is hidden AND OAuth required -->
+        <DsProgressStepsFooter
+          v-else-if="requiresOAuth"
+          :show-back-button="true"
+          back-button-text="Cancel"
+          back-button-to="/mcp-server"
+          :next-button-text="t('mcpInstallations.wizard.authorizeAndInstall')"
+          :is-next-disabled="isSubmitting"
+          :is-next-loading="isSubmitting"
+          @next="handleOAuthAuthorization"
+        />
 
-              <!-- Non-OAuth: "Install" button -->
-              <Button
-                v-else
-                @click="submitInstallation"
-                :disabled="!canSubmit || isSubmitting"
-                class="w-full sm:w-auto"
-              >
-                <Spinner v-if="isSubmitting" class="mr-2" />
-                {{ t('mcpInstallations.wizard.install') }}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <!-- If satellite step is hidden AND OAuth NOT required -->
+        <DsProgressStepsFooter
+          v-else
+          :show-back-button="true"
+          back-button-text="Cancel"
+          back-button-to="/mcp-server"
+          :next-button-text="t('mcpInstallations.wizard.install')"
+          :is-next-disabled="!canSubmit || isSubmitting"
+          :is-next-loading="isSubmitting"
+          @next="submitInstallation"
+        />
       </template>
 
       <!-- Environment/OAuth Step when satellite step is shown -->
@@ -584,41 +570,33 @@ onUnmounted(() => {
           :server-data="serverData"
           @validation-change="handleValidationChange"
         />
+      </template>
 
-        <!-- Navigation Buttons -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 mt-8 sm:mt-6">
-          <Button variant="outline" @click="previousStep" class="w-full sm:w-auto">
-            {{ t('navigation.previous') }}
-          </Button>
+      <!-- Footer for Step 1 (only shown when satellite step is shown) -->
+      <template #step-footer-1>
+        <!-- OAuth case -->
+        <DsProgressStepsFooter
+          v-if="requiresOAuth"
+          :show-back-button="true"
+          :back-button-text="t('navigation.previous')"
+          :next-button-text="t('mcpInstallations.wizard.authorizeAndInstall')"
+          :is-next-disabled="isSubmitting"
+          :is-next-loading="isSubmitting"
+          @back="previousStep"
+          @next="handleOAuthAuthorization"
+        />
 
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
-            <Button variant="ghost" @click="handleCancel" class="w-full sm:w-auto">
-              {{ t('navigation.cancel') }}
-            </Button>
-
-            <!-- OAuth: "Authorize & Install" button -->
-            <Button
-              v-if="requiresOAuth"
-              @click="handleOAuthAuthorization"
-              :disabled="isSubmitting"
-              class="w-full sm:w-auto"
-            >
-              <Spinner v-if="isSubmitting" class="mr-2" />
-              {{ t('mcpInstallations.wizard.authorizeAndInstall') }}
-            </Button>
-
-            <!-- Non-OAuth: "Install" button -->
-            <Button
-              v-else
-              @click="submitInstallation"
-              :disabled="!canSubmit || isSubmitting"
-              class="w-full sm:w-auto"
-            >
-              <Spinner v-if="isSubmitting" class="mr-2" />
-              {{ t('mcpInstallations.wizard.install') }}
-            </Button>
-          </div>
-        </div>
+        <!-- Non-OAuth case -->
+        <DsProgressStepsFooter
+          v-else
+          :show-back-button="true"
+          :back-button-text="t('navigation.previous')"
+          :next-button-text="t('mcpInstallations.wizard.install')"
+          :is-next-disabled="!canSubmit || isSubmitting"
+          :is-next-loading="isSubmitting"
+          @back="previousStep"
+          @next="submitInstallation"
+        />
       </template>
     </DsProgressSteps>
 

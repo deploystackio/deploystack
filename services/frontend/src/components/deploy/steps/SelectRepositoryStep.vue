@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
-import { CheckCircle, AlertCircle } from 'lucide-vue-next'
+import { AlertCircle, GitBranch } from 'lucide-vue-next'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DeploymentService, type Repository, type Branch } from '@/services/deploymentService'
 import { useEventBus } from '@/composables/useEventBus'
@@ -23,33 +22,61 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: RepositorySelection]
-  'next': []
-  'back': []
 }>()
 
 const { t } = useI18n()
 const eventBus = useEventBus()
 
+// GitHub connection state
+const isCheckingConnection = ref(true)
+const isConnected = ref(false)
+const connectionError = ref<string | null>(null)
+
+// Repository state
 const repositories = ref<Repository[]>([])
+const selectedRepoId = ref<string>('')
 const selectedRepo = ref<Repository | null>(null)
 const branch = ref('main')
 const branches = ref<Branch[]>([])
 const defaultBranch = ref<string>('')
 const isLoadingBranches = ref(false)
 const branchesError = ref<string | null>(null)
-const searchQuery = ref('')
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 
-const filteredRepositories = computed(() => {
-  if (!searchQuery.value) return repositories.value
+async function checkConnection() {
+  try {
+    isCheckingConnection.value = true
+    connectionError.value = null
 
-  const query = searchQuery.value.toLowerCase()
-  return repositories.value.filter(repo =>
-    repo.full_name.toLowerCase().includes(query) ||
-    repo.description?.toLowerCase().includes(query)
-  )
-})
+    const teamId = eventBus.getState<string>('selected_team_id')
+    if (!teamId) {
+      throw new Error('No team selected')
+    }
+
+    const result = await DeploymentService.checkConnection(teamId)
+    isConnected.value = result.connected
+
+    if (result.connected) {
+      await fetchRepositories()
+    }
+  } catch (err) {
+    connectionError.value = err instanceof Error ? err.message : 'Failed to check connection'
+    toast.error(t('deployments.notifications.connectionError'))
+  } finally {
+    isCheckingConnection.value = false
+  }
+}
+
+function connectGitHub() {
+  const teamId = eventBus.getState<string>('selected_team_id')
+  if (!teamId) {
+    toast.error('No team selected')
+    return
+  }
+
+  window.location.href = `${DeploymentService['baseUrl']}/api/teams/${teamId}/deploy/github/install`
+}
 
 async function fetchRepositories() {
   try {
@@ -102,92 +129,112 @@ async function fetchBranches(repo: Repository) {
   }
 }
 
-function selectRepository(repo: Repository) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function handleRepoChange(repoId: any) {
+  if (!repoId) return
+
+  const repoIdStr = String(repoId)
+  const repo = repositories.value.find(r => r.id.toString() === repoIdStr)
+  if (!repo) return
+
   selectedRepo.value = repo
+  selectedRepoId.value = repoIdStr
   branch.value = repo.default_branch
 
   // Fetch branches for the selected repository
   fetchBranches(repo)
 }
 
-function handleNext() {
-  if (!selectedRepo.value) return
-
-  emit('update:modelValue', {
-    url: selectedRepo.value.clone_url,
-    name: selectedRepo.value.full_name,
-    branch: branch.value
-  })
-
-  emit('next')
-}
+// Watch for changes and emit to parent
+watch([selectedRepo, branch], () => {
+  if (selectedRepo.value) {
+    emit('update:modelValue', {
+      url: selectedRepo.value.clone_url,
+      name: selectedRepo.value.full_name,
+      branch: branch.value
+    })
+  }
+})
 
 onMounted(() => {
-  fetchRepositories()
+  checkConnection()
 })
 </script>
 
 <template>
   <div class="space-y-6">
-    <div>
-      <h2 class="text-xl font-bold mb-2">{{ t('deployments.wizard.selectRepository.title') }}</h2>
+      <!-- STATE 1: Checking Connection -->
+      <div v-if="isCheckingConnection" class="text-center py-8">
+        <Spinner class="h-12 w-12 mx-auto mb-4" />
+        <p class="text-muted-foreground">{{ t('deployments.wizard.connectGitHub.checking') }}</p>
+      </div>
+
+      <!-- STATE 2: Connection Error or Not Connected -->
+      <div v-else-if="connectionError || !isConnected" class="text-center py-8">
+      <!-- Error message if any -->
+      <div v-if="connectionError" class="mb-6">
+        <div class="bg-destructive/10 border border-destructive/20 rounded-lg p-6 max-w-md mx-auto">
+          <p class="text-destructive font-semibold">{{ connectionError }}</p>
+        </div>
+      </div>
+
+      <!-- Connect GitHub UI -->
+      <div v-if="!isConnected" class="text-center">
+        <GitBranch class="h-20 w-20 mx-auto text-muted-foreground mb-6" />
+        <p class="text-muted-foreground mb-6">
+          {{ t('deployments.wizard.connectGitHub.description') }}
+        </p>
+        <Button @click="connectGitHub" class="inline-flex items-center gap-2">
+          <GitBranch class="h-5 w-5" />
+          {{ t('deployments.wizard.connectGitHub.button') }}
+        </Button>
+        <p class="text-xs text-muted-foreground mt-4">
+          {{ t('deployments.wizard.connectGitHub.notice') }}
+        </p>
+      </div>
+
     </div>
 
-    <!-- Loading State -->
-    <div v-if="isLoading" class="text-center py-8">
-      <Spinner class="h-12 w-12 mx-auto mb-4" />
-      <p class="text-muted-foreground">{{ t('deployments.wizard.selectRepository.loading') }}</p>
-    </div>
+    <!-- STATE 3: Connected - Show Repository Selection -->
+    <div v-else>
+      <!-- Loading State -->
+      <div v-if="isLoading" class="text-center py-8">
+        <Spinner class="h-12 w-12 mx-auto mb-4" />
+        <p class="text-muted-foreground">{{ t('deployments.wizard.selectRepository.loading') }}</p>
+      </div>
 
-    <!-- Error State -->
-    <div v-else-if="error" class="text-center py-8">
-      <p class="text-destructive mb-4">{{ error }}</p>
-      <Button @click="fetchRepositories">
-        {{ t('deployments.wizard.selectRepository.tryAgain') }}
-      </Button>
-    </div>
+      <!-- Error State -->
+      <div v-else-if="error" class="text-center py-8">
+        <p class="text-destructive mb-4">{{ error }}</p>
+        <Button @click="fetchRepositories">
+          {{ t('deployments.wizard.selectRepository.tryAgain') }}
+        </Button>
+      </div>
 
-    <!-- Repository List -->
-    <div v-else class="space-y-4">
-      <!-- Search -->
-      <Input
-        v-model="searchQuery"
-        type="text"
-        :placeholder="t('deployments.wizard.selectRepository.searchPlaceholder')"
-        class="w-full"
-      />
-
-      <!-- Repository List -->
-      <div class="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-2">
-        <div
-          v-for="repo in filteredRepositories"
-          :key="repo.id"
-          @click="selectRepository(repo)"
-          :class="[
-            'p-4 border rounded-lg cursor-pointer transition',
-            selectedRepo?.id === repo.id
-              ? 'border-primary bg-primary/5'
-              : 'border-border hover:border-primary/50 hover:bg-muted/50'
-          ]"
-        >
-          <div class="flex items-start justify-between">
-            <div class="flex-1 min-w-0">
-              <div class="font-semibold truncate">{{ repo.full_name }}</div>
-              <p v-if="repo.description" class="text-sm text-muted-foreground mt-1 line-clamp-2">
-                {{ repo.description }}
-              </p>
-              <div class="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                <span>{{ t('deployments.wizard.selectRepository.defaultBranch') }}: {{ repo.default_branch }}</span>
-                <span v-if="repo.private" class="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded text-xs">
-                  {{ t('deployments.wizard.selectRepository.private') }}
+      <!-- Repository Selection -->
+      <div v-else class="space-y-4">
+      <!-- Repository Select -->
+      <div class="space-y-2">
+        <Label for="repository">{{ t('deployments.wizard.selectRepository.repositoryLabel') }}</Label>
+        <Select v-model="selectedRepoId" @update:model-value="handleRepoChange">
+          <SelectTrigger class="w-full">
+            <SelectValue :placeholder="t('deployments.wizard.selectRepository.repositoryPlaceholder')" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem
+              v-for="repo in repositories"
+              :key="repo.id"
+              :value="repo.id.toString()"
+            >
+              <div class="flex flex-col items-start">
+                <span class="font-medium">{{ repo.full_name }}</span>
+                <span v-if="repo.description" class="text-xs text-muted-foreground line-clamp-1">
+                  {{ repo.description }}
                 </span>
               </div>
-            </div>
-            <div v-if="selectedRepo?.id === repo.id" class="text-primary ml-4 flex-shrink-0">
-              <CheckCircle class="h-6 w-6" />
-            </div>
-          </div>
-        </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <!-- Branch Selection -->
@@ -215,7 +262,7 @@ onMounted(() => {
 
         <!-- Branch dropdown -->
         <Select v-else v-model="branch" :disabled="branches.length === 0">
-          <SelectTrigger>
+          <SelectTrigger class="w-full">
             <SelectValue :placeholder="branch || 'Select a branch'" />
           </SelectTrigger>
           <SelectContent>
@@ -224,7 +271,7 @@ onMounted(() => {
               :key="branchItem.name"
               :value="branchItem.name"
             >
-              <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
                 <span>{{ branchItem.name }}</span>
                 <span v-if="branchItem.name === defaultBranch" class="text-xs text-muted-foreground">
                   (default)
@@ -241,18 +288,6 @@ onMounted(() => {
           {{ branches.length }} branch{{ branches.length === 1 ? '' : 'es' }} available
         </p>
       </div>
-
-      <!-- Navigation Buttons -->
-      <div class="flex justify-between pt-4">
-        <Button variant="outline" @click="$emit('back')">
-          {{ t('deployments.wizard.buttons.back') }}
-        </Button>
-        <Button
-          @click="handleNext"
-          :disabled="!selectedRepo || branches.length === 0 || !!branchesError"
-        >
-          {{ t('deployments.wizard.buttons.next') }}
-        </Button>
       </div>
     </div>
   </div>

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
-import { CheckCircle, Satellite, Check } from 'lucide-vue-next'
+import { RadioCard, RadioCardGroup } from '@/components/ui/radio-card'
 import { SatelliteService, type TeamSatellite } from '@/services/satelliteService'
 import { useEventBus } from '@/composables/useEventBus'
 import { toast } from 'vue-sonner'
@@ -19,8 +18,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: SatelliteSelection]
-  'next': []
-  'back': []
 }>()
 
 const { t } = useI18n()
@@ -30,10 +27,6 @@ const satellites = ref<TeamSatellite[]>([])
 const selectedSatelliteId = ref('')
 const isLoading = ref(true)
 const error = ref<string | null>(null)
-
-const canProceed = computed(() => {
-  return selectedSatelliteId.value !== ''
-})
 
 async function fetchSatellites() {
   try {
@@ -65,18 +58,14 @@ async function fetchSatellites() {
   }
 }
 
-function handleNext() {
-  if (!canProceed.value) return
-
-  emit('update:modelValue', {
-    satellite_id: selectedSatelliteId.value
-  })
-  emit('next')
-}
-
-function handleBack() {
-  emit('back')
-}
+// Watch for changes and emit to parent
+watch(selectedSatelliteId, (newValue) => {
+  if (newValue) {
+    emit('update:modelValue', {
+      satellite_id: newValue
+    })
+  }
+})
 
 onMounted(() => {
   fetchSatellites()
@@ -84,12 +73,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="flex items-center gap-3 mb-6">
-      <Satellite class="h-6 w-6 text-primary" />
-      <h2 class="text-2xl font-semibold">{{ t('deployments.wizard.steps.selectSatellite') }}</h2>
-    </div>
-
+  <div>
+    <div class="space-y-6">
     <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-12">
       <Spinner class="h-8 w-8" />
@@ -114,59 +99,24 @@ onMounted(() => {
         {{ t('deployments.wizard.stepDescriptions.selectSatellite') }}
       </p>
 
-      <div class="space-y-2">
-        <Label>Available Satellites</Label>
-        <div class="space-y-2">
-          <div
-            v-for="satellite in satellites"
-            :key="satellite.id"
-            class="relative flex items-center justify-between rounded-lg border p-4 cursor-pointer transition-all"
-            :class="{
-              'border-primary bg-primary/5 ring-2 ring-primary/20': selectedSatelliteId === satellite.id,
-              'hover:bg-accent': selectedSatelliteId !== satellite.id
-            }"
-            @click="selectedSatelliteId = satellite.id"
-          >
-            <div class="flex-1">
-              <div class="flex items-center gap-3">
-                <Satellite class="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p class="font-medium">{{ satellite.name }}</p>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span class="text-xs px-2 py-0.5 rounded-full"
-                          :class="satellite.satellite_type === 'global'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-purple-100 text-purple-700'">
-                      {{ satellite.satellite_type }}
-                    </span>
-                    <span v-if="satellite.status === 'active'" class="text-xs text-green-600 flex items-center gap-1">
-                      <CheckCircle class="h-3 w-3" />
-                      Active
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <Check
-              v-if="selectedSatelliteId === satellite.id"
-              class="h-5 w-5 text-primary"
-            />
-          </div>
-        </div>
-      </div>
+      <RadioCardGroup v-model="selectedSatelliteId" name="satellite-selection">
+        <RadioCard
+          v-for="satellite in satellites"
+          :key="satellite.id"
+          :value="satellite.id"
+        >
+          <template #title>{{ satellite.name }}</template>
+          <template #description>
+            <span class="text-xs px-2 py-0.5 rounded-full"
+                  :class="satellite.satellite_type === 'global'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                    : 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'">
+              {{ satellite.satellite_type }}
+            </span>
+          </template>
+        </RadioCard>
+      </RadioCardGroup>
     </div>
-
-    <!-- Actions -->
-    <div class="flex justify-between pt-6">
-      <Button @click="handleBack" variant="outline">
-        {{ t('common.actions.back') }}
-      </Button>
-      <Button
-        @click="handleNext"
-        :disabled="!canProceed"
-      >
-        {{ t('common.actions.next') }}
-      </Button>
     </div>
   </div>
 </template>

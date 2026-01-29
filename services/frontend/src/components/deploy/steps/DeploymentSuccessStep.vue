@@ -1,9 +1,5 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
-import { Button } from '@/components/ui/button'
-import { CheckCircle, Eye, RefreshCw } from 'lucide-vue-next'
-import { useEventBus } from '@/composables/useEventBus'
 
 interface Props {
   installationId: string
@@ -12,78 +8,58 @@ interface Props {
   commitSha: string
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 const { t } = useI18n()
-const router = useRouter()
-const eventBus = useEventBus()
-
-function handleViewInstallation() {
-  const teamId = eventBus.getState<string>('selected_team_id')
-  if (!teamId) {
-    console.error('No team selected')
-    return
-  }
-  router.push(`/teams/${teamId}/mcp/installations/${props.installationId}`)
-}
-
-function handleDeployAnother() {
-  router.push('/deploy/create')
-}
 </script>
 
 <template>
-  <div class="space-y-6 py-8 text-center">
-    <!-- Success Icon -->
-    <CheckCircle class="h-20 w-20 text-green-600 mx-auto" />
-
-    <h2 class="text-2xl font-bold text-green-600">{{ t('deployments.wizard.success.title') }}</h2>
-
-    <!-- Deployment Details Box -->
-    <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6 max-w-md mx-auto text-left">
-      <h3 class="font-semibold mb-4 text-green-900 dark:text-green-100">{{ t('deployments.wizard.success.detailsTitle') }}</h3>
-      <div class="space-y-2 text-sm">
-        <div class="flex justify-between">
-          <span class="text-muted-foreground">{{ t('deployments.wizard.success.repository') }}:</span>
-          <span class="font-mono font-medium">{{ repositoryName }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-muted-foreground">{{ t('deployments.wizard.success.branch') }}:</span>
-          <span class="font-mono font-medium">{{ branch }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-muted-foreground">{{ t('deployments.wizard.success.commitSha') }}:</span>
-          <span class="font-mono text-xs">{{ commitSha.substring(0, 8) }}</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-muted-foreground">{{ t('deployments.wizard.success.status') }}:</span>
-          <span class="text-green-600 font-semibold">{{ t('deployments.wizard.success.online') }}</span>
-        </div>
-      </div>
+  <div>
+    <div class="space-y-6 py-8">
+    <!-- Success Description -->
+    <div class="text-center">
+      <p class="text-muted-foreground">
+        {{ t('deployments.wizard.success.description') }}
+      </p>
     </div>
 
-    <p class="text-muted-foreground">
-      {{ t('deployments.wizard.success.description') }}
-    </p>
-
-    <!-- Action Buttons -->
-    <div class="flex justify-center gap-4">
-      <Button
-        @click="handleViewInstallation"
-        variant="default"
-        class="inline-flex items-center gap-2"
-      >
-        <Eye class="h-4 w-4" />
-        {{ t('deployments.wizard.success.viewInstallation') }}
-      </Button>
-      <Button
-        @click="handleDeployAnother"
-        variant="outline"
-        class="inline-flex items-center gap-2"
-      >
-        <RefreshCw class="h-4 w-4" />
-        {{ t('deployments.wizard.success.deployAnother') }}
-      </Button>
+    <!-- Deployment Details -->
+    <div class="mt-6">
+      <dl class="divide-y divide-neutral-100 dark:divide-neutral-800">
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            {{ t('deployments.wizard.success.repository') }}
+          </dt>
+          <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300 sm:col-span-2 sm:mt-0 font-mono">
+            {{ repositoryName }}
+          </dd>
+        </div>
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            {{ t('deployments.wizard.success.branch') }}
+          </dt>
+          <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300 sm:col-span-2 sm:mt-0 font-mono">
+            {{ branch }}
+          </dd>
+        </div>
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            {{ t('deployments.wizard.success.commitSha') }}
+          </dt>
+          <dd class="mt-1 text-sm text-neutral-700 dark:text-neutral-300 sm:col-span-2 sm:mt-0 font-mono">
+            {{ commitSha.substring(0, 8) }}
+          </dd>
+        </div>
+        <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+          <dt class="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            {{ t('deployments.wizard.success.status') }}
+          </dt>
+          <dd class="mt-1 text-sm text-green-600 dark:text-green-400 sm:col-span-2 sm:mt-0 font-semibold">
+            {{ t('deployments.wizard.success.online') }}
+          </dd>
+        </div>
+      </dl>
+    </div>
     </div>
   </div>
 </template>

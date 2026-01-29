@@ -402,6 +402,44 @@ export interface CoreEventData {
     };
   };
 
+  [EVENT_NAMES.MCP_DEPLOYMENT_SUCCEEDED]: {
+    deployment: {
+      installationId: string;
+      serverId: string;
+      commitSha: string;
+      repositoryUrl: string;
+      branch: string;
+    };
+    deployedBy: {
+      id: string;
+      email: string;
+    };
+    metadata: {
+      ip: string;
+      duration?: number;
+    };
+  };
+
+  [EVENT_NAMES.MCP_DEPLOYMENT_FAILED]: {
+    deployment: {
+      repositoryUrl: string;
+      branch: string;
+      step: string;
+    };
+    error: {
+      message: string;
+      code?: string;
+    };
+    attemptedBy: {
+      id: string;
+      email: string;
+    };
+    metadata: {
+      ip: string;
+      duration?: number;
+    };
+  };
+
   [EVENT_NAMES.SYSTEM_STARTUP]: {
     version: string;
     environment: string;

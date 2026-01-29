@@ -1,19 +1,18 @@
 import type { FastifyInstance } from 'fastify';
 import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
-import { Octokit } from '@octokit/rest';
-import { createAppAuth } from '@octokit/auth-app';
 import { nanoid } from 'nanoid';
 import { getDb, getSchema } from '../../../db';
-import { eq, or, and } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { GlobalSettings } from '../../../global-settings/helpers';
-import { getGitHubAppConfig } from '../../../lib/deployment/github-config';
 import { DeploymentCredentialService } from '../../../services/deploymentCredentialService';
+import { DeploymentValidationService } from '../../../services/deploymentValidationService';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { McpInstanceService } from '../../../services/mcpInstanceService';
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { TeamService } from '../../../services/teamService';
 import { McpSlugService } from '../../../services/mcpCatalogService';
+import { SatelliteValidationService } from '../../../services/satelliteValidationService';
 import { EVENT_NAMES } from '../../../events';
 
 // Reusable schema constants
@@ -115,7 +114,7 @@ interface ErrorResponse {
   step?: string;
 }
 
-// Helper function to parse GitHub URL
+// Helper function to parse GitHub URL (for extracting owner/repo for server creation)
 function parseGitHubUrl(url: string): { owner: string; repo: string } {
   const match = url.match(/github\.com[/:]([\w-]+)\/([\w-]+?)(\.git)?$/);
   if (!match) {
@@ -160,7 +159,7 @@ export default async function deployRoutes(server: FastifyInstance) {
         },
         400: {
           ...ERROR_RESPONSE_SCHEMA,
-          description: 'Validation error (missing package.json, invalid MCP SDK, etc.)'
+          description: 'Validation error (missing package.json, invalid MCP SDK, invalid satellite_id, satellite not active, etc.)'
         },
         401: {
           ...ERROR_RESPONSE_SCHEMA,
@@ -168,7 +167,7 @@ export default async function deployRoutes(server: FastifyInstance) {
         },
         403: {
           ...ERROR_RESPONSE_SCHEMA,
-          description: 'Forbidden'
+          description: 'Forbidden (feature disabled, attempting to deploy to another team\'s satellite, etc.)'
         },
         404: {
           ...ERROR_RESPONSE_SCHEMA,
@@ -181,12 +180,78 @@ export default async function deployRoutes(server: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
+    // Track deployment start time for duration metrics
+    const deploymentStartTime = Date.now();
+
+    // Helper function to emit deployment failed event
+    const emitFailureEvent = (
+      repositoryUrl: string,
+      branch: string,
+      step: string,
+      errorMessage: string,
+      errorCode?: string
+    ) => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userId = request.user ? (request.user as any).id : 'unknown';
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const userEmail = request.user ? (request.user as any).email : 'unknown';
+
+        const eventContext: import('../../../events/types').EventContext = {
+          db: server.db,
+          logger: request.log,
+          user: request.user ? {
+            id: userId,
+            email: userEmail,
+            roleId: 'unknown'
+          } : undefined,
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.MCP_DEPLOYMENT_FAILED,
+          {
+            deployment: {
+              repositoryUrl,
+              branch,
+              step
+            },
+            error: {
+              message: errorMessage,
+              code: errorCode
+            },
+            attemptedBy: {
+              id: userId,
+              email: userEmail
+            },
+            metadata: {
+              ip: request.ip,
+              duration: Date.now() - deploymentStartTime
+            }
+          },
+          eventContext
+        );
+        request.log.info({ step, error: errorMessage }, 'MCP_DEPLOYMENT_FAILED event emitted');
+      } catch (eventError) {
+        request.log.error(eventError, 'Failed to emit MCP_DEPLOYMENT_FAILED event:');
+        // Don't break the response if event emission fails
+      }
+    };
+
     // Check if deployment feature is enabled
     const deploymentEnabled = await GlobalSettings.getBoolean('deployment.enabled', false);
     if (!deploymentEnabled) {
+      const { repository_url = 'unknown', branch = 'unknown' } = (request.body || {}) as DeployRequest;
+      const errorMsg = 'GitHub deployment feature is not enabled. Please contact your DeployStack administrator to enable this feature in Global Settings.';
+      emitFailureEvent(repository_url, branch, 'feature_disabled', errorMsg, 'FEATURE_DISABLED');
       const errorResponse: ErrorResponse = {
         success: false,
-        error: 'GitHub deployment feature is not enabled. Please contact your DeployStack administrator to enable this feature in Global Settings.'
+        error: errorMsg
       };
       const jsonString = JSON.stringify(errorResponse);
       return reply.status(403).type('application/json').send(jsonString);
@@ -206,9 +271,11 @@ export default async function deployRoutes(server: FastifyInstance) {
 
     // Validate source
     if (source !== 'github') {
+      const errorMsg = 'Only GitHub source is supported';
+      emitFailureEvent(repository_url, branch, 'invalid_source', errorMsg, 'INVALID_SOURCE');
       const errorResponse: ErrorResponse = {
         success: false,
-        error: 'Only GitHub source is supported'
+        error: errorMsg
       };
       const jsonString = JSON.stringify(errorResponse);
       return reply.status(400).type('application/json').send(jsonString);
@@ -241,6 +308,7 @@ export default async function deployRoutes(server: FastifyInstance) {
         .limit(1);
 
       if (!teamData || teamData.length === 0) {
+        emitFailureEvent(repository_url, branch, 'validate_team', 'Team not found', 'TEAM_NOT_FOUND');
         const errorResponse: ErrorResponse = {
           success: false,
           error: 'Team not found',
@@ -262,9 +330,11 @@ export default async function deployRoutes(server: FastifyInstance) {
 
       // Check total limit
       if (totalCount >= team.mcp_server_limit) {
+        const errorMsg = `Team has reached the maximum limit of ${team.mcp_server_limit} MCP server installations. Current installations: ${totalCount}. Please remove existing installations or contact your administrator to increase the limit.`;
+        emitFailureEvent(repository_url, branch, 'validate_total_limit', errorMsg, 'TOTAL_LIMIT_EXCEEDED');
         const errorResponse: ErrorResponse = {
           success: false,
-          error: `Team has reached the maximum limit of ${team.mcp_server_limit} MCP server installations. Current installations: ${totalCount}. Please remove existing installations or contact your administrator to increase the limit.`,
+          error: errorMsg,
           step: 'validate_total_limit'
         };
         const jsonString = JSON.stringify(errorResponse);
@@ -287,9 +357,11 @@ export default async function deployRoutes(server: FastifyInstance) {
 
       // Check GitHub limit
       if (githubCount >= team.github_mcp_limit) {
+        const errorMsg = `Team has reached the maximum limit of ${team.github_mcp_limit} GitHub MCP server deployments. Current GitHub deployments: ${githubCount}. Please remove existing GitHub deployments or contact your administrator to increase the limit.`;
+        emitFailureEvent(repository_url, branch, 'validate_github_limit', errorMsg, 'GITHUB_LIMIT_EXCEEDED');
         const errorResponse: ErrorResponse = {
           success: false,
-          error: `Team has reached the maximum limit of ${team.github_mcp_limit} GitHub MCP server deployments. Current GitHub deployments: ${githubCount}. Please remove existing GitHub deployments or contact your administrator to increase the limit.`,
+          error: errorMsg,
           step: 'validate_github_limit'
         };
         const jsonString = JSON.stringify(errorResponse);
@@ -309,181 +381,56 @@ export default async function deployRoutes(server: FastifyInstance) {
       const credentialService = new DeploymentCredentialService(db);
 
       // ============================================
-      // STEP 1: Parse GitHub URL
+      // STEP 1-6: Validate Repository (Shared Logic)
       // ============================================
-      let owner: string;
-      let repo: string;
-      try {
-        const parsed = parseGitHubUrl(repository_url);
-        owner = parsed.owner;
-        repo = parsed.repo;
-        request.log.debug({ owner, repo }, 'Parsed GitHub URL');
-      } catch {
+      request.log.info({ repository_url, branch }, 'Validating repository using shared service');
+
+      const repoValidationResult = await DeploymentValidationService.validate(
+        {
+          teamId,
+          repository_url,
+          branch,
+          userId
+        },
+        credentialService
+      );
+
+      if (!repoValidationResult.valid) {
+        request.log.warn({
+          operation: 'github_deployment_validation_failed',
+          teamId,
+          step: repoValidationResult.step,
+          error: repoValidationResult.error
+        }, 'GitHub repository validation failed');
+
+        emitFailureEvent(repository_url, branch, repoValidationResult.step || 'validation_failed', repoValidationResult.error!, 'VALIDATION_FAILED');
         const errorResponse: ErrorResponse = {
           success: false,
-          error: 'Invalid GitHub URL format. Expected: https://github.com/owner/repo',
-          step: 'parse_github_url'
+          error: repoValidationResult.error!,
+          step: repoValidationResult.step
         };
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      // ============================================
-      // STEP 2: Get GitHub App Installation Token
-      // ============================================
-      const githubInstallation = await credentialService.getInstallation(teamId, 'github');
-      if (!githubInstallation) {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'Team does not have GitHub App installed. Please install the GitHub App first.',
-          step: 'check_github_installation'
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
+      // Extract validated metadata
+      const { metadata } = repoValidationResult;
+      const commitSha = metadata!.commit_sha;
+      const packageName = metadata!.name;
+      const packageVersion = metadata!.version;
+      const packageDescription = metadata!.description;
+      const packageLicense = metadata!.license;
+      const runtime = metadata!.runtime;
 
-      // Generate ephemeral installation access token (1-hour expiry)
-      const config = await getGitHubAppConfig();
+      request.log.info({
+        packageName,
+        version: packageVersion,
+        runtime,
+        mcpSdkDetected: metadata!.mcp_sdk.detected
+      }, 'Repository validated successfully');
 
-      const auth = createAppAuth({
-        appId: config.appId,
-        privateKey: config.privateKey,
-        installationId: githubInstallation.installationId
-      });
-
-      const { token } = await auth({ type: 'installation' });
-      const octokit = new Octokit({ auth: token });
-
-      // ============================================
-      // STEP 3: Validate Repository Exists
-      // ============================================
-      request.log.debug({ owner, repo }, 'Validating repository access');
-      try {
-        const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
-
-        // Check if repository is empty (no commits)
-        if (repoData.size === 0 || !repoData.default_branch) {
-          const errorResponse: ErrorResponse = {
-            success: false,
-            error: `Repository ${owner}/${repo} is empty. Please push code to the repository before deploying.`,
-            step: 'validate_repository_not_empty'
-          };
-          const jsonString = JSON.stringify(errorResponse);
-          return reply.status(400).type('application/json').send(jsonString);
-        }
-      } catch (error: unknown) {
-        if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-          const errorResponse: ErrorResponse = {
-            success: false,
-            error: `Repository ${owner}/${repo} not found or not accessible. Ensure the GitHub App has access to this repository.`,
-            step: 'validate_repository_access'
-          };
-          const jsonString = JSON.stringify(errorResponse);
-          return reply.status(400).type('application/json').send(jsonString);
-        }
-        throw error;
-      }
-
-      // ============================================
-      // STEP 4: Get Latest Commit SHA
-      // ============================================
-      request.log.debug({ owner, repo, branch }, 'Fetching latest commit SHA');
-      let commitSha: string;
-      try {
-        const { data: branchData } = await octokit.rest.repos.getBranch({
-          owner,
-          repo,
-          branch
-        });
-        commitSha = branchData.commit.sha;
-        request.log.debug({ commitSha }, 'Fetched commit SHA');
-      } catch (error: unknown) {
-        if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-          const errorResponse: ErrorResponse = {
-            success: false,
-            error: `Branch '${branch}' not found in ${owner}/${repo}. Please check the branch name.`,
-            step: 'validate_branch_exists'
-          };
-          const jsonString = JSON.stringify(errorResponse);
-          return reply.status(400).type('application/json').send(jsonString);
-        }
-        throw error;
-      }
-
-      // ============================================
-      // STEP 5: Read package.json
-      // ============================================
-      request.log.debug({ owner, repo, commitSha }, 'Reading package.json');
-      let packageJson: {
-        name?: string;
-        version?: string;
-        description?: string;
-        license?: string;
-        dependencies?: Record<string, string>;
-        devDependencies?: Record<string, string>;
-      };
-      try {
-        const { data: packageJsonFile } = await octokit.rest.repos.getContent({
-          owner,
-          repo,
-          path: 'package.json',
-          ref: commitSha
-        });
-
-        if (!('content' in packageJsonFile) || Array.isArray(packageJsonFile)) {
-          const errorResponse: ErrorResponse = {
-            success: false,
-            error: 'package.json not found in repository root',
-            step: 'validate_package_json'
-          };
-          const jsonString = JSON.stringify(errorResponse);
-          return reply.status(400).type('application/json').send(jsonString);
-        }
-
-        packageJson = JSON.parse(
-          Buffer.from(packageJsonFile.content, 'base64').toString('utf8')
-        );
-      } catch (error: unknown) {
-        if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-          const errorResponse: ErrorResponse = {
-            success: false,
-            error: 'package.json not found in repository',
-            step: 'validate_package_json'
-          };
-          const jsonString = JSON.stringify(errorResponse);
-          return reply.status(400).type('application/json').send(jsonString);
-        }
-        throw error;
-      }
-
-      // ============================================
-      // STEP 6: Validate MCP SDK Dependency
-      // ============================================
-      const hasMcpSdk = packageJson.dependencies?.['@modelcontextprotocol/sdk'] ||
-                        packageJson.devDependencies?.['@modelcontextprotocol/sdk'];
-
-      if (!hasMcpSdk) {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'Not a valid MCP server (missing @modelcontextprotocol/sdk dependency)',
-          step: 'validate_mcp_sdk'
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
-
-      request.log.info({ packageName: packageJson.name, version: packageJson.version }, 'Valid MCP server detected');
-
-      // Ensure package.json has required fields
-      if (!packageJson.name) {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: 'package.json missing required "name" field',
-          step: 'validate_package_json'
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
+      // Parse GitHub URL for owner/repo (needed for server creation)
+      const { owner, repo } = parseGitHubUrl(repository_url);
 
       // ============================================
       // STEP 7: Create mcpServers Entry
@@ -492,7 +439,7 @@ export default async function deployRoutes(server: FastifyInstance) {
 
       // Generate unique slug using McpSlugService (same as catalog servers)
       const serverSlug = await McpSlugService.generateSlug(
-        packageJson.name,
+        packageName!,
         'team',
         teamId,
         db
@@ -501,12 +448,12 @@ export default async function deployRoutes(server: FastifyInstance) {
       try {
         await db.insert(schema.mcpServers).values({
         id: serverId,
-        name: packageJson.name,
+        name: packageName!,
         official_name: null,
         slug: serverSlug,
-        description: packageJson.description || 'GitHub-deployed MCP server',
-        long_description: packageJson.description || '',
-        version: packageJson.version,
+        description: packageDescription || 'GitHub-deployed MCP server',
+        long_description: packageDescription || '',
+        version: packageVersion,
         repository_url: repository_url,
         repository_source: 'github',
         repository_id: null,
@@ -515,8 +462,8 @@ export default async function deployRoutes(server: FastifyInstance) {
         git_commit_sha: commitSha,
         website_url: null,
         icon_url: null,
-        language: 'typescript',
-        runtime: 'node',
+        language: runtime === 'node' ? 'typescript' : runtime === 'python' ? 'python' : runtime === 'go' ? 'go' : 'typescript',
+        runtime: runtime,
         transport_type: 'stdio', // Hardcoded for GitHub deployments
         github_account_id: null,
         github_readme_base64: null,
@@ -533,7 +480,7 @@ export default async function deployRoutes(server: FastifyInstance) {
         prompts: null,
         visibility: 'team',
         owner_team_id: teamId,
-        license: packageJson.license || null,
+        license: packageLicense || null,
         // Template tier - locked GitHub reference (base args that can't be changed)
         template_args: JSON.stringify([
           { value: '-y', locked: true, description: 'Auto-confirm npx', order: 0 },
@@ -617,10 +564,10 @@ export default async function deployRoutes(server: FastifyInstance) {
           {
             server: {
               id: serverId,
-              name: packageJson.name,
-              description: packageJson.description || 'GitHub-deployed MCP server',
-              language: 'typescript',
-              runtime: 'node'
+              name: packageName!,
+              description: packageDescription || 'GitHub-deployed MCP server',
+              language: runtime === 'node' ? 'typescript' : runtime === 'python' ? 'python' : runtime === 'go' ? 'go' : 'typescript',
+              runtime: runtime
             },
             createdBy: {
               id: userId,
@@ -643,27 +590,35 @@ export default async function deployRoutes(server: FastifyInstance) {
       // STEP 8: Create Installation (like /installations/create.ts)
       // ============================================
 
-      // Determine satellite_id: use provided value or auto-select
-      let satelliteId: string | undefined = satellite_id;
+      // Validate satellite using shared validation service
+      const satelliteValidationService = new SatelliteValidationService(db, request.log);
 
-      // If not provided, get team's first available satellite (global or team satellite)
-      if (!satelliteId) {
-        const { satellites } = getSchema();
-        const teamSatellites = await db
-          .select({
-            id: satellites.id
-          })
-          .from(satellites)
-          .where(
-            or(
-              eq(satellites.satellite_type, 'global'),
-              eq(satellites.team_id, teamId)
-            )
-          )
-          .limit(1);
+      const satelliteValidationResult = await satelliteValidationService.validateSatellite({
+        satelliteId: satellite_id,
+        teamId,
+        autoSelect: true
+      });
 
-        satelliteId = teamSatellites.length > 0 ? teamSatellites[0].id : undefined;
+      if (!satelliteValidationResult.valid) {
+        emitFailureEvent(
+          repository_url,
+          branch,
+          'validate_satellite',
+          satelliteValidationResult.error!,
+          satelliteValidationResult.errorCode
+        );
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: satelliteValidationResult.error!,
+          step: 'validate_satellite'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        // Map httpStatus to allowed status codes (400, 403 are the only ones we use)
+        const statusCode = satelliteValidationResult.httpStatus === 403 ? 403 : 400;
+        return reply.status(statusCode).type('application/json').send(jsonString);
       }
+
+      const satelliteId = satelliteValidationResult.satelliteId;
 
       const installationService = new McpInstallationService(db, request.log);
       const mcpInstallation = await installationService.createInstallation(
@@ -671,7 +626,7 @@ export default async function deployRoutes(server: FastifyInstance) {
         userId,
         {
           server_id: serverId,
-          installation_name: `GitHub: ${packageJson.name}`,
+          installation_name: `GitHub: ${packageName}`,
           installation_type: 'team',
           satellite_id: satelliteId,
           team_args: template_args,
@@ -811,7 +766,56 @@ export default async function deployRoutes(server: FastifyInstance) {
       }
 
       // ============================================
-      // STEP 12: Return Success (Installation Created!)
+      // STEP 12: Emit Deployment Success Event
+      // ============================================
+      try {
+        const eventContext: import('../../../events/types').EventContext = {
+          db: server.db,
+          logger: request.log,
+          user: {
+            id: userId,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            email: (request.user as any).email,
+            roleId: 'unknown'
+          },
+          request: {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            requestId: request.id
+          },
+          timestamp: new Date()
+        };
+
+        server.eventBus.emitWithContext(
+          EVENT_NAMES.MCP_DEPLOYMENT_SUCCEEDED,
+          {
+            deployment: {
+              installationId: mcpInstallation.id,
+              serverId,
+              commitSha,
+              repositoryUrl: repository_url,
+              branch
+            },
+            deployedBy: {
+              id: userId,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              email: (request.user as any).email
+            },
+            metadata: {
+              ip: request.ip,
+              duration: Date.now() - deploymentStartTime
+            }
+          },
+          eventContext
+        );
+        request.log.info(`MCP_DEPLOYMENT_SUCCEEDED event emitted for installation: ${mcpInstallation.id}`);
+      } catch (eventError) {
+        request.log.error(eventError, `Failed to emit MCP_DEPLOYMENT_SUCCEEDED event for installation ${mcpInstallation.id}:`);
+        // Don't fail deployment if event emission fails
+      }
+
+      // ============================================
+      // STEP 13: Return Success (Installation Created!)
       // ============================================
       const successResponse: DeploySuccessResponse = {
         success: true,
@@ -827,6 +831,13 @@ export default async function deployRoutes(server: FastifyInstance) {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorStep = (error as any).step || 'internal_error';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errorCode = (error as any).code;
+
+      const { teamId } = request.params as { teamId: string };
+      const { repository_url = 'unknown', branch = 'unknown' } = (request.body || {}) as DeployRequest;
 
       request.log.error({
         operation: 'github_deployment_failed',
@@ -835,10 +846,13 @@ export default async function deployRoutes(server: FastifyInstance) {
         stack: errorStack
       }, 'GitHub deployment failed');
 
+      // Emit deployment failed event using helper
+      emitFailureEvent(repository_url, branch, errorStep, errorMessage, errorCode);
+
       const errorResponse: ErrorResponse = {
         success: false,
         error: errorMessage || 'Internal server error during deployment',
-        step: 'internal_error'
+        step: errorStep
       };
       const jsonString = JSON.stringify(errorResponse);
       return reply.status(500).type('application/json').send(jsonString);

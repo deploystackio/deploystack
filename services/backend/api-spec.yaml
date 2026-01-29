@@ -10754,6 +10754,188 @@ paths:
                   - success
                   - error
                 description: Forbidden
+  /api/teams/{teamId}/deploy/validate:
+    post:
+      summary: Validate GitHub repository for deployment
+      tags:
+        - Deployment
+      description: Validates GitHub repository without creating any database entries.
+        Returns repository metadata including runtime, MCP SDK, and build
+        scripts. This is a lightweight validation endpoint used before the
+        actual deployment.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                repository_url:
+                  type: string
+                  minLength: 1
+                  description: GitHub repository URL (e.g., https://github.com/user/repo)
+                branch:
+                  type: string
+                  minLength: 1
+                  description: Git branch to validate (e.g., main)
+              required:
+                - repository_url
+                - branch
+              additionalProperties: false
+        required: true
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Repository validated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  metadata:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      version:
+                        type: string
+                      description:
+                        type: string
+                      runtime:
+                        type: string
+                        enum:
+                          - node
+                          - python
+                          - go
+                          - unknown
+                      mcp_sdk:
+                        type: object
+                        properties:
+                          detected:
+                            type: boolean
+                          version:
+                            type: string
+                          package:
+                            type: string
+                          runtime:
+                            type: string
+                            enum:
+                              - node
+                              - python
+                              - go
+                              - unknown
+                        required:
+                          - detected
+                          - runtime
+                      scripts:
+                        type: object
+                        additionalProperties:
+                          type: string
+                      commit_sha:
+                        type: string
+                    required:
+                      - runtime
+                      - mcp_sdk
+                      - commit_sha
+                required:
+                  - valid
+                  - metadata
+                description: Repository validated successfully
+        "400":
+          description: Validation error (missing package.json, invalid MCP SDK, etc.)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  error:
+                    type: string
+                  step:
+                    type: string
+                required:
+                  - valid
+                  - error
+                description: Validation error (missing package.json, invalid MCP SDK, etc.)
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  error:
+                    type: string
+                  step:
+                    type: string
+                required:
+                  - valid
+                  - error
+                description: Unauthorized
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  error:
+                    type: string
+                  step:
+                    type: string
+                required:
+                  - valid
+                  - error
+                description: Forbidden
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  error:
+                    type: string
+                  step:
+                    type: string
+                required:
+                  - valid
+                  - error
+                description: Team not found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  error:
+                    type: string
+                  step:
+                    type: string
+                required:
+                  - valid
+                  - error
+                description: Internal Server Error
   /api/teams/{teamId}/deploy:
     post:
       summary: Deploy MCP server from GitHub (synchronous)

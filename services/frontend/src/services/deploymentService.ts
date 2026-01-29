@@ -124,6 +124,58 @@ export class DeploymentService {
   }
 
   /**
+   * Validate a repository before deployment (lightweight validation)
+   */
+  static async validateRepository(
+    teamId: string,
+    data: {
+      repository_url: string
+      branch: string
+    }
+  ): Promise<{
+    valid: boolean
+    metadata?: {
+      name?: string
+      version?: string
+      description?: string
+      runtime: 'node' | 'python' | 'go' | 'unknown'
+      mcp_sdk: {
+        detected: boolean
+        version?: string
+        package: string
+        runtime: 'node' | 'python' | 'go' | 'unknown'
+      }
+      scripts?: {
+        build?: string
+        start?: string
+        [key: string]: string | undefined
+      }
+      commit_sha: string
+    }
+    error?: string
+    step?: string
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/deploy/validate`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Validation failed')
+    }
+
+    return response.json()
+  }
+
+  /**
    * Create a new deployment (synchronous - returns installation_id)
    */
   static async createDeployment(
@@ -142,6 +194,7 @@ export class DeploymentService {
           source: 'github',
           repository_url: params.repository_url,
           branch: params.branch,
+          satellite_id: params.satellite_id,
           team_env: params.team_env || {},
           template_args: params.template_args || []
         })

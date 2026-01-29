@@ -3,16 +3,14 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import NavbarLayout from '@/components/NavbarLayout.vue'
-import { DsProgressSteps, type ProgressStep } from '@/components/ui/ds-progress-steps'
+import { DsProgressSteps, DsProgressStepsFooter, type ProgressStep } from '@/components/ui/ds-progress-steps'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
 import { Settings } from 'lucide-vue-next'
-import ConnectGitHubStep from '@/components/deploy/steps/ConnectGitHubStep.vue'
 import SelectRepositoryStep from '@/components/deploy/steps/SelectRepositoryStep.vue'
 import SelectSatelliteStep from '@/components/deploy/steps/SelectSatelliteStep.vue'
 import ConfigureEnvironmentStep from '@/components/deploy/steps/ConfigureEnvironmentStep.vue'
 import ValidatingDeploymentStep from '@/components/deploy/steps/ValidatingDeploymentStep.vue'
-import StreamingLogsStep from '@/components/deploy/steps/StreamingLogsStep.vue'
-import DeploymentSuccessStep from '@/components/deploy/steps/DeploymentSuccessStep.vue'
+import DeploymentProgressStep from '@/components/deploy/steps/DeploymentProgressStep.vue'
 import { DeploymentService } from '@/services/deploymentService'
 import { useTeamContext } from '@/composables/useTeamContext'
 import { toast } from 'vue-sonner'
@@ -25,8 +23,28 @@ const { selectedTeam, teamId, isLoading: isLoadingTeam, allowGithubMcp } = useTe
 
 const currentStep = ref(0)
 const completedSteps = ref<number[]>([])
+const loadingSteps = ref<number[]>([])
 const featureDisabled = ref(false)
 const isCheckingFeature = ref(true)
+
+interface ValidationMetadata {
+  name?: string
+  version?: string
+  description?: string
+  runtime: 'node' | 'python' | 'go' | 'unknown'
+  mcp_sdk: {
+    detected: boolean
+    version?: string
+    package: string
+    runtime: 'node' | 'python' | 'go' | 'unknown'
+  }
+  scripts?: {
+    build?: string
+    start?: string
+    [key: string]: string | undefined
+  }
+  commit_sha: string
+}
 
 const formData = ref({
   repository: {
@@ -36,6 +54,10 @@ const formData = ref({
   },
   satellite: {
     satellite_id: ''
+  },
+  validation: {
+    metadata: null as ValidationMetadata | null,
+    validated: false
   },
   config: {
     teamEnv: {} as Record<string, string>,
@@ -49,44 +71,34 @@ const formData = ref({
 })
 
 // State for validation step
+const isValidating = ref(false)
+const validationError = ref<{ error: string; step: string } | null>(null)
+
+// State for deployment step
 const isDeploying = ref(false)
 const deploymentError = ref<{ error: string; step: string } | null>(null)
+const isDeploymentOnline = ref(false)
 
 const progressSteps = computed<ProgressStep[]>(() => [
   {
     id: 1,
-    title: t('deployments.wizard.steps.connectGitHub'),
-    description: t('deployments.wizard.stepDescriptions.connectGitHub')
+    title: t('deployments.wizard.steps.selectRepository')
   },
   {
     id: 2,
-    title: t('deployments.wizard.steps.selectRepository'),
-    description: t('deployments.wizard.stepDescriptions.selectRepository')
+    title: t('deployments.wizard.steps.selectSatellite')
   },
   {
     id: 3,
-    title: t('deployments.wizard.steps.selectSatellite'),
-    description: t('deployments.wizard.stepDescriptions.selectSatellite')
+    title: t('deployments.wizard.steps.validate')
   },
   {
     id: 4,
-    title: t('deployments.wizard.steps.configureEnvironment'),
-    description: t('deployments.wizard.stepDescriptions.configureEnvironment')
+    title: t('deployments.wizard.steps.configureEnvironment')
   },
   {
     id: 5,
-    title: t('deployments.wizard.steps.validate'),
-    description: t('deployments.wizard.stepDescriptions.validate')
-  },
-  {
-    id: 6,
-    title: t('deployments.wizard.steps.streaming'),
-    description: t('deployments.wizard.stepDescriptions.streaming')
-  },
-  {
-    id: 7,
-    title: t('deployments.wizard.steps.success'),
-    description: t('deployments.wizard.stepDescriptions.success')
+    title: t('deployments.wizard.steps.deployProgress')
   }
 ])
 
@@ -105,8 +117,77 @@ function previousStep() {
   }
 }
 
-function handleGitHubConnected() {
-  // GitHub is connected, wizard will auto-advance
+async function handleValidate() {
+  try {
+    if (!teamId.value) {
+      toast.error('No team selected')
+      return
+    }
+
+    // Move to Step 3 (Validating) immediately
+    nextStep()
+    isValidating.value = true
+    validationError.value = null
+
+    // Call validation endpoint
+    const result = await DeploymentService.validateRepository(teamId.value, {
+      repository_url: formData.value.repository.url,
+      branch: formData.value.repository.branch
+    })
+
+    // Store validation metadata
+    formData.value.validation.metadata = result.metadata ?? null
+    formData.value.validation.validated = true
+
+    isValidating.value = false
+
+    // DO NOT auto-advance - let user review validation results and manually click "Next"
+  } catch (error) {
+    isValidating.value = false
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    validationError.value = {
+      error: errorMessage,
+      step: 'validation_failed'
+    }
+
+    // Stay on Step 3 (Validate) to show error
+  }
+}
+
+async function handleRetryValidation() {
+  // Retry validation
+  validationError.value = null
+  isValidating.value = true
+
+  try {
+    if (!teamId.value) {
+      toast.error('No team selected')
+      return
+    }
+
+    // Call validation endpoint again
+    const result = await DeploymentService.validateRepository(teamId.value, {
+      repository_url: formData.value.repository.url,
+      branch: formData.value.repository.branch
+    })
+
+    // Store validation metadata
+    formData.value.validation.metadata = result.metadata ?? null
+    formData.value.validation.validated = true
+
+    isValidating.value = false
+
+    // DO NOT auto-advance - let user review validation results
+  } catch (error) {
+    isValidating.value = false
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    validationError.value = {
+      error: errorMessage,
+      step: 'validation_failed'
+    }
+  }
 }
 
 async function handleDeploy() {
@@ -116,8 +197,6 @@ async function handleDeploy() {
       return
     }
 
-    // Move to Step 5 (Validating) immediately
-    nextStep()
     isDeploying.value = true
     deploymentError.value = null
 
@@ -137,7 +216,8 @@ async function handleDeploy() {
 
     isDeploying.value = false
 
-    // Move to Step 5 (Streaming Logs)
+    // Move to Step 5 (Streaming Logs) and mark it as loading
+    loadingSteps.value.push(4)
     nextStep()
   } catch (error) {
     isDeploying.value = false
@@ -149,19 +229,32 @@ async function handleDeploy() {
       step: 'deployment_failed'
     }
 
-    // Stay on Step 4 to show error
+    // Stay on Step 3 (Configure & Deploy) to show error
   }
 }
 
 function handleRetryDeploy() {
-  // Go back to Step 4 (Configure Environment) to retry
-  currentStep.value = 3
+  // Clear error and retry
   deploymentError.value = null
+  handleDeploy()
 }
 
-function handleCancelStreaming() {
-  // Go back to beginning or list
-  router.push('/deploy')
+function handleDeploymentOnline() {
+  // Deployment is online, show footer button
+  isDeploymentOnline.value = true
+
+  // Mark step 4 as completed (stops the spinner in progress indicator)
+  if (!completedSteps.value.includes(4)) {
+    completedSteps.value.push(4)
+  }
+
+  // Remove loading state from step 4
+  loadingSteps.value = loadingSteps.value.filter(step => step !== 4)
+}
+
+function handleViewInstallation() {
+  // Navigate to installation detail page
+  router.push(`/mcp-server/installation/${formData.value.deployment.installation_id}/general`)
 }
 
 onMounted(async () => {
@@ -265,18 +358,12 @@ watch(selectedTeam, (newTeam) => {
         :steps="progressSteps"
         :current-step="currentProgressStep"
         :completed-steps="completedSteps"
+        :loading-steps="loadingSteps"
         max-width="max-w-3xl"
+        :hide-footer="true"
       >
-        <!-- Step 1: Connect GitHub -->
+        <!-- Step 1: Select Repository -->
         <template #step-content-0>
-          <ConnectGitHubStep
-            @connected="handleGitHubConnected"
-            @next="nextStep"
-          />
-        </template>
-
-        <!-- Step 2: Select Repository -->
-        <template #step-content-1>
           <SelectRepositoryStep
             v-model="formData.repository"
             @next="nextStep"
@@ -284,52 +371,109 @@ watch(selectedTeam, (newTeam) => {
           />
         </template>
 
-        <!-- Step 3: Select Satellite -->
-        <template #step-content-2>
+        <template #step-footer-0>
+          <DsProgressStepsFooter
+            :next-button-text="$t('deployments.wizard.buttons.next')"
+            :is-next-disabled="currentStep !== 0 || !formData.repository.url"
+            @next="nextStep"
+          />
+        </template>
+
+        <!-- Step 2: Select Satellite -->
+        <template #step-content-1>
           <SelectSatelliteStep
             v-model="formData.satellite"
-            @next="nextStep"
+            @next="handleValidate"
             @back="previousStep"
           />
         </template>
 
-        <!-- Step 4: Configure Environment -->
+        <template #step-footer-1>
+          <DsProgressStepsFooter
+            :next-button-text="$t('deployments.wizard.buttons.next')"
+            :is-next-disabled="currentStep !== 1 || !formData.satellite.satellite_id"
+            :is-next-loading="isValidating"
+            @next="handleValidate"
+          />
+        </template>
+
+        <!-- Step 3: Validate Repository -->
+        <template #step-content-2>
+          <ValidatingDeploymentStep
+            :is-loading="isValidating"
+            :error="validationError"
+            :metadata="formData.validation.metadata"
+            @back="previousStep"
+            @retry="handleRetryValidation"
+          />
+        </template>
+
+        <template #step-footer-2>
+          <DsProgressStepsFooter
+            v-if="validationError"
+            :next-button-text="$t('deployments.wizard.validating.error.tryAgain')"
+            :is-next-disabled="currentStep !== 2"
+            @next="handleRetryValidation"
+          />
+          <DsProgressStepsFooter
+            v-else-if="!isValidating && formData.validation.validated"
+            :next-button-text="$t('deployments.wizard.buttons.next')"
+            :is-next-disabled="currentStep !== 2"
+            @next="nextStep"
+          />
+        </template>
+
+        <!-- Step 4: Configure & Deploy -->
         <template #step-content-3>
           <ConfigureEnvironmentStep
             v-model="formData.config"
             :repository-name="formData.repository.name"
             :branch="formData.repository.branch"
+            :error="deploymentError"
             @deploy="handleDeploy"
             @back="previousStep"
           />
         </template>
 
-        <!-- Step 5: Validating Deployment -->
+        <template #step-footer-3>
+          <!-- Show "Try Again" button when error exists -->
+          <DsProgressStepsFooter
+            v-if="deploymentError"
+            :next-button-text="$t('deployments.wizard.deployment.error.tryAgain')"
+            :is-next-disabled="currentStep !== 3"
+            next-button-class="bg-green-600 hover:bg-green-700 text-white"
+            @next="handleRetryDeploy"
+          />
+          <!-- Show normal "Deploy" button otherwise -->
+          <DsProgressStepsFooter
+            v-else
+            :next-button-text="$t('deployments.wizard.buttons.deploy')"
+            :is-next-disabled="currentStep !== 3"
+            :is-next-loading="isDeploying"
+            :next-loading-text="$t('deployments.wizard.buttons.deploying')"
+            next-button-class="bg-green-600 hover:bg-green-700 text-white"
+            @next="handleDeploy"
+          />
+        </template>
+
+        <!-- Step 5: Deployment Progress -->
         <template #step-content-4>
-          <ValidatingDeploymentStep
-            :is-loading="isDeploying"
-            :error="deploymentError"
-            @back="previousStep"
-            @retry="handleRetryDeploy"
-          />
-        </template>
-
-        <!-- Step 6: Streaming Logs & Status -->
-        <template #step-content-5>
-          <StreamingLogsStep
-            :installation-id="formData.deployment.installation_id"
-            @next="nextStep"
-            @cancel="handleCancelStreaming"
-          />
-        </template>
-
-        <!-- Step 7: Success -->
-        <template #step-content-6>
-          <DeploymentSuccessStep
+          <DeploymentProgressStep
             :installation-id="formData.deployment.installation_id"
             :repository-name="formData.repository.name"
             :branch="formData.repository.branch"
             :commit-sha="formData.deployment.commit_sha"
+            @deployment-online="handleDeploymentOnline"
+          />
+        </template>
+
+        <template #step-footer-4>
+          <DsProgressStepsFooter
+            v-if="currentStep === 4"
+            :next-button-text="isDeploymentOnline ? $t('deployments.wizard.deployProgress.viewInstallation') : $t('deployments.wizard.deployProgress.deploying')"
+            :is-next-disabled="!isDeploymentOnline"
+            :is-next-loading="!isDeploymentOnline"
+            @next="handleViewInstallation"
           />
         </template>
       </DsProgressSteps>
