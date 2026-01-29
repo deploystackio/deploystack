@@ -206,12 +206,13 @@ export class ProcessSpawner {
    * Spawn process with nsjail isolation (production mode on Linux)
    *
    * Configuration supports multiple runtimes (Node.js, Python, etc.):
-   * - Memory: 2048MB (adequate for V8 and Python interpreters)
+   * - Memory: 2048MB virtual (RLIMIT_AS), 512MB physical (cgroup)
    * - Processes: 1000 (package managers spawn many child processes)
    * - File descriptors: 1024 (adequate for I/O operations)
    * - File size: 50MB (prevents oversized downloads)
    * - /dev files: Required for crypto and I/O operations
    * - --proc_rw: Required for pthread_create and thread management
+   * - Cgroup limits: Precise control over physical memory and CPU usage
    */
   async spawnWithNsjail(config: MCPServerConfig): Promise<ChildProcess> {
     // Determine runtime (default to 'node' for backward compatibility)
@@ -227,12 +228,14 @@ export class ProcessSpawner {
       runtime: runtime,
       cache_dir: cacheDir,
       memory_limit_mb: nsjailConfig.memoryLimitMB,
+      cgroup_mem_max_mb: Math.floor(nsjailConfig.cgroupMemMaxBytes / (1024 * 1024)),
       cpu_time_limit_seconds: nsjailConfig.cpuTimeLimitSeconds,
       max_processes: nsjailConfig.maxProcesses,
+      cgroup_pids_max: nsjailConfig.cgroupPidsMax,
       max_open_files: nsjailConfig.maxOpenFiles,
       max_file_size_mb: nsjailConfig.maxFileSizeMB,
       tmpfs_size: nsjailConfig.tmpfsSize
-    }, `Spawning ${runtime} MCP server with nsjail isolation`);
+    }, `Spawning ${runtime} MCP server with nsjail isolation (cgroup mem: 512MB)`);
 
     // Get current user UID and GID (deploystack user in production)
     const uid = process.getuid ? process.getuid() : 1000;
@@ -259,6 +262,9 @@ export class ProcessSpawner {
       '--rlimit_nofile', String(nsjailConfig.maxOpenFiles), // Max file descriptors
       '--rlimit_fsize', String(nsjailConfig.maxFileSizeMB), // Max file size (MB)
       '--time_limit', '0',                      // No wall-clock time limit
+      // Cgroup limits for precise resource control
+      '--cgroup_mem_max', String(nsjailConfig.cgroupMemMaxBytes), // Physical memory limit (512MB)
+      '--cgroup_pids_max', String(nsjailConfig.cgroupPidsMax),   // Process limit (1000)
       '-R', '/usr',                             // Read-only mount: /usr
       '-R', '/lib',                             // Read-only mount: /lib
       '-R', '/lib64',                           // Read-only mount: /lib64

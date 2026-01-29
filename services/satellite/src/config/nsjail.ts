@@ -3,7 +3,8 @@
  * These limits apply only in production on Linux platforms when nsjail isolation is enabled
  *
  * Defaults based on empirical testing with package managers (npm, uvx) and runtime requirements:
- * - 2048MB memory: Sufficient for V8, Python interpreters, and other runtimes
+ * - 2048MB virtual memory (RLIMIT_AS): Fallback for systems without cgroup support
+ * - 512MB physical memory (cgroup_mem_max): Precise control over actual memory usage
  * - 1000 processes: Adequate for package managers which spawn many child processes
  * - 1024 file descriptors: Adequate for file I/O operations
  * - 50MB file size: Prevents oversized downloads while accommodating most packages
@@ -13,11 +14,17 @@ export const nsjailConfig = {
   /** Memory limit per MCP server process in MB (default: 2048, sufficient for most runtimes) */
   memoryLimitMB: parseInt(process.env.NSJAIL_MEMORY_LIMIT_MB || '2048', 10),
 
+  /** Cgroup physical memory limit in bytes (default: 512MB = 536870912 bytes) */
+  cgroupMemMaxBytes: parseInt(process.env.NSJAIL_CGROUP_MEM_MAX_BYTES || '536870912', 10),
+
   /** CPU time limit per MCP server process in seconds (default: 60) */
   cpuTimeLimitSeconds: parseInt(process.env.NSJAIL_CPU_TIME_LIMIT_SECONDS || '60', 10),
 
   /** Maximum number of processes per MCP server (default: 1000, required for package managers) */
   maxProcesses: parseInt(process.env.NSJAIL_MAX_PROCESSES || '1000', 10),
+
+  /** Cgroup max PIDs (default: 1000) */
+  cgroupPidsMax: parseInt(process.env.NSJAIL_CGROUP_PIDS_MAX || '1000', 10),
 
   /** Maximum number of open file descriptors (default: 1024) */
   maxOpenFiles: parseInt(process.env.NSJAIL_RLIMIT_NOFILE || '1024', 10),
