@@ -30,12 +30,13 @@ export class GitHubDeploymentHandler {
   ) {}
 
   /**
-   * Parse GitHub URL from NPX arguments
-   * Supports: github:owner/repo#ref
+   * Parse GitHub URL from package manager arguments
+   * Supports: github:owner/repo#ref (for npx and uvx)
    */
   parseGitHubUrl(command: string, args: string[]): GitHubInfo | null {
-    // Check if this is an NPX command with GitHub shorthand
-    if (command !== 'npx') {
+    // Check if this is a supported package manager command with GitHub shorthand
+    const supportedCommands = ['npx', 'uvx'];
+    if (!supportedCommands.includes(command)) {
       return null;
     }
 
@@ -50,8 +51,9 @@ export class GitHubDeploymentHandler {
     if (!match) {
       this.logger.warn({
         operation: 'github_url_parse_failed',
-        github_arg: githubArg
-      }, 'Failed to parse GitHub URL from NPX arguments');
+        github_arg: githubArg,
+        command: command
+      }, `Failed to parse GitHub URL from ${command} arguments`);
       return null;
     }
 
@@ -64,9 +66,13 @@ export class GitHubDeploymentHandler {
 
   /**
    * Check if a config requires GitHub deployment
+   * Supports both Node.js (npx) and Python (uvx) runtimes
    */
   isGitHubDeployment(config: MCPServerConfig): boolean {
-    return config.source === 'github' && config.command === 'npx' && !!this.backendClient;
+    const supportedCommands = ['npx', 'uvx'];
+    return config.source === 'github' &&
+           supportedCommands.includes(config.command) &&
+           !!this.backendClient;
   }
 
   /**
@@ -504,10 +510,11 @@ export class GitHubDeploymentHandler {
       installation_name: config.installation_name,
       installation_id: config.installation_id,
       command: config.command,
+      runtime: config.runtime || 'unknown',
       args: config.args
-    }, 'GitHub deployment detected, downloading repository via Octokit');
+    }, `GitHub deployment detected (${config.runtime || 'unknown'} runtime), downloading repository via Octokit`);
 
-    // Parse GitHub URL from NPX arguments
+    // Parse GitHub URL from package manager arguments
     const githubInfo = this.parseGitHubUrl(config.command, config.args || []);
     if (!githubInfo) {
       throw new Error('Failed to parse GitHub URL from NPX arguments');

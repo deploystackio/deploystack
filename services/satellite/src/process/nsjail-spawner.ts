@@ -74,6 +74,7 @@ export class ProcessSpawner {
     const commandPaths: Record<string, string> = {
       'npx': '/usr/bin/npx',
       'node': '/usr/bin/node',
+      'uvx': '/usr/bin/uvx',
       'python': '/usr/bin/python',
       'python3': '/usr/bin/python3'
     };
@@ -90,6 +91,49 @@ export class ProcessSpawner {
 
     // Otherwise, try /usr/bin/ as default
     return `/usr/bin/${command}`;
+  }
+
+  /**
+   * Get runtime-specific environment variables for nsjail isolation
+   * Different runtimes need different cache directories and package manager settings
+   */
+  private getEnvironmentForRuntime(config: MCPServerConfig): string[] {
+    const runtime = config.runtime || 'node'; // Default to node for backward compatibility
+    const envVars: string[] = [];
+
+    switch (runtime) {
+      case 'node':
+        envVars.push(
+          '-E', 'HOME=/home/node',
+          '-E', 'PATH=/usr/bin:/bin:/usr/local/bin',
+          '-E', 'NPM_CONFIG_CACHE=/home/node/.npm',
+          '-E', 'NPM_CONFIG_PREFIX=/home/node/.npm-global',
+          '-E', 'NPM_CONFIG_UPDATE_NOTIFIER=false',
+          '-E', 'NO_UPDATE_NOTIFIER=1'
+        );
+        break;
+
+      case 'python':
+        envVars.push(
+          '-E', 'HOME=/home/python',
+          '-E', 'PATH=/usr/bin:/bin:/usr/local/bin',
+          '-E', 'UV_CACHE_DIR=/home/python/.cache/uv',
+          '-E', 'UV_TOOL_DIR=/home/python/.local/bin',
+          '-E', 'PYTHONUNBUFFERED=1',
+          '-E', 'UV_NO_UPDATE_NOTIFIER=1'
+        );
+        break;
+
+      default:
+        // Generic runtime - minimal environment
+        envVars.push(
+          '-E', `HOME=/home/${runtime}`,
+          '-E', 'PATH=/usr/bin:/bin:/usr/local/bin'
+        );
+        break;
+    }
+
+    return envVars;
   }
 
   /**
@@ -120,17 +164,18 @@ export class ProcessSpawner {
   }
 
   /**
-   * Ensure team-specific cache directory exists
+   * Ensure team-specific cache directory exists for the runtime
    */
-  async ensureCacheDirectory(teamId: string): Promise<string> {
-    const cacheDir = `${mcpCacheBaseDir}/mcp-cache/${teamId}`;
+  async ensureCacheDirectory(teamId: string, runtime: string): Promise<string> {
+    const cacheDir = `${mcpCacheBaseDir}/mcp-cache/${runtime}/${teamId}`;
 
     if (!existsSync(cacheDir)) {
       this.logger.info({
         operation: 'create_cache_directory',
         team_id: teamId,
+        runtime: runtime,
         cache_dir: cacheDir
-      }, `Creating team cache directory: ${cacheDir}`);
+      }, `Creating team cache directory for ${runtime} runtime: ${cacheDir}`);
 
       try {
         await mkdir(cacheDir, { recursive: true });
@@ -138,6 +183,7 @@ export class ProcessSpawner {
         this.logger.info({
           operation: 'cache_directory_created',
           team_id: teamId,
+          runtime: runtime,
           cache_dir: cacheDir
         }, `Team cache directory created successfully`);
       } catch (error) {
@@ -145,6 +191,7 @@ export class ProcessSpawner {
         this.logger.error({
           operation: 'cache_directory_creation_failed',
           team_id: teamId,
+          runtime: runtime,
           cache_dir: cacheDir,
           error: errorMessage
         }, `Failed to create team cache directory`);
@@ -158,22 +205,26 @@ export class ProcessSpawner {
   /**
    * Spawn process with nsjail isolation (production mode on Linux)
    *
-   * Configuration based on empirical testing with npx and Node.js:
-   * - Memory: 2048MB (V8 minimum requirement)
-   * - Processes: 1000 (npm spawns many child processes)
+   * Configuration supports multiple runtimes (Node.js, Python, etc.):
+   * - Memory: 2048MB (adequate for V8 and Python interpreters)
+   * - Processes: 1000 (package managers spawn many child processes)
    * - File descriptors: 1024 (adequate for I/O operations)
    * - File size: 50MB (prevents oversized downloads)
-   * - /dev files: Required for Node.js crypto and I/O operations
+   * - /dev files: Required for crypto and I/O operations
    * - --proc_rw: Required for pthread_create and thread management
    */
   async spawnWithNsjail(config: MCPServerConfig): Promise<ChildProcess> {
+    // Determine runtime (default to 'node' for backward compatibility)
+    const runtime = config.runtime || 'node';
+
     // Ensure team-specific cache directory exists before mounting
-    const cacheDir = await this.ensureCacheDirectory(config.team_id);
+    const cacheDir = await this.ensureCacheDirectory(config.team_id, runtime);
 
     this.logger.info({
       operation: 'spawn_nsjail',
       installation_name: config.installation_name,
       team_id: config.team_id,
+      runtime: runtime,
       cache_dir: cacheDir,
       memory_limit_mb: nsjailConfig.memoryLimitMB,
       cpu_time_limit_seconds: nsjailConfig.cpuTimeLimitSeconds,
@@ -181,7 +232,7 @@ export class ProcessSpawner {
       max_open_files: nsjailConfig.maxOpenFiles,
       max_file_size_mb: nsjailConfig.maxFileSizeMB,
       tmpfs_size: nsjailConfig.tmpfsSize
-    }, 'Spawning process with nsjail isolation');
+    }, `Spawning ${runtime} MCP server with nsjail isolation`);
 
     // Get current user UID and GID (deploystack user in production)
     const uid = process.getuid ? process.getuid() : 1000;
@@ -199,12 +250,12 @@ export class ProcessSpawner {
     // Build nsjail arguments based on working production configuration
     const nsjailArgs = [
       '-Mo',                                    // Mount mode: once, don't remount
-      '--proc_rw',                              // Required for Node.js pthread_create
+      '--proc_rw',                              // Required for pthread_create and thread management
       '--user', String(uid),                    // Use current user (deploystack)
       '--group', String(gid),                   // Use current group (deploystack)
-      '--rlimit_as', String(nsjailConfig.memoryLimitMB), // Memory limit (MB) - 2048 minimum for V8
+      '--rlimit_as', String(nsjailConfig.memoryLimitMB), // Memory limit (MB) - 2048 for interpreters
       '--rlimit_cpu', String(nsjailConfig.cpuTimeLimitSeconds), // CPU time limit (seconds)
-      '--rlimit_nproc', String(nsjailConfig.maxProcesses), // Max processes - 1000 for npm
+      '--rlimit_nproc', String(nsjailConfig.maxProcesses), // Max processes - 1000 for package managers
       '--rlimit_nofile', String(nsjailConfig.maxOpenFiles), // Max file descriptors
       '--rlimit_fsize', String(nsjailConfig.maxFileSizeMB), // Max file size (MB)
       '--time_limit', '0',                      // No wall-clock time limit
@@ -215,25 +266,21 @@ export class ProcessSpawner {
       '-R', '/sbin',                            // Read-only mount: /sbin
       '-R', '/etc',                             // Read-only mount: /etc (includes resolv.conf)
       '-T', `/tmp:size=${nsjailConfig.tmpfsSize}`, // Writable temp with size limit (100M)
-      '-B', `${cacheDir}:/home/npx`,           // Team-specific cache directory mount
+      '-B', `${cacheDir}:/home/${runtime}`,    // Runtime-specific cache directory mount
       '--bindmount', '/dev/null:/dev/null',    // Required for I/O redirection
       '--bindmount', '/dev/urandom:/dev/urandom', // Required for crypto operations
       '--bindmount', '/dev/zero:/dev/zero',    // Required for memory allocation
       '--symlink', '/proc/self/fd:/dev/fd',    // Required for file descriptor management
-      '-E', 'HOME=/home/npx',                  // Set HOME for npx cache
-      '-E', 'PATH=/usr/bin:/bin:/usr/local/bin', // Set PATH
-      '-E', 'NPM_CONFIG_CACHE=/home/npx/.npm', // npm cache location
-      '-E', 'NPM_CONFIG_PREFIX=/home/npx/.npm-global', // npm global prefix
-      '-E', 'NPM_CONFIG_UPDATE_NOTIFIER=false', // Disable update notifier
-      '-E', 'NO_UPDATE_NOTIFIER=1',            // Disable update notifier (alternative)
+      // Runtime-specific environment variables
+      ...this.getEnvironmentForRuntime(config),
       // Inject user-provided environment variables (sanitized)
       ...this.sanitizeEnvVars(config.env, config.installation_name),
-      '--disable_clone_newnet',                // Allow network access (required for npm downloads)
+      '--disable_clone_newnet',                // Allow network access (required for package downloads)
       '--disable_clone_newcgroup',             // Disable cgroup namespace (causes clone() errors on some kernels)
       '--disable_no_new_privs',                // May be needed for some packages
       '--hostname', `mcp-${config.team_id}`,   // Team-specific hostname
       '--',                                     // End of nsjail args
-      fullCommandPath,                          // MCP server command with full path (e.g., /usr/bin/npx)
+      fullCommandPath,                          // MCP server command with full path (e.g., /usr/bin/npx or /usr/bin/uvx)
       ...config.args                            // MCP server arguments
     ];
 
