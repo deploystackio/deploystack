@@ -39,7 +39,7 @@
     "eslint": "^9.39.2",
     "node-loader": "^2.1.0",
     "nodemon": "^3.1.11",
-    "release-it": "^19.2.3",
+    "release-it": "^19.2.4",
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
