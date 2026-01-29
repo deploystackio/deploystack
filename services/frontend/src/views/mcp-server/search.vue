@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
+import { useTeamContext } from '@/composables/useTeamContext'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import McpServerSquareCard from '@/components/mcp-server/McpServerSquareCard.vue'
 import FeaturedMcpServers from '@/components/mcp-server/FeaturedMcpServers.vue'
@@ -18,6 +19,9 @@ import type { McpServerSearchParams, McpServerSearchResponse } from '@/types/mcp
 const { t } = useI18n()
 const router = useRouter()
 const { setBreadcrumbs } = useBreadcrumbs()
+
+// Team context using composable
+const { selectedTeam } = useTeamContext()
 
 // State
 const isLoading = ref(false)
@@ -48,6 +52,11 @@ const hasSearched = computed(() => {
 
 const shouldShowResults = computed(() => {
   return hasSearched.value && filteredServers.value.length > 0
+})
+
+// Show Deploy MCP button only if team allows GitHub MCP
+const showDeployButton = computed(() => {
+  return selectedTeam.value?.allow_github_mcp === true
 })
 
 // Methods
@@ -211,6 +220,15 @@ onMounted(() => {
             @click="router.push('/mcp-server/catalog')"
           >
             {{ t('mcpInstallations.wizard.server.viewAllServers') }}
+          </Button>
+          <Button
+            v-if="showDeployButton"
+            variant="outline"
+            size="sm"
+            class="bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
+            @click="router.push('/deploy')"
+          >
+            {{ t('mcpInstallations.actions.deployMcp') }}
           </Button>
         </div>
       </div>

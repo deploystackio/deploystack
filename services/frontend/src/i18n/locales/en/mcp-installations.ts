@@ -77,7 +77,8 @@ export default {
     view: 'View Details',
     configure: 'Configure',
     remove: 'Remove Installation',
-    openMenu: 'Open menu'
+    openMenu: 'Open menu',
+    deployMcp: 'Deploy MCP'
   },
 
   buttons: {

@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { DsPageHeading } from '@/components/ui/ds-page-heading'
 import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import { useInstallationsStream } from '@/composables/mcp-server'
@@ -33,6 +34,11 @@ const {
 // Computed
 const hasInstallations = computed(() => installations.value.length > 0)
 
+// Show Deploy MCP button only if team allows GitHub MCP
+const showDeployButton = computed(() => {
+  return selectedTeam.value?.allow_github_mcp === true
+})
+
 // Watch for team changes to reconnect stream
 watch(selectedTeam, (newTeam) => {
   if (newTeam) {
@@ -43,6 +49,10 @@ watch(selectedTeam, (newTeam) => {
 
 const handleInstallServer = () => {
   router.push('/mcp-server/install')
+}
+
+const handleDeployMcp = () => {
+  router.push('/deploy')
 }
 
 const handleViewInstallation = (serverId: string) => {
@@ -187,13 +197,21 @@ onUnmounted(() => {
   <NavbarLayout>
     <DsPageHeading :title="t('mcpInstallations.title')">
       <template #actions>
-        <Button
-          v-if="selectedTeam"
-          @click="handleInstallServer"
-          class="flex items-center gap-2"
-        >
-          {{ t('mcpInstallations.featuredList.browseCatalog') }}
-        </Button>
+        <ButtonGroup v-if="selectedTeam">
+          <Button
+            v-if="showDeployButton"
+            @click="handleDeployMcp"
+            variant="outline"
+          >
+            {{ t('mcpInstallations.actions.deployMcp') }}
+          </Button>
+          <Button
+            @click="handleInstallServer"
+            variant="outline"
+          >
+            {{ t('mcpInstallations.featuredList.browseCatalog') }}
+          </Button>
+        </ButtonGroup>
       </template>
     </DsPageHeading>
 

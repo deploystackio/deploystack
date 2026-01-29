@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import NavbarLayout from '@/components/NavbarLayout.vue'
 import { Button } from '@/components/ui/button'
+import { ButtonGroup } from '@/components/ui/button-group'
 import { toast } from 'vue-sonner'
 import { useEventBus } from '@/composables/useEventBus'
 import { useBreadcrumbs } from '@/composables/useBreadcrumbs'
@@ -48,6 +49,11 @@ const isConfigModalOpen = ref(false)
 
 // Computed
 const hasInstallations = computed(() => installations.value.length > 0)
+
+// Show Deploy MCP button only if team allows GitHub MCP
+const showDeployButton = computed(() => {
+  return selectedTeam.value?.allow_github_mcp === true
+})
 
 // Watch for team changes to reconnect stream
 watch(selectedTeam, (newTeam) => {
@@ -136,6 +142,10 @@ watch(isLoading, (newValue, oldValue) => {
 
 const handleInstallServer = () => {
   router.push('/mcp-server/install')
+}
+
+const handleDeployMcp = () => {
+  router.push('/deploy')
 }
 
 const handleOpenConfigModal = () => {
@@ -365,7 +375,6 @@ onUnmounted(() => {
           <Button
             id="get-configuration-button"
             @click="handleOpenConfigModal"
-            variant="outline"
             :class="[
               'flex items-center justify-center gap-2',
               showStep2ButtonHighZIndex ? 'relative z-[10000]' : ''
@@ -373,12 +382,21 @@ onUnmounted(() => {
           >
             {{ t('satelliteConfig.button.getConfiguration') }}
           </Button>
-          <Button
-            @click="handleInstallServer"
-            class="flex items-center justify-center gap-2"
-          >
-            {{ t('mcpInstallations.featuredList.browseCatalog') }}
-          </Button>
+          <ButtonGroup>
+            <Button
+              v-if="showDeployButton"
+              @click="handleDeployMcp"
+              variant="outline"
+            >
+              {{ t('mcpInstallations.actions.deployMcp') }}
+            </Button>
+            <Button
+              @click="handleInstallServer"
+              variant="outline"
+            >
+              {{ t('mcpInstallations.featuredList.browseCatalog') }}
+            </Button>
+          </ButtonGroup>
         </div>
       </div>
 
