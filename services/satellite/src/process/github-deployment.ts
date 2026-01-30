@@ -10,6 +10,8 @@ import { LogBuffer } from './log-buffer';
 import type { BackendClient } from '../services/backend-client';
 import { ProcessSpawner } from './nsjail-spawner';
 import { validateBuildScripts } from '../config/security-validation';
+import { TmpfsManager } from '../lib/tmpfs-manager';
+import { githubDeploymentBaseDir, nsjailConfig } from '../config/nsjail';
 
 /**
  * Parsed GitHub repository information
@@ -39,6 +41,7 @@ async function fileExists(filePath: string): Promise<boolean> {
  */
 export class GitHubDeploymentHandler {
   private processSpawner: ProcessSpawner;
+  private tmpfsManager: TmpfsManager;
 
   constructor(
     private logger: Logger,
@@ -46,6 +49,7 @@ export class GitHubDeploymentHandler {
     private backendClient?: BackendClient
   ) {
     this.processSpawner = new ProcessSpawner(logger);
+    this.tmpfsManager = new TmpfsManager(logger);
   }
 
   /**
@@ -203,11 +207,14 @@ export class GitHubDeploymentHandler {
    * Extract tarball to temporary directory
    */
   async extractTarball(tarballBuffer: Buffer, tempDir: string): Promise<void> {
+    const isTmpfs = await this.tmpfsManager.isTmpfs(tempDir);
+
     this.logger.debug({
       operation: 'tarball_extract_start',
       temp_dir: tempDir,
-      tarball_size: tarballBuffer.length
-    }, 'Extracting tarball to temporary directory');
+      tarball_size: tarballBuffer.length,
+      is_tmpfs: isTmpfs
+    }, `Extracting tarball to ${isTmpfs ? 'tmpfs' : 'filesystem'} directory`);
 
     try {
       // Create temp directory
@@ -802,13 +809,16 @@ export class GitHubDeploymentHandler {
       throw new Error('BackendClient not available for GitHub deployment');
     }
 
+    const useTmpfs = process.env.NODE_ENV === 'production' || process.env.MCP_USE_TMPFS === 'true';
+
     this.logger.info({
       operation: 'github_deployment_detected',
       installation_name: config.installation_name,
       installation_id: config.installation_id,
       command: config.command,
       runtime: config.runtime || 'unknown',
-      args: config.args
+      args: config.args,
+      use_tmpfs: useTmpfs
     }, `GitHub deployment detected (${config.runtime || 'unknown'} runtime), downloading repository via Octokit`);
 
     // Parse GitHub URL from package manager arguments
@@ -844,30 +854,69 @@ export class GitHubDeploymentHandler {
       tokenResult.token
     );
 
-    // Create temp directory
-    const { v4: uuidv4 } = await import('uuid');
-    const tempDir = `/tmp/mcp-${uuidv4()}`;
-    this.logger.debug({
-      operation: 'temp_dir_created',
-      temp_dir: tempDir
-    }, `Created temp directory: ${tempDir}`);
+    // Create deployment directory
+    let deploymentDir: string;
 
-    // Extract tarball
-    await this.extractTarball(tarballBuffer, tempDir);
+    if (useTmpfs) {
+      // Production: Use tmpfs with 300MB quota
+      deploymentDir = `${githubDeploymentBaseDir}/${config.team_id}/${config.installation_id}`;
+
+      this.logger.debug({
+        operation: 'deployment_tmpfs_create_start',
+        deployment_dir: deploymentDir,
+        tmpfs_size: nsjailConfig.deploymentTmpfsSize
+      }, `Creating tmpfs with ${nsjailConfig.deploymentTmpfsSize} quota`);
+
+      try {
+        await this.tmpfsManager.createTmpfs(deploymentDir, {
+          size: nsjailConfig.deploymentTmpfsSize,
+          mode: '0755'
+        });
+
+        this.logger.info({
+          operation: 'deployment_tmpfs_created',
+          deployment_dir: deploymentDir,
+          size: nsjailConfig.deploymentTmpfsSize
+        }, `tmpfs created with kernel-enforced ${nsjailConfig.deploymentTmpfsSize} quota`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.error({
+          operation: 'deployment_tmpfs_failed',
+          deployment_dir: deploymentDir,
+          error: errorMessage
+        }, 'Failed to create tmpfs for deployment');
+
+        throw new Error(`Failed to create deployment tmpfs: ${errorMessage}`);
+      }
+    } else {
+      // Development: Use regular /tmp directory
+      const { v4: uuidv4 } = await import('uuid');
+      deploymentDir = `/tmp/mcp-${uuidv4()}`;
+
+      this.logger.debug({
+        operation: 'deployment_dir_create_dev',
+        deployment_dir: deploymentDir
+      }, 'Creating deployment directory (development mode, no tmpfs)');
+
+      await mkdir(deploymentDir, { recursive: true });
+    }
+
+    // Extract tarball to deployment directory
+    await this.extractTarball(tarballBuffer, deploymentDir);
 
     // Detect runtime from extracted files or use config runtime
-    const runtime = config.runtime || await this.detectRuntime(tempDir);
+    const runtime = config.runtime || await this.detectRuntime(deploymentDir);
 
     this.logger.info({
       operation: 'github_deployment_runtime_detected',
       runtime,
-      temp_dir: tempDir
+      temp_dir: deploymentDir
     }, `Detected runtime: ${runtime}`);
 
     // Handle runtime-specific installation and build
     if (runtime === 'node') {
       // Defense-in-depth: Re-validate build scripts before execution
-      const packageJsonPath = path.join(tempDir, 'package.json');
+      const packageJsonPath = path.join(deploymentDir, 'package.json');
       if (await fileExists(packageJsonPath)) {
         const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
         const packageJson = JSON.parse(packageJsonContent);
@@ -886,63 +935,69 @@ export class GitHubDeploymentHandler {
       }
 
       // Install Node.js dependencies
-      await this.installDependencies(tempDir, config.installation_id, config.team_id, config.user_id);
+      await this.installDependencies(deploymentDir, config.installation_id, config.team_id, config.user_id);
 
       // Build package if build script exists
-      await this.buildPackage(tempDir, config.installation_id, config.team_id, config.user_id);
+      await this.buildPackage(deploymentDir, config.installation_id, config.team_id, config.user_id);
 
       // Resolve Node.js package entry point
-      const entryPoint = await this.resolvePackageEntry(tempDir);
+      const entryPoint = await this.resolvePackageEntry(deploymentDir);
+
+      // Make entry point relative to deployment dir for nsjail mounting
+      const relativeEntryPoint = path.relative(deploymentDir, entryPoint);
 
       const updatedConfig: MCPServerConfig = {
         ...config,
         command: 'node',
-        args: [entryPoint],
-        temp_dir: tempDir
+        args: [relativeEntryPoint],
+        temp_dir: deploymentDir
       };
 
       this.logger.info({
         operation: 'github_deployment_ready',
         installation_name: config.installation_name,
-        temp_dir: tempDir,
+        temp_dir: deploymentDir,
         runtime: 'node',
-        entry_point: entryPoint
+        entry_point: entryPoint,
+        relative_entry_point: relativeEntryPoint
       }, 'Node.js GitHub repository downloaded and ready to spawn');
 
       return updatedConfig;
 
     } else if (runtime === 'python') {
       // Install Python dependencies
-      await this.installPythonDependencies(tempDir, config.installation_id, config.team_id, config.user_id);
+      await this.installPythonDependencies(deploymentDir, config.installation_id, config.team_id, config.user_id);
 
       // Resolve Python package entry point
-      const { command, entryPoint } = await this.resolvePythonPackageEntry(tempDir);
+      const { command, entryPoint } = await this.resolvePythonPackageEntry(deploymentDir);
 
       // Determine the correct command and args based on entry point type
       let updatedConfig: MCPServerConfig;
 
       if (command === 'python3') {
-        // Running with python3 interpreter
+        // Running with python3 interpreter - make path relative
+        const relativeEntryPoint = path.relative(deploymentDir, entryPoint);
         updatedConfig = {
           ...config,
           command: 'python3',
-          args: [entryPoint],
-          temp_dir: tempDir
+          args: [relativeEntryPoint],
+          temp_dir: deploymentDir
         };
       } else {
         // Running directly (entry point is executable script from venv)
+        const relativeCommand = path.relative(deploymentDir, entryPoint);
         updatedConfig = {
           ...config,
-          command: entryPoint,
+          command: relativeCommand,
           args: [],
-          temp_dir: tempDir
+          temp_dir: deploymentDir
         };
       }
 
       this.logger.info({
         operation: 'github_deployment_ready',
         installation_name: config.installation_name,
-        temp_dir: tempDir,
+        temp_dir: deploymentDir,
         runtime: 'python',
         command: updatedConfig.command,
         entry_point: entryPoint

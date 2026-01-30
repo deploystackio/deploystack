@@ -33,7 +33,10 @@ export const nsjailConfig = {
   maxFileSizeMB: parseInt(process.env.NSJAIL_RLIMIT_FSIZE || '50', 10),
 
   /** Tmpfs size for /tmp directory (default: 100M) */
-  tmpfsSize: process.env.NSJAIL_TMPFS_SIZE || '100M'
+  tmpfsSize: process.env.NSJAIL_TMPFS_SIZE || '100M',
+
+  /** Tmpfs size for GitHub deployment working directories (default: 300M) */
+  deploymentTmpfsSize: process.env.NSJAIL_DEPLOYMENT_TMPFS_SIZE || '300M'
 };
 
 /**
@@ -43,6 +46,13 @@ export const nsjailConfig = {
  * Falls back to /opt/deploystack if HOME is not set
  */
 export const mcpCacheBaseDir = process.env.HOME || '/opt/deploystack';
+
+/**
+ * GitHub Deployment Base Directory
+ * Base directory for GitHub deployment tmpfs mounts
+ * Default: /opt/mcp-deployments
+ */
+export const githubDeploymentBaseDir = process.env.MCP_DEPLOYMENT_BASE_DIR || '/opt/mcp-deployments';
 
 /**
  * Blocked Environment Variables

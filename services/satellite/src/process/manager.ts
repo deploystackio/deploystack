@@ -13,6 +13,7 @@ import { ProcessSpawner } from './nsjail-spawner';
 import { GitHubDeploymentHandler } from './github-deployment';
 import { RestartHandler } from './restart-handler';
 import { DormantManager } from './dormant-manager';
+import { TmpfsManager } from '../lib/tmpfs-manager';
 
 /**
  * Process Manager for MCP server subprocesses
@@ -40,6 +41,7 @@ export class ProcessManager extends EventEmitter {
   private githubHandler: GitHubDeploymentHandler;
   private restartHandler: RestartHandler;
   private dormantManager: DormantManager;
+  private tmpfsManager: TmpfsManager;
 
   constructor(logger: Logger, eventBus?: EventBus, runtimeState?: RuntimeState, backendClient?: BackendClient) {
     super();
@@ -54,6 +56,7 @@ export class ProcessManager extends EventEmitter {
     this.githubHandler = new GitHubDeploymentHandler(logger, this.logBuffer, backendClient);
     this.restartHandler = new RestartHandler(logger, eventBus);
     this.dormantManager = new DormantManager(logger, runtimeState, eventBus);
+    this.tmpfsManager = new TmpfsManager(logger);
 
     // Listen for process exits to detect crashes and attempt restart
     this.on('processExit', (processInfo, code, signal) => {
@@ -767,39 +770,53 @@ export class ProcessManager extends EventEmitter {
     this.processes.delete(processInfo.id);
     this.processIdsByName.delete(processInfo.config.installation_name);
 
-    // Cleanup temp directory if this was a GitHub deployment
+    // Cleanup deployment directory if this was a GitHub deployment
     // ONLY delete on uninstall - preserve for dormant respawn, crash recovery, etc.
     if (processInfo.config.temp_dir && processInfo.isUninstallShutdown) {
+      this.logger.debug({
+        operation: 'github_cleanup_deployment',
+        installation_id: processInfo.config.installation_id,
+        deployment_dir: processInfo.config.temp_dir
+      }, 'Cleaning up GitHub deployment directory');
+
       try {
-        this.logger.debug({
-          operation: 'temp_dir_cleanup_start',
-          installation_name: processInfo.config.installation_name,
-          temp_dir: processInfo.config.temp_dir
-        }, `Cleaning up temp directory: ${processInfo.config.temp_dir}`);
+        // Check if it's a tmpfs mount (deployment directories use tmpfs)
+        const isTmpfs = await this.tmpfsManager.isTmpfs(processInfo.config.temp_dir);
 
-        await rm(processInfo.config.temp_dir, { recursive: true, force: true });
+        if (isTmpfs) {
+          // Unmount tmpfs
+          await this.tmpfsManager.removeTmpfs(processInfo.config.temp_dir);
 
-        this.logger.debug({
-          operation: 'temp_dir_cleanup_success',
-          installation_name: processInfo.config.installation_name,
-          temp_dir: processInfo.config.temp_dir
-        }, 'Temp directory cleaned up successfully');
+          this.logger.info({
+            operation: 'github_cleanup_tmpfs_success',
+            installation_id: processInfo.config.installation_id,
+            deployment_dir: processInfo.config.temp_dir
+          }, 'GitHub deployment tmpfs unmounted successfully');
+        } else {
+          // Regular directory cleanup (legacy or fallback)
+          await rm(processInfo.config.temp_dir, { recursive: true, force: true });
+
+          this.logger.info({
+            operation: 'github_cleanup_dir_success',
+            installation_id: processInfo.config.installation_id,
+            deployment_dir: processInfo.config.temp_dir
+          }, 'GitHub deployment directory cleaned up successfully');
+        }
       } catch (error) {
-        this.logger.warn({
-          operation: 'temp_dir_cleanup_failed',
-          installation_name: processInfo.config.installation_name,
-          temp_dir: processInfo.config.temp_dir,
+        this.logger.error({
+          operation: 'github_cleanup_failed',
+          installation_id: processInfo.config.installation_id,
+          deployment_dir: processInfo.config.temp_dir,
           error: error instanceof Error ? error.message : String(error)
-        }, 'Failed to cleanup temp directory (non-fatal)');
+        }, 'Failed to clean up GitHub deployment directory');
       }
     } else if (processInfo.config.temp_dir) {
-      // Log that we're preserving the temp directory for potential restart/respawn
       this.logger.debug({
-        operation: 'temp_dir_preserved',
-        installation_name: processInfo.config.installation_name,
-        temp_dir: processInfo.config.temp_dir,
-        reason: processInfo.isDormantShutdown ? 'dormant_respawn' : 'potential_restart'
-      }, `Preserving temp directory: ${processInfo.config.temp_dir}`);
+        operation: 'github_preserve_deployment',
+        installation_id: processInfo.config.installation_id,
+        deployment_dir: processInfo.config.temp_dir,
+        reason: 'Process restart/respawn or dormant wake-up'
+      }, 'Preserving GitHub deployment directory for future restart');
     }
 
     this.logger.info({

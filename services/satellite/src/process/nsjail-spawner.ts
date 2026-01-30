@@ -1,6 +1,7 @@
 import { spawn, ChildProcess } from 'child_process';
 import { mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
+import * as path from 'path';
 import { Logger } from 'pino';
 import { MCPServerConfig } from './types';
 import { nsjailConfig, mcpCacheBaseDir, BLOCKED_ENV_VARS } from '../config/nsjail';
@@ -210,10 +211,14 @@ export class ProcessSpawner {
       team_id: config.team_id
     }, 'Spawning process directly (no isolation - development mode)');
 
+    // For GitHub deployments, use temp_dir as working directory
+    // This allows relative paths (like 'dist/index.js') to resolve correctly
+    const workingDir = config.temp_dir || process.cwd();
+
     return spawn(config.command, config.args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, ...config.env },
-      cwd: process.cwd()
+      cwd: workingDir
     });
   }
 
@@ -336,6 +341,8 @@ export class ProcessSpawner {
       '-R', '/etc',                             // Read-only mount: /etc (includes resolv.conf)
       '-T', `/tmp:size=${nsjailConfig.tmpfsSize}`, // Writable temp with size limit (100M)
       '-B', `${cacheDir}:/home/${runtime}`,    // Runtime-specific cache directory mount
+      // Mount GitHub deployment directory if present
+      ...(config.temp_dir ? ['-B', `${config.temp_dir}:/app:ro`, '--cwd', '/app'] : []),
       '--bindmount', '/dev/null:/dev/null',    // Required for I/O redirection
       '--bindmount', '/dev/urandom:/dev/urandom', // Required for crypto operations
       '--bindmount', '/dev/zero:/dev/zero',    // Required for memory allocation
@@ -349,8 +356,14 @@ export class ProcessSpawner {
       '--disable_no_new_privs',                // May be needed for some packages
       '--hostname', `mcp-${config.team_id}`,   // Team-specific hostname
       '--',                                     // End of nsjail args
-      fullCommandPath,                          // MCP server command with full path (e.g., /usr/bin/npx or /usr/bin/uvx)
-      ...config.args                            // MCP server arguments
+      fullCommandPath,                          // MCP server command with full path (e.g., /usr/bin/npx)
+      // Prepend /app/ to relative paths for GitHub deployments
+      ...config.args.map(arg => {
+        if (config.temp_dir && !path.isAbsolute(arg) && !arg.startsWith('-')) {
+          return path.join('/app', arg);
+        }
+        return arg;
+      })
     ];
 
     return spawn('nsjail', nsjailArgs, {
