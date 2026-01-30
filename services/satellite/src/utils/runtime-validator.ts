@@ -58,6 +58,43 @@ interface RuntimeCheckResult {
 }
 
 /**
+ * Build enhanced PATH for runtime checks
+ * Includes common installation directories that might not be in systemd PATH
+ */
+function buildEnhancedPath(): string {
+  const currentPath = process.env.PATH || '';
+  const pathSegments = currentPath.split(':').filter(Boolean);
+
+  // Common installation locations (order matters - user local should come first)
+  const commonPaths = [
+    // User-local installations (using actual username, not hardcoded)
+    `${process.env.HOME}/.local/bin`,     // pip/uv user installs
+    `${process.env.HOME}/.cargo/bin`,     // Rust toolchain
+    `${process.env.HOME}/bin`,            // User bin directory
+
+    // System-wide package manager locations
+    '/usr/local/bin',                      // Homebrew, manual installs
+    '/usr/bin',                            // System packages
+    '/bin',                                // Core system binaries
+
+    // Additional common locations
+    '/opt/homebrew/bin',                   // macOS ARM Homebrew
+    '/usr/local/sbin',
+    '/usr/sbin',
+    '/sbin'
+  ];
+
+  // Add common paths that aren't already in PATH
+  for (const path of commonPaths) {
+    if (path && !pathSegments.includes(path)) {
+      pathSegments.push(path);
+    }
+  }
+
+  return pathSegments.join(':');
+}
+
+/**
  * Check if command is available on the system (searches PATH)
  */
 function checkCommand(command: string, versionFlag: string): CommandCheckResult {
@@ -66,7 +103,11 @@ function checkCommand(command: string, versionFlag: string): CommandCheckResult 
       timeout: 5000,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: false
+      shell: true,
+      env: {
+        ...process.env,
+        PATH: buildEnhancedPath()
+      }
     });
 
     // Command not found
@@ -205,6 +246,12 @@ function buildWarningMessage(result: RuntimeCheckResult): string {
 
   return lines.join('\n');
 }
+
+/**
+ * Build enhanced PATH for runtime checks
+ * Exported for potential reuse in process spawner
+ */
+export { buildEnhancedPath };
 
 /**
  * Validate system runtimes before satellite starts
