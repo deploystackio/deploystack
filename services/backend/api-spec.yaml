@@ -11024,7 +11024,8 @@ paths:
                   - data
                 description: Deployment created successfully
         "400":
-          description: Validation error (missing package.json, invalid MCP SDK, etc.)
+          description: Validation error (missing package.json, invalid MCP SDK, invalid
+            satellite_id, satellite not active, etc.)
           content:
             application/json:
               schema:
@@ -11041,7 +11042,8 @@ paths:
                 required:
                   - success
                   - error
-                description: Validation error (missing package.json, invalid MCP SDK, etc.)
+                description: Validation error (missing package.json, invalid MCP SDK, invalid
+                  satellite_id, satellite not active, etc.)
         "401":
           description: Unauthorized
           content:
@@ -11062,7 +11064,8 @@ paths:
                   - error
                 description: Unauthorized
         "403":
-          description: Forbidden
+          description: Forbidden (feature disabled, attempting to deploy to another team's
+            satellite, etc.)
           content:
             application/json:
               schema:
@@ -11079,7 +11082,8 @@ paths:
                 required:
                   - success
                   - error
-                description: Forbidden
+                description: Forbidden (feature disabled, attempting to deploy to another team's
+                  satellite, etc.)
         "404":
           description: Team not found
           content:
@@ -17297,41 +17301,76 @@ paths:
                   type: array
                   items:
                     type: string
+                    maxLength: 500
+                    pattern: ^[a-zA-Z0-9@/_\.\-=:#]+$
+                  maxItems: 100
                   description: Team-level shared command line arguments
                 team_env:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 32768
+                  maxProperties: 100
+                  propertyNames:
+                    pattern: ^[A-Za-z_][A-Za-z0-9_]*$
+                    maxLength: 256
                   description: Team-level shared environment variables
                 team_headers:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 8192
+                  maxProperties: 50
+                  propertyNames:
+                    pattern: ^[A-Za-z0-9\-]+$
+                    maxLength: 256
                   description: Team-level shared headers
                 team_url_query_params:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 2048
+                  maxProperties: 50
+                  propertyNames:
+                    pattern: ^[A-Za-z0-9_\-]+$
+                    maxLength: 256
                   description: Team-level shared URL query parameters
                 user_args:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 500
+                  maxProperties: 50
                   description: User-level argument mappings (placeholder -> actual value)
                 user_environment_variables:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 32768
+                  maxProperties: 100
+                  propertyNames:
+                    pattern: ^[A-Za-z_][A-Za-z0-9_]*$
+                    maxLength: 256
                   description: User-level environment variables
                 user_headers:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 8192
+                  maxProperties: 50
+                  propertyNames:
+                    pattern: ^[A-Za-z0-9\-]+$
+                    maxLength: 256
                   description: User-level HTTP headers (optional)
                 user_url_query_params:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 2048
+                  maxProperties: 50
+                  propertyNames:
+                    pattern: ^[A-Za-z0-9_\-]+$
+                    maxLength: 256
                   description: User-level URL query parameters
               required:
                 - server_id
@@ -17369,6 +17408,9 @@ paths:
                       team_id:
                         type: string
                         description: Team ID that owns this installation
+                      team_slug:
+                        type: string
+                        description: Team slug for hierarchical router path
                       server_id:
                         type: string
                         description: MCP server ID that was installed
@@ -17443,6 +17485,24 @@ paths:
                             type: string
                             nullable: true
                             description: Subfolder path for monorepos
+                          source:
+                            type: string
+                            enum:
+                              - official_registry
+                              - manual
+                              - github
+                            description: Source of the MCP server
+                          git_branch:
+                            type: string
+                            nullable: true
+                            description: Git branch for GitHub-deployed servers
+                          git_commit_sha:
+                            type: string
+                            nullable: true
+                            description: Git commit SHA for GitHub-deployed servers
+                          slug:
+                            type: string
+                            description: Server slug for hierarchical router
                           website_url:
                             type: string
                             nullable: true
@@ -17760,6 +17820,9 @@ paths:
                         team_id:
                           type: string
                           description: Team ID that owns this installation
+                        team_slug:
+                          type: string
+                          description: Team slug for hierarchical router path
                         server_id:
                           type: string
                           description: MCP server ID that was installed
@@ -17834,6 +17897,24 @@ paths:
                               type: string
                               nullable: true
                               description: Subfolder path for monorepos
+                            source:
+                              type: string
+                              enum:
+                                - official_registry
+                                - manual
+                                - github
+                              description: Source of the MCP server
+                            git_branch:
+                              type: string
+                              nullable: true
+                              description: Git branch for GitHub-deployed servers
+                            git_commit_sha:
+                              type: string
+                              nullable: true
+                              description: Git commit SHA for GitHub-deployed servers
+                            slug:
+                              type: string
+                              description: Server slug for hierarchical router
                             website_url:
                               type: string
                               nullable: true
@@ -18153,6 +18234,9 @@ paths:
                       team_id:
                         type: string
                         description: Team ID that owns this installation
+                      team_slug:
+                        type: string
+                        description: Team slug for hierarchical router path
                       server_id:
                         type: string
                         description: MCP server ID that was installed
@@ -18227,6 +18311,24 @@ paths:
                             type: string
                             nullable: true
                             description: Subfolder path for monorepos
+                          source:
+                            type: string
+                            enum:
+                              - official_registry
+                              - manual
+                              - github
+                            description: Source of the MCP server
+                          git_branch:
+                            type: string
+                            nullable: true
+                            description: Git branch for GitHub-deployed servers
+                          git_commit_sha:
+                            type: string
+                            nullable: true
+                            description: Git commit SHA for GitHub-deployed servers
+                          slug:
+                            type: string
+                            description: Server slug for hierarchical router
                           website_url:
                             type: string
                             nullable: true
@@ -18493,16 +18595,25 @@ paths:
                 installation_name:
                   type: string
                   minLength: 1
+                  maxLength: 100
                   description: Updated installation name
                 team_args:
                   type: array
                   items:
                     type: string
+                    maxLength: 500
+                    pattern: ^[a-zA-Z0-9@/_\.\-=:#]+$
+                  maxItems: 100
                   description: Updated team-level shared command line arguments
                 team_env:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 32768
+                  maxProperties: 100
+                  propertyNames:
+                    pattern: ^[A-Za-z_][A-Za-z0-9_]*$
+                    maxLength: 256
                   description: Updated team-level shared environment variables
               additionalProperties: false
       parameters:
@@ -18543,6 +18654,9 @@ paths:
                       team_id:
                         type: string
                         description: Team ID that owns this installation
+                      team_slug:
+                        type: string
+                        description: Team slug for hierarchical router path
                       server_id:
                         type: string
                         description: MCP server ID that was installed
@@ -18617,6 +18731,24 @@ paths:
                             type: string
                             nullable: true
                             description: Subfolder path for monorepos
+                          source:
+                            type: string
+                            enum:
+                              - official_registry
+                              - manual
+                              - github
+                            description: Source of the MCP server
+                          git_branch:
+                            type: string
+                            nullable: true
+                            description: Git branch for GitHub-deployed servers
+                          git_commit_sha:
+                            type: string
+                            nullable: true
+                            description: Git commit SHA for GitHub-deployed servers
+                          slug:
+                            type: string
+                            description: Server slug for hierarchical router
                           website_url:
                             type: string
                             nullable: true
@@ -19031,6 +19163,11 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 32768
+                  maxProperties: 100
+                  propertyNames:
+                    pattern: ^[A-Za-z_][A-Za-z0-9_]*$
+                    maxLength: 256
                   description: Team-level environment variables to update
               required:
                 - team_env
@@ -19074,6 +19211,9 @@ paths:
                       team_id:
                         type: string
                         description: Team ID that owns this installation
+                      team_slug:
+                        type: string
+                        description: Team slug for hierarchical router path
                       server_id:
                         type: string
                         description: MCP server ID that was installed
@@ -19148,6 +19288,24 @@ paths:
                             type: string
                             nullable: true
                             description: Subfolder path for monorepos
+                          source:
+                            type: string
+                            enum:
+                              - official_registry
+                              - manual
+                              - github
+                            description: Source of the MCP server
+                          git_branch:
+                            type: string
+                            nullable: true
+                            description: Git branch for GitHub-deployed servers
+                          git_commit_sha:
+                            type: string
+                            nullable: true
+                            description: Git commit SHA for GitHub-deployed servers
+                          slug:
+                            type: string
+                            description: Server slug for hierarchical router
                           website_url:
                             type: string
                             nullable: true
@@ -19420,6 +19578,11 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 8192
+                  maxProperties: 50
+                  propertyNames:
+                    pattern: ^[A-Za-z0-9\-]+$
+                    maxLength: 256
                   description: Team-level headers to update
               required:
                 - team_headers
@@ -19463,6 +19626,9 @@ paths:
                       team_id:
                         type: string
                         description: Team ID that owns this installation
+                      team_slug:
+                        type: string
+                        description: Team slug for hierarchical router path
                       server_id:
                         type: string
                         description: MCP server ID that was installed
@@ -19537,6 +19703,24 @@ paths:
                             type: string
                             nullable: true
                             description: Subfolder path for monorepos
+                          source:
+                            type: string
+                            enum:
+                              - official_registry
+                              - manual
+                              - github
+                            description: Source of the MCP server
+                          git_branch:
+                            type: string
+                            nullable: true
+                            description: Git branch for GitHub-deployed servers
+                          git_commit_sha:
+                            type: string
+                            nullable: true
+                            description: Git commit SHA for GitHub-deployed servers
+                          slug:
+                            type: string
+                            description: Server slug for hierarchical router
                           website_url:
                             type: string
                             nullable: true
@@ -19810,6 +19994,11 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
+                    maxLength: 2048
+                  maxProperties: 50
+                  propertyNames:
+                    pattern: ^[A-Za-z0-9_\-]+$
+                    maxLength: 256
                   description: Team-level URL query parameters to update
               required:
                 - team_url_query_params
@@ -19853,6 +20042,9 @@ paths:
                       team_id:
                         type: string
                         description: Team ID that owns this installation
+                      team_slug:
+                        type: string
+                        description: Team slug for hierarchical router path
                       server_id:
                         type: string
                         description: MCP server ID that was installed
@@ -19927,6 +20119,24 @@ paths:
                             type: string
                             nullable: true
                             description: Subfolder path for monorepos
+                          source:
+                            type: string
+                            enum:
+                              - official_registry
+                              - manual
+                              - github
+                            description: Source of the MCP server
+                          git_branch:
+                            type: string
+                            nullable: true
+                            description: Git branch for GitHub-deployed servers
+                          git_commit_sha:
+                            type: string
+                            nullable: true
+                            description: Git commit SHA for GitHub-deployed servers
+                          slug:
+                            type: string
+                            description: Server slug for hierarchical router
                           website_url:
                             type: string
                             nullable: true
@@ -20200,6 +20410,9 @@ paths:
                   type: array
                   items:
                     type: string
+                    maxLength: 500
+                    pattern: ^[a-zA-Z0-9@/_\.\-=:#]+$
+                  maxItems: 100
                   description: Command line arguments to update
               required:
                 - args
@@ -20243,6 +20456,9 @@ paths:
                       team_id:
                         type: string
                         description: Team ID that owns this installation
+                      team_slug:
+                        type: string
+                        description: Team slug for hierarchical router path
                       server_id:
                         type: string
                         description: MCP server ID that was installed
@@ -20317,6 +20533,24 @@ paths:
                             type: string
                             nullable: true
                             description: Subfolder path for monorepos
+                          source:
+                            type: string
+                            enum:
+                              - official_registry
+                              - manual
+                              - github
+                            description: Source of the MCP server
+                          git_branch:
+                            type: string
+                            nullable: true
+                            description: Git branch for GitHub-deployed servers
+                          git_commit_sha:
+                            type: string
+                            nullable: true
+                            description: Git commit SHA for GitHub-deployed servers
+                          slug:
+                            type: string
+                            description: Server slug for hierarchical router
                           website_url:
                             type: string
                             nullable: true
@@ -22957,6 +23191,7 @@ paths:
                   type: string
                 scope:
                   type: string
+                  description: Optional, defaults to all supported scopes
                 state:
                   type: string
                 code_challenge:
@@ -22972,10 +23207,12 @@ paths:
                   enum:
                     - "true"
                     - "false"
+                resource:
+                  type: string
+                  description: RFC 8707 Resource Indicator (optional)
               required:
                 - client_id
                 - redirect_uri
-                - scope
                 - state
                 - code_challenge
                 - code_challenge_method
@@ -23032,8 +23269,9 @@ paths:
             type: string
           in: query
           name: scope
-          required: true
-          description: Space-separated list of requested scopes
+          required: false
+          description: Space-separated list of requested scopes (optional, defaults to all
+            supported scopes)
         - schema:
             type: string
             minLength: 1
@@ -23062,6 +23300,13 @@ paths:
           name: team
           required: false
           description: Team ID for team-scoped OAuth flow (optional, defaults to user team)
+        - schema:
+            type: string
+          in: query
+          name: resource
+          required: false
+          description: RFC 8707 Resource Indicator - target MCP server URI (optional, used
+            for audience binding)
       responses:
         "302":
           description: Redirect to consent page or error redirect

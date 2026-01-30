@@ -138,42 +138,99 @@ export const CREATE_INSTALLATION_REQUEST_SCHEMA = {
     },
     team_args: {
       type: 'array',
-      items: { type: 'string' },
+      items: {
+        type: 'string',
+        maxLength: 500, // Security: limit argument length
+        pattern: '^[a-zA-Z0-9@/_\\.\\-=:#]+$' // Security: restrict to safe characters
+      },
+      maxItems: 100, // Security: limit total arguments
       description: 'Team-level shared command line arguments'
     },
     team_env: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 32768 // 32KB max for env values
+      },
+      maxProperties: 100, // Security: limit total env vars
+      propertyNames: {
+        pattern: '^[A-Za-z_][A-Za-z0-9_]*$', // POSIX env var naming
+        maxLength: 256
+      },
       description: 'Team-level shared environment variables'
     },
     team_headers: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 8192 // 8KB max for header values
+      },
+      maxProperties: 50, // Security: limit total headers
+      propertyNames: {
+        pattern: '^[A-Za-z0-9\\-]+$', // HTTP token format
+        maxLength: 256
+      },
       description: 'Team-level shared headers'
     },
     team_url_query_params: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 2048 // 2KB max for query param values
+      },
+      maxProperties: 50, // Security: limit total query params
+      propertyNames: {
+        pattern: '^[A-Za-z0-9_\\-]+$',
+        maxLength: 256
+      },
       description: 'Team-level shared URL query parameters'
     },
     user_args: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 500
+      },
+      maxProperties: 50,
       description: 'User-level argument mappings (placeholder -> actual value)'
     },
     user_environment_variables: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 32768
+      },
+      maxProperties: 100,
+      propertyNames: {
+        pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+        maxLength: 256
+      },
       description: 'User-level environment variables'
     },
     user_headers: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 8192
+      },
+      maxProperties: 50,
+      propertyNames: {
+        pattern: '^[A-Za-z0-9\\-]+$',
+        maxLength: 256
+      },
       description: 'User-level HTTP headers (optional)'
     },
     user_url_query_params: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 2048
+      },
+      maxProperties: 50,
+      propertyNames: {
+        pattern: '^[A-Za-z0-9_\\-]+$',
+        maxLength: 256
+      },
       description: 'User-level URL query parameters'
     }
   },
@@ -184,19 +241,33 @@ export const CREATE_INSTALLATION_REQUEST_SCHEMA = {
 export const UPDATE_INSTALLATION_REQUEST_SCHEMA = {
   type: 'object',
   properties: {
-    installation_name: { 
-      type: 'string', 
+    installation_name: {
+      type: 'string',
       minLength: 1,
+      maxLength: 100,
       description: 'Updated installation name'
     },
     team_args: {
       type: 'array',
-      items: { type: 'string' },
+      items: {
+        type: 'string',
+        maxLength: 500,
+        pattern: '^[a-zA-Z0-9@/_\\.\\-=:#]+$'
+      },
+      maxItems: 100,
       description: 'Updated team-level shared command line arguments'
     },
     team_env: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 32768
+      },
+      maxProperties: 100,
+      propertyNames: {
+        pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+        maxLength: 256
+      },
       description: 'Updated team-level shared environment variables'
     }
   },
@@ -208,7 +279,15 @@ export const UPDATE_ENVIRONMENT_VARS_REQUEST_SCHEMA = {
   properties: {
     team_env: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 32768
+      },
+      maxProperties: 100,
+      propertyNames: {
+        pattern: '^[A-Za-z_][A-Za-z0-9_]*$',
+        maxLength: 256
+      },
       description: 'Team-level environment variables to update'
     }
   },
@@ -221,7 +300,12 @@ export const UPDATE_ARGS_REQUEST_SCHEMA = {
   properties: {
     args: {
       type: 'array',
-      items: { type: 'string' },
+      items: {
+        type: 'string',
+        maxLength: 500,
+        pattern: '^[a-zA-Z0-9@/_\\.\\-=:#]+$'
+      },
+      maxItems: 100,
       description: 'Command line arguments to update'
     }
   },
@@ -234,7 +318,15 @@ export const UPDATE_HEADERS_REQUEST_SCHEMA = {
   properties: {
     team_headers: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 8192
+      },
+      maxProperties: 50,
+      propertyNames: {
+        pattern: '^[A-Za-z0-9\\-]+$',
+        maxLength: 256
+      },
       description: 'Team-level headers to update'
     }
   },
@@ -247,7 +339,15 @@ export const UPDATE_QUERY_PARAMS_REQUEST_SCHEMA = {
   properties: {
     team_url_query_params: {
       type: 'object',
-      additionalProperties: { type: 'string' },
+      additionalProperties: {
+        type: 'string',
+        maxLength: 2048
+      },
+      maxProperties: 50,
+      propertyNames: {
+        pattern: '^[A-Za-z0-9_\\-]+$',
+        maxLength: 256
+      },
       description: 'Team-level URL query parameters to update'
     }
   },
@@ -341,10 +441,29 @@ export const SERVER_DETAILS_SCHEMA = {
       nullable: true, 
       description: 'Platform-specific repository identifier' 
     },
-    repository_subfolder: { 
-      type: 'string', 
-      nullable: true, 
-      description: 'Subfolder path for monorepos' 
+    repository_subfolder: {
+      type: 'string',
+      nullable: true,
+      description: 'Subfolder path for monorepos'
+    },
+    source: {
+      type: 'string',
+      enum: ['official_registry', 'manual', 'github'],
+      description: 'Source of the MCP server'
+    },
+    git_branch: {
+      type: 'string',
+      nullable: true,
+      description: 'Git branch for GitHub-deployed servers'
+    },
+    git_commit_sha: {
+      type: 'string',
+      nullable: true,
+      description: 'Git commit SHA for GitHub-deployed servers'
+    },
+    slug: {
+      type: 'string',
+      description: 'Server slug for hierarchical router'
     },
     website_url: {
       type: 'string',
@@ -512,6 +631,10 @@ export const INSTALLATION_ENTITY_SCHEMA = {
     team_id: {
       type: 'string',
       description: 'Team ID that owns this installation'
+    },
+    team_slug: {
+      type: 'string',
+      description: 'Team slug for hierarchical router path'
     },
     server_id: {
       type: 'string',
@@ -789,6 +912,10 @@ export interface ServerDetails {
   repository_source: string | null;
   repository_id: string | null;
   repository_subfolder: string | null;
+  source: 'official_registry' | 'manual' | 'github';
+  git_branch: string | null;
+  git_commit_sha: string | null;
+  slug: string;
   website_url: string | null;
   icon_url: string | null;
   author_name: string | null;
@@ -842,6 +969,7 @@ export interface StatusSummary {
 export interface InstallationData {
   id: string;
   team_id: string;
+  team_slug: string;
   server_id: string;
   created_by: string;
   installation_name: string;
@@ -859,6 +987,7 @@ export interface InstallationData {
 export interface InstallationResponse {
   id: string;
   team_id: string;
+  team_slug: string;
   server_id: string;
   created_by: string;
   installation_name: string;

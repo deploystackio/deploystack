@@ -14,6 +14,7 @@ import { TeamService } from '../../../services/teamService';
 import { McpSlugService } from '../../../services/mcpCatalogService';
 import { SatelliteValidationService } from '../../../services/satelliteValidationService';
 import { EVENT_NAMES } from '../../../events';
+import { validateArgs, validateEnvVars } from '../../../lib/security';
 
 // Reusable schema constants
 const DEPLOY_REQUEST_SCHEMA = {
@@ -121,6 +122,48 @@ function parseGitHubUrl(url: string): { owner: string; repo: string } {
     throw new Error('Invalid GitHub URL format');
   }
   return { owner: match[1], repo: match[2] };
+}
+
+// Type for runtime
+type Runtime = 'node' | 'python' | 'go' | 'unknown';
+
+/**
+ * Get runtime-specific package manager command for GitHub deployments
+ * Node.js uses npx, Python uses uvx
+ */
+function getPackageManagerConfig(
+  runtime: Runtime,
+  owner: string,
+  repo: string,
+  commitSha: string
+): {
+  command: string;
+  args: string[];
+  templateArgs: Array<{ value: string; locked: boolean; description: string; order: number }>;
+} {
+  switch (runtime) {
+    case 'node':
+      return {
+        command: 'npx',
+        args: ['-y', `github:${owner}/${repo}#${commitSha}`],
+        templateArgs: [
+          { value: '-y', locked: true, description: 'Auto-confirm npx', order: 0 },
+          { value: `github:${owner}/${repo}#${commitSha}`, locked: true, description: 'GitHub package reference', order: 1 }
+        ]
+      };
+    case 'python':
+      return {
+        command: 'uvx',
+        args: [`git+https://github.com/${owner}/${repo}.git@${commitSha}`],
+        templateArgs: [
+          { value: `git+https://github.com/${owner}/${repo}.git@${commitSha}`, locked: true, description: 'GitHub package reference', order: 0 }
+        ]
+      };
+    case 'go':
+      throw new Error('Go GitHub deployments are not yet supported. Go MCP servers are typically distributed as pre-built binaries.');
+    default:
+      throw new Error(`Unsupported runtime: ${runtime}`);
+  }
 }
 
 export default async function deployRoutes(server: FastifyInstance) {
@@ -279,6 +322,55 @@ export default async function deployRoutes(server: FastifyInstance) {
       };
       const jsonString = JSON.stringify(errorResponse);
       return reply.status(400).type('application/json').send(jsonString);
+    }
+
+    // Security validation: Validate user-provided configuration
+    // Validate template_args if provided
+    if (template_args && template_args.length > 0) {
+      const argsValidation = validateArgs(template_args);
+      if (!argsValidation.valid) {
+        request.log.warn({
+          operation: 'github_deployment_security_validation',
+          teamId,
+          userId,
+          validationType: 'template_args',
+          error: argsValidation.error,
+          details: argsValidation.details
+        }, 'Security validation failed for template_args');
+
+        emitFailureEvent(repository_url, branch, 'validate_args', argsValidation.error!, 'SECURITY_VALIDATION_FAILED');
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: argsValidation.error!,
+          step: 'validate_args'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(400).type('application/json').send(jsonString);
+      }
+    }
+
+    // Validate team_env if provided
+    if (team_env && Object.keys(team_env).length > 0) {
+      const envValidation = validateEnvVars(team_env);
+      if (!envValidation.valid) {
+        request.log.warn({
+          operation: 'github_deployment_security_validation',
+          teamId,
+          userId,
+          validationType: 'team_env',
+          error: envValidation.error,
+          details: envValidation.details
+        }, 'Security validation failed for team_env');
+
+        emitFailureEvent(repository_url, branch, 'validate_env', envValidation.error!, 'SECURITY_VALIDATION_FAILED');
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: envValidation.error!,
+          step: 'validate_env'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(400).type('application/json').send(jsonString);
+      }
     }
 
     request.log.info({
@@ -445,6 +537,9 @@ export default async function deployRoutes(server: FastifyInstance) {
         db
       );
 
+      // Get runtime-specific package manager configuration
+      const pkgManagerConfig = getPackageManagerConfig(runtime, owner, repo, commitSha);
+
       try {
         await db.insert(schema.mcpServers).values({
         id: serverId,
@@ -470,8 +565,8 @@ export default async function deployRoutes(server: FastifyInstance) {
         github_stars: null,
         packages: JSON.stringify([{
           transport: {
-            command: 'npx',
-            args: ['-y', `github:${owner}/${repo}#${commitSha}`],
+            command: pkgManagerConfig.command,
+            args: pkgManagerConfig.args,
             env: {}
           }
         }]),
@@ -482,10 +577,7 @@ export default async function deployRoutes(server: FastifyInstance) {
         owner_team_id: teamId,
         license: packageLicense || null,
         // Template tier - locked GitHub reference (base args that can't be changed)
-        template_args: JSON.stringify([
-          { value: '-y', locked: true, description: 'Auto-confirm npx', order: 0 },
-          { value: `github:${owner}/${repo}#${commitSha}`, locked: true, description: 'GitHub package reference', order: 1 }
-        ]),
+        template_args: JSON.stringify(pkgManagerConfig.templateArgs),
         template_env: JSON.stringify([]),
         template_headers: JSON.stringify([]),
         template_url_query_params: JSON.stringify([]),
@@ -498,7 +590,7 @@ export default async function deployRoutes(server: FastifyInstance) {
               required: false,
               locked: false,
               default_team_locked: false,
-              order: 2 + index // Start after template_args
+              order: pkgManagerConfig.templateArgs.length + index // Start after template_args
             })))
           : JSON.stringify([]),
         team_env_schema: team_env && Object.keys(team_env).length > 0

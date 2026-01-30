@@ -8,6 +8,12 @@ import { McpInstallationNotificationService } from '../../../services/mcpInstall
 import { SatelliteValidationService } from '../../../services/satelliteValidationService';
 import { getDb } from '../../../db';
 import {
+  validateArgs,
+  validateEnvVars,
+  validateHeaders,
+  validateQueryParams
+} from '../../../lib/security';
+import {
   TEAM_ID_PARAM_SCHEMA,
   CREATE_INSTALLATION_REQUEST_SCHEMA,
   INSTALLATION_SUCCESS_RESPONSE_SCHEMA,
@@ -91,6 +97,95 @@ export default async function createInstallationRoute(server: FastifyInstance) {
 
     try {
       const db = getDb();
+
+      // Security validation: Validate user-provided configuration
+      // Validate team_args if provided
+      if (installationData.team_args && installationData.team_args.length > 0) {
+        const argsValidation = validateArgs(installationData.team_args);
+        if (!argsValidation.valid) {
+          request.log.warn({
+            operation: 'create_mcp_installation_security_validation',
+            teamId,
+            userId,
+            validationType: 'team_args',
+            error: argsValidation.error,
+            details: argsValidation.details
+          }, 'Security validation failed for team_args');
+
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: argsValidation.error!
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
+      // Validate team_env if provided
+      if (installationData.team_env && Object.keys(installationData.team_env).length > 0) {
+        const envValidation = validateEnvVars(installationData.team_env);
+        if (!envValidation.valid) {
+          request.log.warn({
+            operation: 'create_mcp_installation_security_validation',
+            teamId,
+            userId,
+            validationType: 'team_env',
+            error: envValidation.error,
+            details: envValidation.details
+          }, 'Security validation failed for team_env');
+
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: envValidation.error!
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
+      // Validate team_headers if provided
+      if (installationData.team_headers && Object.keys(installationData.team_headers).length > 0) {
+        const headersValidation = validateHeaders(installationData.team_headers);
+        if (!headersValidation.valid) {
+          request.log.warn({
+            operation: 'create_mcp_installation_security_validation',
+            teamId,
+            userId,
+            validationType: 'team_headers',
+            error: headersValidation.error,
+            details: headersValidation.details
+          }, 'Security validation failed for team_headers');
+
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: headersValidation.error!
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
+      // Validate team_url_query_params if provided
+      if (installationData.team_url_query_params && Object.keys(installationData.team_url_query_params).length > 0) {
+        const queryParamsValidation = validateQueryParams(installationData.team_url_query_params);
+        if (!queryParamsValidation.valid) {
+          request.log.warn({
+            operation: 'create_mcp_installation_security_validation',
+            teamId,
+            userId,
+            validationType: 'team_url_query_params',
+            error: queryParamsValidation.error,
+            details: queryParamsValidation.details
+          }, 'Security validation failed for team_url_query_params');
+
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: queryParamsValidation.error!
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
 
       // Validate satellite using shared validation service
       const satelliteValidationService = new SatelliteValidationService(db, request.log);

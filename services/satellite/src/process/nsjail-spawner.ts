@@ -4,6 +4,48 @@ import { existsSync } from 'fs';
 import { Logger } from 'pino';
 import { MCPServerConfig } from './types';
 import { nsjailConfig, mcpCacheBaseDir, BLOCKED_ENV_VARS } from '../config/nsjail';
+import {
+  validateCommand,
+  validateArgs,
+  COMMAND_PATHS
+} from '../config/security-validation';
+
+/**
+ * Allowed build commands (npm, uv, pip)
+ * These are the only commands that can be used during the build phase
+ */
+const ALLOWED_BUILD_COMMANDS = new Set(['npm', 'uv', 'pip', 'pip3']);
+
+/**
+ * Build command path mappings for nsjail
+ */
+const BUILD_COMMAND_PATHS: Record<string, string> = {
+  'npm': '/usr/bin/npm',
+  'uv': '/usr/bin/uv',
+  'pip': '/usr/bin/pip',
+  'pip3': '/usr/bin/pip3'
+};
+
+/**
+ * Options for sandboxed build commands
+ */
+export interface BuildCommandOptions {
+  /** Allow network access (required for npm install, blocked for npm run build) */
+  allowNetwork: boolean;
+  /** Timeout in milliseconds */
+  timeoutMs: number;
+  /** Runtime type for environment configuration */
+  runtime: 'node' | 'python';
+}
+
+/**
+ * Result of a sandboxed build command
+ */
+export interface BuildCommandResult {
+  code: number;
+  stdout: string;
+  stderr: string;
+}
 
 /**
  * ProcessSpawner handles spawning MCP server processes
@@ -67,30 +109,42 @@ export class ProcessSpawner {
 
   /**
    * Resolve command to full path for nsjail execution
-   * nsjail has limited PATH, so we need full paths for common commands
+   * SECURE: Only allows commands from the allowlist, rejects absolute paths
+   * nsjail requires full paths for command execution
    */
   resolveCommandPath(command: string): string {
-    // Map of common commands to their full paths
-    const commandPaths: Record<string, string> = {
-      'npx': '/usr/bin/npx',
-      'node': '/usr/bin/node',
-      'uvx': '/usr/bin/uvx',
-      'python': '/usr/bin/python',
-      'python3': '/usr/bin/python3'
-    };
-
-    // If command is in our map, return full path
-    if (commandPaths[command]) {
-      return commandPaths[command];
+    // Validate command first (defense in depth - backend should have validated)
+    const validation = validateCommand(command, this.logger);
+    if (!validation.valid) {
+      this.logger.error({
+        operation: 'resolve_command_path_blocked',
+        command,
+        error: validation.error
+      }, `SECURITY: Rejected command '${command}': ${validation.error}`);
+      throw new Error(validation.error || `Command '${command}' not allowed`);
     }
 
-    // If command already starts with /, assume it's a full path
-    if (command.startsWith('/')) {
-      return command;
+    // Get path from secure mappings (only known-safe commands)
+    const normalizedCommand = command.trim().toLowerCase();
+    const path = COMMAND_PATHS[normalizedCommand];
+
+    if (!path) {
+      // This shouldn't happen if ALLOWED_COMMANDS and COMMAND_PATHS are in sync
+      this.logger.error({
+        operation: 'resolve_command_path_no_mapping',
+        command,
+        normalizedCommand
+      }, `No path mapping found for allowed command '${command}'`);
+      throw new Error(`No path mapping for command '${command}'`);
     }
 
-    // Otherwise, try /usr/bin/ as default
-    return `/usr/bin/${command}`;
+    this.logger.debug({
+      operation: 'command_path_resolved',
+      original_command: command,
+      resolved_command: path
+    }, `Resolved command path: ${command} -> ${path}`);
+
+    return path;
   }
 
   /**
@@ -215,6 +269,20 @@ export class ProcessSpawner {
    * - Cgroup limits: Precise control over physical memory and CPU usage
    */
   async spawnWithNsjail(config: MCPServerConfig): Promise<ChildProcess> {
+    // SECURITY: Validate command and arguments (defense in depth)
+    // Backend should have validated, but satellite is the last line of defense
+    const argsValidation = validateArgs(config.args, this.logger);
+    if (!argsValidation.valid) {
+      this.logger.error({
+        operation: 'spawn_nsjail_args_blocked',
+        installation_name: config.installation_name,
+        team_id: config.team_id,
+        error: argsValidation.error,
+        blockedItems: argsValidation.blockedItems
+      }, `SECURITY: Blocked spawn due to dangerous arguments`);
+      throw new Error(`Security validation failed: ${argsValidation.error}`);
+    }
+
     // Determine runtime (default to 'node' for backward compatibility)
     const runtime = config.runtime || 'node';
 
@@ -242,13 +310,8 @@ export class ProcessSpawner {
     const gid = process.getgid ? process.getgid() : 1000;
 
     // Resolve command to full path (nsjail requires full paths)
+    // This also validates the command is in the allowlist
     const fullCommandPath = this.resolveCommandPath(config.command);
-
-    this.logger.debug({
-      operation: 'command_path_resolved',
-      original_command: config.command,
-      resolved_command: fullCommandPath
-    }, `Resolved command path: ${config.command} -> ${fullCommandPath}`);
 
     // Build nsjail arguments based on working production configuration
     const nsjailArgs = [
@@ -292,6 +355,206 @@ export class ProcessSpawner {
 
     return spawn('nsjail', nsjailArgs, {
       stdio: ['pipe', 'pipe', 'pipe']
+    });
+  }
+
+  /**
+   * Get sanitized build environment (NO SECRETS)
+   *
+   * Build commands should not have access to secrets or sensitive environment variables.
+   * This prevents exfiltration during malicious build scripts.
+   */
+  private getSanitizedBuildEnv(runtime: 'node' | 'python'): string[] {
+    const baseEnv = [
+      '-E', 'CI=true',
+      '-E', 'PATH=/usr/bin:/bin:/usr/local/bin'
+    ];
+
+    if (runtime === 'node') {
+      return [
+        ...baseEnv,
+        '-E', 'HOME=/build',
+        '-E', 'NPM_CONFIG_CACHE=/build/.npm',
+        '-E', 'NPM_CONFIG_UPDATE_NOTIFIER=false',
+        '-E', 'NODE_ENV=production'
+      ];
+    } else {
+      return [
+        ...baseEnv,
+        '-E', 'HOME=/build',
+        '-E', 'UV_CACHE_DIR=/build/.cache/uv',
+        '-E', 'UV_TOOL_DIR=/build/.local/bin',
+        '-E', 'PYTHONUNBUFFERED=1',
+        '-E', 'PIP_NO_CACHE_DIR=1',
+        '-E', 'PIP_DISABLE_PIP_VERSION_CHECK=1'
+      ];
+    }
+  }
+
+  /**
+   * Spawn build commands (npm/uv/pip) inside nsjail sandbox
+   *
+   * Only used in production mode (Linux + nsjail available).
+   * Development mode uses direct spawn() instead.
+   *
+   * Security features:
+   * - Command allowlist validation (only npm, uv, pip, pip3)
+   * - Sanitized environment (NO secrets passed to build)
+   * - Network can be blocked during build phase (post-install)
+   * - Resource limits applied
+   *
+   * @param command - The build command (npm, uv, pip, pip3)
+   * @param args - Command arguments
+   * @param workingDir - Directory with the extracted repository
+   * @param options - Build options (network, timeout, runtime)
+   * @returns Promise with exit code, stdout, and stderr
+   */
+  async spawnBuildCommandWithNsjail(
+    command: string,
+    args: string[],
+    workingDir: string,
+    options: BuildCommandOptions
+  ): Promise<BuildCommandResult> {
+    // Validate command against allowlist
+    const normalizedCommand = command.trim().toLowerCase();
+    if (!ALLOWED_BUILD_COMMANDS.has(normalizedCommand)) {
+      this.logger.error({
+        operation: 'security_build_command_blocked',
+        command,
+        allowed: Array.from(ALLOWED_BUILD_COMMANDS)
+      }, `SECURITY: Build command not in allowlist: ${command}`);
+      throw new Error(`Build command '${command}' not allowed. Allowed: ${Array.from(ALLOWED_BUILD_COMMANDS).join(', ')}`);
+    }
+
+    // Get command path
+    const commandPath = BUILD_COMMAND_PATHS[normalizedCommand];
+    if (!commandPath) {
+      throw new Error(`No path mapping for build command '${command}'`);
+    }
+
+    // Get current user UID and GID
+    const uid = process.getuid ? process.getuid() : 1000;
+    const gid = process.getgid ? process.getgid() : 1000;
+
+    const timeoutSeconds = Math.floor(options.timeoutMs / 1000);
+
+    this.logger.info({
+      operation: 'spawn_build_command_nsjail',
+      command,
+      command_path: commandPath,
+      args,
+      working_dir: workingDir,
+      allow_network: options.allowNetwork,
+      timeout_seconds: timeoutSeconds,
+      runtime: options.runtime
+    }, `Spawning sandboxed build command: ${command} ${args.join(' ')}`);
+
+    // Build nsjail arguments for build commands
+    const nsjailArgs = [
+      '-Mo',                                    // Mount mode: once
+      '--proc_rw',                              // Required for thread management
+      '--user', String(uid),
+      '--group', String(gid),
+      '--rlimit_as', String(nsjailConfig.memoryLimitMB),
+      '--rlimit_cpu', String(timeoutSeconds),
+      '--rlimit_nproc', String(nsjailConfig.maxProcesses),
+      '--rlimit_nofile', String(nsjailConfig.maxOpenFiles),
+      '--rlimit_fsize', String(nsjailConfig.maxFileSizeMB),
+      '--time_limit', String(timeoutSeconds),
+      // Cgroup limits
+      '--cgroup_mem_max', String(nsjailConfig.cgroupMemMaxBytes),
+      '--cgroup_pids_max', String(nsjailConfig.cgroupPidsMax),
+      // Read-only system mounts
+      '-R', '/usr',
+      '-R', '/lib',
+      '-R', '/lib64',
+      '-R', '/bin',
+      '-R', '/sbin',
+      '-R', '/etc',
+      // Writable temp
+      '-T', `/tmp:size=${nsjailConfig.tmpfsSize}`,
+      // Working directory (read-write for install/build to work)
+      '-B', `${workingDir}:/build:rw`,
+      '--cwd', '/build',
+      // Device mounts
+      '--bindmount', '/dev/null:/dev/null',
+      '--bindmount', '/dev/urandom:/dev/urandom',
+      '--bindmount', '/dev/zero:/dev/zero',
+      '--symlink', '/proc/self/fd:/dev/fd',
+      // Sanitized environment (NO SECRETS)
+      ...this.getSanitizedBuildEnv(options.runtime),
+      // Disable cgroup namespace (causes clone() errors on some kernels)
+      '--disable_clone_newcgroup',
+      '--disable_no_new_privs',
+      '--hostname', 'mcp-build',
+      // Network: conditional based on phase
+      // Install phase needs network, build phase should block it
+      ...(options.allowNetwork ? ['--disable_clone_newnet'] : []),
+      '--',
+      commandPath,
+      ...args
+    ];
+
+    return new Promise<BuildCommandResult>((resolve, reject) => {
+      const proc = spawn('nsjail', nsjailArgs, {
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      let stdout = '';
+      let stderr = '';
+      let timedOut = false;
+
+      // Set up timeout
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        proc.kill('SIGKILL');
+      }, options.timeoutMs + 5000); // Give nsjail time to cleanup
+
+      proc.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      proc.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      proc.on('close', (code) => {
+        clearTimeout(timeout);
+
+        if (timedOut) {
+          this.logger.error({
+            operation: 'build_command_timeout',
+            command,
+            timeout_ms: options.timeoutMs
+          }, `Build command timed out after ${options.timeoutMs}ms`);
+          reject(new Error(`Build command '${command}' timed out after ${options.timeoutMs}ms`));
+          return;
+        }
+
+        this.logger.info({
+          operation: 'build_command_completed',
+          command,
+          exit_code: code,
+          stdout_length: stdout.length,
+          stderr_length: stderr.length
+        }, `Build command completed with code ${code}`);
+
+        resolve({
+          code: code ?? 1,
+          stdout,
+          stderr
+        });
+      });
+
+      proc.on('error', (error) => {
+        clearTimeout(timeout);
+        this.logger.error({
+          operation: 'build_command_error',
+          command,
+          error: error.message
+        }, `Build command process error: ${error.message}`);
+        reject(error);
+      });
     });
   }
 }

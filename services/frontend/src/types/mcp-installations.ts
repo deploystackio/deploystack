@@ -17,6 +17,10 @@ export interface McpServer {
   repository_source?: string | null
   repository_id?: string | null
   repository_subfolder?: string | null
+  source?: 'official_registry' | 'manual' | 'github'
+  git_branch?: string | null
+  git_commit_sha?: string | null
+  slug?: string
   tags?: string[] | null
   environment_variables?: EnvironmentVariable[]
   transport_type?: 'stdio' | 'http' | 'sse'
@@ -77,6 +81,7 @@ export interface McpInstallation {
   installation_name: string
   installation_type: 'global' | 'team'
   team_id: string
+  team_slug?: string
   created_at: string
   last_used_at: string | null
   server?: McpServer

@@ -9,6 +9,7 @@ import { ExternalLink, Calendar, Tag, RefreshCw, Github } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import InstallationStatusBadge from './InstallationStatusBadge.vue'
 import GeneralMetricsPanel from './GeneralMetricsPanel.vue'
+import DeploymentInfoCard from './DeploymentInfoCard.vue'
 import McpServerInfoSpecifications from '@/components/mcp-server/view/McpServerInfoSpecifications.vue'
 import { useMcpToolsStore } from '@/stores/mcpToolsStore'
 // import { useMcpInstallationCache } from '@/composables/mcp-server/installation'
@@ -354,6 +355,9 @@ onUnmounted(() => {
         </div>
       </dl>
     </DsCard>
+
+    <!-- Deployment Info (GitHub only) -->
+    <DeploymentInfoCard :installation="installation" />
 
     <!-- Installation Details Card -->
     <DsCard title="Details">

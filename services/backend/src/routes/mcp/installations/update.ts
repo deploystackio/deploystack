@@ -5,6 +5,7 @@ import { McpInstallationService } from '../../../services/mcpInstallationService
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb, getSchema } from '../../../db';
 import { eq } from 'drizzle-orm';
+import { validateArgs, validateEnvVars } from '../../../lib/security';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
   UPDATE_INSTALLATION_REQUEST_SCHEMA,
@@ -73,9 +74,56 @@ export default async function updateInstallationRoute(server: FastifyInstance) {
     }, 'Updating MCP installation');
 
     try {
+      // Security validation: Validate user-provided configuration
+      // Validate team_args if provided
+      if (updateData.team_args && updateData.team_args.length > 0) {
+        const argsValidation = validateArgs(updateData.team_args);
+        if (!argsValidation.valid) {
+          request.log.warn({
+            operation: 'update_mcp_installation_security_validation',
+            teamId,
+            installationId,
+            userId,
+            validationType: 'team_args',
+            error: argsValidation.error,
+            details: argsValidation.details
+          }, 'Security validation failed for team_args');
+
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: argsValidation.error!
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
+      // Validate team_env if provided
+      if (updateData.team_env && Object.keys(updateData.team_env).length > 0) {
+        const envValidation = validateEnvVars(updateData.team_env);
+        if (!envValidation.valid) {
+          request.log.warn({
+            operation: 'update_mcp_installation_security_validation',
+            teamId,
+            installationId,
+            userId,
+            validationType: 'team_env',
+            error: envValidation.error,
+            details: envValidation.details
+          }, 'Security validation failed for team_env');
+
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: envValidation.error!
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
       const db = getDb();
       const installationService = new McpInstallationService(db, request.log);
-      
+
       const updatedInstallation = await installationService.updateInstallation(
         installationId,
         teamId,

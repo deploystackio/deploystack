@@ -5,6 +5,7 @@ import { McpInstallationService } from '../../../services/mcpInstallationService
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb, getSchema } from '../../../db';
 import { eq, and, sql } from 'drizzle-orm';
+import { validateQueryParams } from '../../../lib/security';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
   UPDATE_QUERY_PARAMS_REQUEST_SCHEMA,
@@ -72,6 +73,28 @@ export default async function updateQueryParamsRoute(server: FastifyInstance) {
     }, 'Updating MCP installation query parameters');
 
     try {
+      // Security validation: Validate query parameters
+      if (Object.keys(team_url_query_params).length > 0) {
+        const queryParamsValidation = validateQueryParams(team_url_query_params);
+        if (!queryParamsValidation.valid) {
+          request.log.warn({
+            operation: 'update_mcp_installation_query_params_security_validation',
+            teamId,
+            installationId,
+            userId,
+            error: queryParamsValidation.error,
+            details: queryParamsValidation.details
+          }, 'Security validation failed for team_url_query_params');
+
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: queryParamsValidation.error!
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
       const db = getDb();
       const installationService = new McpInstallationService(db, request.log);
 

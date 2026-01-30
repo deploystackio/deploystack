@@ -5,6 +5,7 @@ import { McpInstallationService } from '../../../services/mcpInstallationService
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb, getSchema } from '../../../db';
 import { eq, and, sql } from 'drizzle-orm';
+import { validateArgs } from '../../../lib/security';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
   UPDATE_ARGS_REQUEST_SCHEMA,
@@ -72,9 +73,31 @@ export default async function updateArgsRoute(server: FastifyInstance) {
     }, 'Updating MCP installation command line arguments');
 
     try {
+      // Security validation: Validate command line arguments
+      if (args.length > 0) {
+        const argsValidation = validateArgs(args);
+        if (!argsValidation.valid) {
+          request.log.warn({
+            operation: 'update_mcp_installation_args_security_validation',
+            teamId,
+            installationId,
+            userId,
+            error: argsValidation.error,
+            details: argsValidation.details
+          }, 'Security validation failed for args');
+
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: argsValidation.error!
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
       const db = getDb();
       const installationService = new McpInstallationService(db, request.log);
-      
+
       // Update only the command line arguments
       const updatedInstallation = await installationService.updateInstallation(
         installationId,

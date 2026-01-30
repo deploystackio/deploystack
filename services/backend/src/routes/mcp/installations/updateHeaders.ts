@@ -5,6 +5,7 @@ import { McpInstallationService } from '../../../services/mcpInstallationService
 import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import { getDb, getSchema } from '../../../db';
 import { eq, and, sql } from 'drizzle-orm';
+import { validateHeaders } from '../../../lib/security';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
   UPDATE_HEADERS_REQUEST_SCHEMA,
@@ -72,9 +73,31 @@ export default async function updateHeadersRoute(server: FastifyInstance) {
     }, 'Updating MCP installation headers');
 
     try {
+      // Security validation: Validate headers
+      if (Object.keys(team_headers).length > 0) {
+        const headersValidation = validateHeaders(team_headers);
+        if (!headersValidation.valid) {
+          request.log.warn({
+            operation: 'update_mcp_installation_headers_security_validation',
+            teamId,
+            installationId,
+            userId,
+            error: headersValidation.error,
+            details: headersValidation.details
+          }, 'Security validation failed for team_headers');
+
+          const errorResponse: ErrorResponse = {
+            success: false,
+            error: headersValidation.error!
+          };
+          const jsonString = JSON.stringify(errorResponse);
+          return reply.status(400).type('application/json').send(jsonString);
+        }
+      }
+
       const db = getDb();
       const installationService = new McpInstallationService(db, request.log);
-      
+
       // Update only the headers
       const updatedInstallation = await installationService.updateInstallation(
         installationId,

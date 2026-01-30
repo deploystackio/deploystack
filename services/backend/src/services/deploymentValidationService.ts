@@ -3,6 +3,7 @@ import { Octokit as OctokitConstructor } from '@octokit/rest';
 import type { DeploymentCredentialService } from './deploymentCredentialService';
 import { getGitHubAppConfig } from '../lib/deployment/github-config';
 import { RuntimeDetector, type Runtime, type McpSdkInfo } from '../lib/deployment/runtime-detector';
+import { validateNodeScripts, validatePythonProject } from '../lib/security/build-script-validation';
 
 export interface ValidationMetadata {
   // Package.json data (Node.js) or equivalent
@@ -196,6 +197,58 @@ export class DeploymentValidationService {
             valid: false,
             error: 'package.json missing required "name" field',
             step: 'validate_package_json'
+          };
+        }
+      }
+
+      // ============================================
+      // STEP 5.5: Validate Build Scripts (Security)
+      // ============================================
+      // Validate build scripts to prevent arbitrary code execution during npm install/build
+      if (runtimeResult.runtime === 'node' && runtimeResult.scripts) {
+        const scriptsValidation = validateNodeScripts(runtimeResult.scripts);
+        if (!scriptsValidation.valid) {
+          return {
+            valid: false,
+            error: scriptsValidation.error,
+            step: 'validate_build_scripts'
+          };
+        }
+      }
+
+      // Validate Python project for dangerous patterns
+      if (runtimeResult.runtime === 'python') {
+        // Check for setup.py (runs arbitrary code during pip install)
+        let hasSetupPy = false;
+        try {
+          await octokit.repos.getContent({ owner, repo, path: 'setup.py', ref: commitSha });
+          hasSetupPy = true;
+        } catch {
+          // setup.py doesn't exist, which is good
+        }
+
+        // Get pyproject.toml content for validation
+        let pyprojectContent: string | undefined;
+        try {
+          const { data } = await octokit.repos.getContent({
+            owner,
+            repo,
+            path: 'pyproject.toml',
+            ref: commitSha
+          });
+          if ('content' in data) {
+            pyprojectContent = Buffer.from(data.content, 'base64').toString('utf8');
+          }
+        } catch {
+          // pyproject.toml doesn't exist
+        }
+
+        const pythonValidation = validatePythonProject(pyprojectContent, hasSetupPy);
+        if (!pythonValidation.valid) {
+          return {
+            valid: false,
+            error: pythonValidation.error,
+            step: 'validate_build_scripts'
           };
         }
       }

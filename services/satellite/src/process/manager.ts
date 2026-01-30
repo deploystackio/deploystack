@@ -768,7 +768,8 @@ export class ProcessManager extends EventEmitter {
     this.processIdsByName.delete(processInfo.config.installation_name);
 
     // Cleanup temp directory if this was a GitHub deployment
-    if (processInfo.config.temp_dir) {
+    // ONLY delete on uninstall - preserve for dormant respawn, crash recovery, etc.
+    if (processInfo.config.temp_dir && processInfo.isUninstallShutdown) {
       try {
         this.logger.debug({
           operation: 'temp_dir_cleanup_start',
@@ -791,6 +792,14 @@ export class ProcessManager extends EventEmitter {
           error: error instanceof Error ? error.message : String(error)
         }, 'Failed to cleanup temp directory (non-fatal)');
       }
+    } else if (processInfo.config.temp_dir) {
+      // Log that we're preserving the temp directory for potential restart/respawn
+      this.logger.debug({
+        operation: 'temp_dir_preserved',
+        installation_name: processInfo.config.installation_name,
+        temp_dir: processInfo.config.temp_dir,
+        reason: processInfo.isDormantShutdown ? 'dormant_respawn' : 'potential_restart'
+      }, `Preserving temp directory: ${processInfo.config.temp_dir}`);
     }
 
     this.logger.info({

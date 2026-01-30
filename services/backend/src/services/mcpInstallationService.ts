@@ -12,6 +12,7 @@ import { OAuthDiscoveryService } from './OAuthDiscoveryService';
 export interface McpInstallation {
   id: string;
   team_id: string;
+  team_slug: string;
   server_id: string;
   created_by: string;
   installation_name: string;
@@ -38,6 +39,10 @@ export interface McpInstallation {
     repository_source: string | null; // Optional in DB
     repository_id: string | null; // Optional in DB
     repository_subfolder: string | null; // Optional in DB
+    source: 'official_registry' | 'manual' | 'github'; // Source of the MCP server
+    git_branch: string | null; // Git branch for GitHub deployments
+    git_commit_sha: string | null; // Git commit SHA for GitHub deployments
+    slug: string; // Server slug for hierarchical router
     tags: string[] | null; // Optional in DB
     packages: any[];
     remotes: any[] | null;
@@ -276,10 +281,12 @@ export class McpInstallationService {
     const result = await this.db
       .select({
         installation: this.mcpServerInstallations,
-        server: this.mcpServers
+        server: this.mcpServers,
+        team_slug: this.teams.slug
       })
       .from(this.mcpServerInstallations)
       .leftJoin(this.mcpServers, eq(this.mcpServerInstallations.server_id, this.mcpServers.id))
+      .leftJoin(this.teams, eq(this.mcpServerInstallations.team_id, this.teams.id))
       .where(
         and(
           eq(this.mcpServerInstallations.id, installationId),
@@ -297,7 +304,7 @@ export class McpInstallationService {
       return null;
     }
 
-    const { installation, server } = result[0];
+    const { installation, server, team_slug } = result[0];
 
     const teamArgs = installation.team_args 
       ? await McpArgsStorage.retrieveTeamArgs(
@@ -310,6 +317,7 @@ export class McpInstallationService {
 
     return {
       ...installation,
+      team_slug: team_slug || '',
       installation_type: installation.installation_type as 'global' | 'team',
       last_used_at: installation.last_used_at ?? undefined,
       team_args: teamArgs,
@@ -339,6 +347,10 @@ export class McpInstallationService {
         repository_source: server.repository_source,
         repository_id: server.repository_id,
         repository_subfolder: server.repository_subfolder,
+        source: server.source,
+        git_branch: server.git_branch,
+        git_commit_sha: server.git_commit_sha,
+        slug: server.slug,
         tags: this.parseJsonField(server.tags, []),
         packages: this.parseJsonField(server.packages, []),
         remotes: this.parseJsonField(server.remotes, null),

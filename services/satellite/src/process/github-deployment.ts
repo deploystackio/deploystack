@@ -8,6 +8,8 @@ import { Logger } from 'pino';
 import { MCPServerConfig } from './types';
 import { LogBuffer } from './log-buffer';
 import type { BackendClient } from '../services/backend-client';
+import { ProcessSpawner } from './nsjail-spawner';
+import { validateBuildScripts } from '../config/security-validation';
 
 /**
  * Parsed GitHub repository information
@@ -19,49 +21,78 @@ export interface GitHubInfo {
 }
 
 /**
+ * Helper to check if a file exists
+ */
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.promises.access(filePath, fs.constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * GitHubDeploymentHandler manages GitHub repository deployments
  * Handles downloading, extracting, building, and preparing MCP servers from GitHub
+ * Supports both Node.js and Python runtimes
  */
 export class GitHubDeploymentHandler {
+  private processSpawner: ProcessSpawner;
+
   constructor(
     private logger: Logger,
     private logBuffer: LogBuffer,
     private backendClient?: BackendClient
-  ) {}
+  ) {
+    this.processSpawner = new ProcessSpawner(logger);
+  }
 
   /**
    * Parse GitHub URL from package manager arguments
-   * Supports: github:owner/repo#ref (for npx and uvx)
+   * Supports:
+   *   - github:owner/repo#ref (for npx)
+   *   - git+https://github.com/owner/repo.git@ref (for uvx/pip)
    */
   parseGitHubUrl(command: string, args: string[]): GitHubInfo | null {
-    // Check if this is a supported package manager command with GitHub shorthand
+    // Check if this is a supported package manager command
     const supportedCommands = ['npx', 'uvx'];
     if (!supportedCommands.includes(command)) {
       return null;
     }
 
-    // Find the github: argument (skip -y or other flags)
+    // Try npm/npx format: github:owner/repo#ref
     const githubArg = args.find(arg => arg.startsWith('github:'));
-    if (!githubArg) {
-      return null;
+    if (githubArg) {
+      const match = githubArg.match(/^github:([^/]+)\/([^#]+)#(.+)$/);
+      if (match) {
+        return {
+          owner: match[1],
+          repo: match[2],
+          ref: match[3]
+        };
+      }
     }
 
-    // Parse github:owner/repo#ref
-    const match = githubArg.match(/^github:([^/]+)\/([^#]+)#(.+)$/);
-    if (!match) {
-      this.logger.warn({
-        operation: 'github_url_parse_failed',
-        github_arg: githubArg,
-        command: command
-      }, `Failed to parse GitHub URL from ${command} arguments`);
-      return null;
+    // Try Python/uvx format: git+https://github.com/owner/repo.git@ref
+    const gitPlusArg = args.find(arg => arg.startsWith('git+https://github.com/'));
+    if (gitPlusArg) {
+      const match = gitPlusArg.match(/^git\+https:\/\/github\.com\/([^/]+)\/([^.]+)\.git@(.+)$/);
+      if (match) {
+        return {
+          owner: match[1],
+          repo: match[2],
+          ref: match[3]
+        };
+      }
     }
 
-    return {
-      owner: match[1],
-      repo: match[2],
-      ref: match[3]
-    };
+    this.logger.warn({
+      operation: 'github_url_parse_failed',
+      args,
+      command
+    }, `Failed to parse GitHub URL from ${command} arguments`);
+    return null;
   }
 
   /**
@@ -497,8 +528,274 @@ export class GitHubDeploymentHandler {
   }
 
   /**
+   * Install Python dependencies using uv or pip
+   * Uses uv sync for pyproject.toml projects, pip for requirements.txt
+   */
+  async installPythonDependencies(
+    tempDir: string,
+    installationId: string,
+    teamId: string,
+    userId?: string
+  ): Promise<void> {
+    const hasPyproject = await fileExists(path.join(tempDir, 'pyproject.toml'));
+    const hasRequirements = await fileExists(path.join(tempDir, 'requirements.txt'));
+
+    if (!hasPyproject && !hasRequirements) {
+      this.logger.info({
+        operation: 'python_install_skip',
+        temp_dir: tempDir
+      }, 'No pyproject.toml or requirements.txt found, skipping install');
+
+      this.logBuffer.add({
+        installation_id: installationId,
+        team_id: teamId,
+        user_id: userId,
+        level: 'info',
+        message: '[python install] No dependency file found, skipping install',
+        timestamp: new Date().toISOString()
+      });
+
+      return;
+    }
+
+    let command: string;
+    let args: string[];
+
+    if (hasPyproject) {
+      // Modern Python: use uv sync
+      command = 'uv';
+      args = ['sync', '--no-dev'];
+      this.logger.debug({
+        operation: 'python_install_start',
+        temp_dir: tempDir,
+        method: 'uv sync'
+      }, 'Installing Python dependencies with uv sync --no-dev');
+    } else {
+      // Legacy Python: use pip
+      command = 'pip';
+      args = ['install', '-r', 'requirements.txt', '--no-cache-dir'];
+      this.logger.debug({
+        operation: 'python_install_start',
+        temp_dir: tempDir,
+        method: 'pip install'
+      }, 'Installing Python dependencies with pip install');
+    }
+
+    // Use nsjail in production, direct spawn in development
+    if (this.processSpawner.shouldUseNsjail()) {
+      const result = await this.processSpawner.spawnBuildCommandWithNsjail(
+        command,
+        args,
+        tempDir,
+        {
+          allowNetwork: true,  // Install needs network
+          timeoutMs: 180000,   // 3 minutes for Python (larger packages)
+          runtime: 'python'
+        }
+      );
+
+      // Emit logs to backend
+      if (result.stdout) {
+        this.logBuffer.add({
+          installation_id: installationId,
+          team_id: teamId,
+          user_id: userId,
+          level: 'info',
+          message: `[${command}] ${result.stdout.substring(0, 1000)}`,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      if (result.code !== 0) {
+        this.logBuffer.add({
+          installation_id: installationId,
+          team_id: teamId,
+          user_id: userId,
+          level: 'error',
+          message: `[${command}] ${result.stderr.substring(0, 500)}`,
+          timestamp: new Date().toISOString()
+        });
+        throw new Error(`${command} ${args.join(' ')} failed with code ${result.code}: ${result.stderr.substring(0, 200)}`);
+      }
+
+      this.logger.info({
+        operation: 'python_install_success',
+        temp_dir: tempDir,
+        method: command
+      }, 'Python dependencies installed successfully');
+    } else {
+      // Development mode - direct spawn
+      return new Promise((resolve, reject) => {
+        const proc = spawn(command, args, {
+          cwd: tempDir,
+          stdio: 'pipe'
+        });
+
+        let stderr = '';
+
+        proc.stdout.on('data', (data) => {
+          const output = data.toString().trim();
+          if (output) {
+            this.logBuffer.add({
+              installation_id: installationId,
+              team_id: teamId,
+              user_id: userId,
+              level: 'info',
+              message: `[${command}] ${output}`,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+
+        proc.stderr.on('data', (data) => {
+          const output = data.toString().trim();
+          stderr += output;
+          if (output) {
+            this.logBuffer.add({
+              installation_id: installationId,
+              team_id: teamId,
+              user_id: userId,
+              level: 'warn',
+              message: `[${command}] ${output}`,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+
+        proc.on('exit', (code) => {
+          if (code === 0) {
+            this.logger.info({
+              operation: 'python_install_success',
+              temp_dir: tempDir,
+              method: command
+            }, 'Python dependencies installed successfully');
+            resolve();
+          } else {
+            this.logger.error({
+              operation: 'python_install_failed',
+              temp_dir: tempDir,
+              exit_code: code,
+              stderr: stderr.substring(0, 500)
+            }, `${command} failed with code ${code}`);
+            reject(new Error(`${command} failed with code ${code}: ${stderr.substring(0, 200)}`));
+          }
+        });
+
+        proc.on('error', (error) => {
+          this.logger.error({
+            operation: 'python_install_error',
+            temp_dir: tempDir,
+            error: error.message
+          }, `${command} process error`);
+          reject(new Error(`${command} process error: ${error.message}`));
+        });
+      });
+    }
+  }
+
+  /**
+   * Resolve Python package entry point from pyproject.toml or __main__.py
+   */
+  async resolvePythonPackageEntry(tempDir: string): Promise<{ command: string; entryPoint: string }> {
+    this.logger.debug({
+      operation: 'python_entry_resolve_start',
+      temp_dir: tempDir
+    }, 'Resolving Python package entry point');
+
+    // Try pyproject.toml first
+    const pyprojectPath = path.join(tempDir, 'pyproject.toml');
+    if (await fileExists(pyprojectPath)) {
+      const content = await fs.promises.readFile(pyprojectPath, 'utf8');
+
+      // Look for [project.scripts] section
+      const scriptsMatch = content.match(/\[project\.scripts\]\s*\n([^[]+)/);
+      if (scriptsMatch) {
+        const firstScriptMatch = scriptsMatch[1].match(/^(\w+)\s*=/m);
+        if (firstScriptMatch) {
+          const scriptName = firstScriptMatch[1];
+          // Entry point is installed in .venv/bin/ after uv sync
+          const entryPoint = path.join(tempDir, '.venv', 'bin', scriptName);
+
+          this.logger.info({
+            operation: 'python_entry_resolved',
+            temp_dir: tempDir,
+            script_name: scriptName,
+            entry_point: entryPoint
+          }, `Resolved Python entry point: ${scriptName}`);
+
+          return { command: entryPoint, entryPoint };
+        }
+      }
+
+      // Look for [project.gui-scripts] as fallback
+      const guiMatch = content.match(/\[project\.gui-scripts\]\s*\n([^[]+)/);
+      if (guiMatch) {
+        const firstScriptMatch = guiMatch[1].match(/^(\w+)\s*=/m);
+        if (firstScriptMatch) {
+          const scriptName = firstScriptMatch[1];
+          const entryPoint = path.join(tempDir, '.venv', 'bin', scriptName);
+
+          this.logger.info({
+            operation: 'python_entry_resolved',
+            temp_dir: tempDir,
+            script_name: scriptName,
+            entry_point: entryPoint
+          }, `Resolved Python GUI entry point: ${scriptName}`);
+
+          return { command: entryPoint, entryPoint };
+        }
+      }
+    }
+
+    // Fallback: look for __main__.py
+    const mainPath = path.join(tempDir, '__main__.py');
+    if (await fileExists(mainPath)) {
+      this.logger.info({
+        operation: 'python_entry_resolved_main',
+        temp_dir: tempDir,
+        entry_point: mainPath
+      }, 'Using __main__.py as entry point');
+
+      return { command: 'python3', entryPoint: mainPath };
+    }
+
+    // Try src/__main__.py (common pattern)
+    const srcMainPath = path.join(tempDir, 'src', '__main__.py');
+    if (await fileExists(srcMainPath)) {
+      this.logger.info({
+        operation: 'python_entry_resolved_src_main',
+        temp_dir: tempDir,
+        entry_point: srcMainPath
+      }, 'Using src/__main__.py as entry point');
+
+      return { command: 'python3', entryPoint: srcMainPath };
+    }
+
+    throw new Error('Cannot resolve Python entry point: no scripts in pyproject.toml and no __main__.py found');
+  }
+
+  /**
+   * Detect runtime from extracted repository files
+   */
+  async detectRuntime(tempDir: string): Promise<'node' | 'python' | 'unknown'> {
+    // Check for Node.js
+    if (await fileExists(path.join(tempDir, 'package.json'))) {
+      return 'node';
+    }
+
+    // Check for Python
+    if (await fileExists(path.join(tempDir, 'pyproject.toml')) ||
+        await fileExists(path.join(tempDir, 'requirements.txt'))) {
+      return 'python';
+    }
+
+    return 'unknown';
+  }
+
+  /**
    * Prepare a GitHub deployment - downloads, extracts, builds, and updates config
    * Returns the updated config with local paths
+   * Supports both Node.js and Python runtimes
    */
   async prepareDeployment(config: MCPServerConfig): Promise<MCPServerConfig> {
     if (!this.backendClient) {
@@ -517,7 +814,7 @@ export class GitHubDeploymentHandler {
     // Parse GitHub URL from package manager arguments
     const githubInfo = this.parseGitHubUrl(config.command, config.args || []);
     if (!githubInfo) {
-      throw new Error('Failed to parse GitHub URL from NPX arguments');
+      throw new Error('Failed to parse GitHub URL from package manager arguments');
     }
 
     this.logger.debug({
@@ -558,30 +855,103 @@ export class GitHubDeploymentHandler {
     // Extract tarball
     await this.extractTarball(tarballBuffer, tempDir);
 
-    // Install dependencies
-    await this.installDependencies(tempDir, config.installation_id, config.team_id, config.user_id);
-
-    // Build package if build script exists
-    await this.buildPackage(tempDir, config.installation_id, config.team_id, config.user_id);
-
-    // Resolve package entry point
-    const entryPoint = await this.resolvePackageEntry(tempDir);
-
-    // Return updated config to run from local directory
-    const updatedConfig: MCPServerConfig = {
-      ...config,
-      command: 'node',
-      args: [entryPoint],
-      temp_dir: tempDir
-    };
+    // Detect runtime from extracted files or use config runtime
+    const runtime = config.runtime || await this.detectRuntime(tempDir);
 
     this.logger.info({
-      operation: 'github_deployment_ready',
-      installation_name: config.installation_name,
-      temp_dir: tempDir,
-      entry_point: entryPoint
-    }, 'GitHub repository downloaded and ready to spawn');
+      operation: 'github_deployment_runtime_detected',
+      runtime,
+      temp_dir: tempDir
+    }, `Detected runtime: ${runtime}`);
 
-    return updatedConfig;
+    // Handle runtime-specific installation and build
+    if (runtime === 'node') {
+      // Defense-in-depth: Re-validate build scripts before execution
+      const packageJsonPath = path.join(tempDir, 'package.json');
+      if (await fileExists(packageJsonPath)) {
+        const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
+        const packageJson = JSON.parse(packageJsonContent);
+
+        if (packageJson.scripts) {
+          const validation = validateBuildScripts(packageJson.scripts);
+          if (!validation.valid) {
+            this.logger.error({
+              operation: 'security_build_scripts_blocked',
+              installation_id: config.installation_id,
+              blocked_reason: validation.error
+            }, 'SECURITY: Blocked dangerous build scripts');
+            throw new Error(`Security: ${validation.error}`);
+          }
+        }
+      }
+
+      // Install Node.js dependencies
+      await this.installDependencies(tempDir, config.installation_id, config.team_id, config.user_id);
+
+      // Build package if build script exists
+      await this.buildPackage(tempDir, config.installation_id, config.team_id, config.user_id);
+
+      // Resolve Node.js package entry point
+      const entryPoint = await this.resolvePackageEntry(tempDir);
+
+      const updatedConfig: MCPServerConfig = {
+        ...config,
+        command: 'node',
+        args: [entryPoint],
+        temp_dir: tempDir
+      };
+
+      this.logger.info({
+        operation: 'github_deployment_ready',
+        installation_name: config.installation_name,
+        temp_dir: tempDir,
+        runtime: 'node',
+        entry_point: entryPoint
+      }, 'Node.js GitHub repository downloaded and ready to spawn');
+
+      return updatedConfig;
+
+    } else if (runtime === 'python') {
+      // Install Python dependencies
+      await this.installPythonDependencies(tempDir, config.installation_id, config.team_id, config.user_id);
+
+      // Resolve Python package entry point
+      const { command, entryPoint } = await this.resolvePythonPackageEntry(tempDir);
+
+      // Determine the correct command and args based on entry point type
+      let updatedConfig: MCPServerConfig;
+
+      if (command === 'python3') {
+        // Running with python3 interpreter
+        updatedConfig = {
+          ...config,
+          command: 'python3',
+          args: [entryPoint],
+          temp_dir: tempDir
+        };
+      } else {
+        // Running directly (entry point is executable script from venv)
+        updatedConfig = {
+          ...config,
+          command: entryPoint,
+          args: [],
+          temp_dir: tempDir
+        };
+      }
+
+      this.logger.info({
+        operation: 'github_deployment_ready',
+        installation_name: config.installation_name,
+        temp_dir: tempDir,
+        runtime: 'python',
+        command: updatedConfig.command,
+        entry_point: entryPoint
+      }, 'Python GitHub repository downloaded and ready to spawn');
+
+      return updatedConfig;
+
+    } else {
+      throw new Error(`Unsupported runtime: ${runtime}. Only Node.js and Python are currently supported.`);
+    }
   }
 }

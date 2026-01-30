@@ -94,3 +94,13 @@ export const BLOCKED_ENV_VARS = new Set([
   // Misc dangerous
   'IFS',                  // Shell word splitting manipulation
 ]);
+
+// Re-export security validation for convenience
+export {
+  ALLOWED_COMMANDS,
+  COMMAND_PATHS,
+  validateCommand,
+  validateArgs,
+  validateStdioConfig,
+  resolveCommandPath
+} from './security-validation';
