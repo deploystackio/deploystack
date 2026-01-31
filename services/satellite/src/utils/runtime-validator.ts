@@ -248,6 +248,115 @@ function buildWarningMessage(result: RuntimeCheckResult): string {
 }
 
 /**
+ * Validate command path for security
+ * Only allow paths in known safe directories
+ */
+function validateCommandPath(commandPath: string): boolean {
+  // Must be absolute
+  if (!commandPath.startsWith('/')) return false;
+
+  // Must match allowed patterns
+  const allowedPatterns = [
+    /^\/usr\/bin\//,
+    /^\/usr\/local\/bin\//,
+    /^\/bin\//,
+    /^\/opt\/[^/]+\/bin\//
+  ];
+
+  // Add HOME-relative pattern if HOME is set
+  if (process.env.HOME) {
+    const homePattern = new RegExp(`^${process.env.HOME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\/\.local\/bin\/`);
+    allowedPatterns.push(homePattern);
+  }
+
+  // Check if path matches any allowed pattern
+  if (!allowedPatterns.some(p => p.test(commandPath))) {
+    return false;
+  }
+
+  // Must not contain suspicious patterns
+  if (commandPath.includes('..')) return false;
+  if (commandPath.includes('//')) return false;
+
+  return true;
+}
+
+/**
+ * Resolve absolute path for a command using system PATH
+ * Returns null if command not found or validation fails
+ * Uses same PATH logic as checkCommand() for consistency
+ */
+export function resolveCommandPath(command: string): string | null {
+  try {
+    const result = spawnSync('which', [command], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 5000,
+      env: {
+        ...process.env,
+        PATH: buildEnhancedPath()
+      }
+    });
+
+    if (result.status === 0 && result.stdout) {
+      const path = result.stdout.trim();
+      if (validateCommandPath(path)) {
+        return path;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Initialize command path cache at startup
+ * Resolves all required commands once and caches results
+ * Called after validateSystemRuntimes() ensures they exist
+ *
+ * @param logger - Logger instance for logging resolved paths
+ * @returns Map of command name to absolute path
+ */
+export function initializeCommandCache(logger: Logger): Map<string, string> {
+  const commands = ['node', 'npm', 'npx', 'python3', 'python', 'uvx', 'uv', 'pip', 'pip3'];
+  const cache = new Map<string, string>();
+
+  logger.info(
+    { operation: 'command_cache_init_start', commands },
+    'Initializing command path cache...'
+  );
+
+  for (const command of commands) {
+    const path = resolveCommandPath(command);
+    if (path) {
+      cache.set(command, path);
+      logger.info(
+        { operation: 'command_resolved', command, path },
+        `Resolved: ${command} -> ${path}`
+      );
+    } else {
+      // Log warning but don't fail - validateSystemRuntimes already checked required commands
+      logger.info(
+        { operation: 'command_not_resolved', command },
+        `Warning: Could not resolve path for ${command} (may be optional)`
+      );
+    }
+  }
+
+  logger.info(
+    {
+      operation: 'command_cache_init_complete',
+      cached_commands: cache.size,
+      total_commands: commands.length
+    },
+    `Command path cache initialized with ${cache.size}/${commands.length} commands`
+  );
+
+  return cache;
+}
+
+/**
  * Build enhanced PATH for runtime checks
  * Exported for potential reuse in process spawner
  */

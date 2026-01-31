@@ -7,8 +7,7 @@ import { MCPServerConfig } from './types';
 import { nsjailConfig, mcpCacheBaseDir, BLOCKED_ENV_VARS } from '../config/nsjail';
 import {
   validateCommand,
-  validateArgs,
-  COMMAND_PATHS
+  validateArgs
 } from '../config/security-validation';
 
 /**
@@ -18,14 +17,21 @@ import {
 const ALLOWED_BUILD_COMMANDS = new Set(['npm', 'uv', 'pip', 'pip3']);
 
 /**
- * Build command path mappings for nsjail
+ * Get command path from global cache
+ * Falls back to /usr/bin if cache miss (should not happen after initialization)
  */
-const BUILD_COMMAND_PATHS: Record<string, string> = {
-  'npm': '/usr/bin/npm',
-  'uv': '/usr/bin/uv',
-  'pip': '/usr/bin/pip',
-  'pip3': '/usr/bin/pip3'
-};
+function getCommandPath(command: string): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cache = (global as any).DEPLOYSTACK_COMMAND_CACHE as Map<string, string> | undefined;
+
+  if (cache && cache.has(command)) {
+    return cache.get(command)!;
+  }
+
+  // Fallback to /usr/bin (should not happen after proper initialization)
+  console.warn(`WARNING: Command ${command} not found in cache, using /usr/bin fallback`);
+  return `/usr/bin/${command}`;
+}
 
 /**
  * Options for sandboxed build commands
@@ -112,6 +118,7 @@ export class ProcessSpawner {
    * Resolve command to full path for nsjail execution
    * SECURE: Only allows commands from the allowlist, rejects absolute paths
    * nsjail requires full paths for command execution
+   * Uses dynamically resolved paths from startup cache
    */
   resolveCommandPath(command: string): string {
     // Validate command first (defense in depth - backend should have validated)
@@ -125,18 +132,18 @@ export class ProcessSpawner {
       throw new Error(validation.error || `Command '${command}' not allowed`);
     }
 
-    // Get path from secure mappings (only known-safe commands)
+    // Get path from runtime-resolved cache (dynamically found at startup)
     const normalizedCommand = command.trim().toLowerCase();
-    const path = COMMAND_PATHS[normalizedCommand];
+    const path = getCommandPath(normalizedCommand);
 
     if (!path) {
-      // This shouldn't happen if ALLOWED_COMMANDS and COMMAND_PATHS are in sync
+      // This shouldn't happen if command cache was initialized
       this.logger.error({
         operation: 'resolve_command_path_no_mapping',
         command,
         normalizedCommand
-      }, `No path mapping found for allowed command '${command}'`);
-      throw new Error(`No path mapping for command '${command}'`);
+      }, `No path found for command '${command}' in cache`);
+      throw new Error(`Command path not found: ${command}`);
     }
 
     this.logger.debug({
@@ -448,10 +455,10 @@ export class ProcessSpawner {
       throw new Error(`Build command '${command}' not allowed. Allowed: ${Array.from(ALLOWED_BUILD_COMMANDS).join(', ')}`);
     }
 
-    // Get command path
-    const commandPath = BUILD_COMMAND_PATHS[normalizedCommand];
+    // Get command path from runtime-resolved cache
+    const commandPath = getCommandPath(normalizedCommand);
     if (!commandPath) {
-      throw new Error(`No path mapping for build command '${command}'`);
+      throw new Error(`Command path not found for build command '${command}'`);
     }
 
     // Get current user UID and GID

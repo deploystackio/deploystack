@@ -22,7 +22,7 @@ import { McpActivityTracker } from './services/mcp-activity-tracker';
 import { ToolSearchService } from './services/tool-search-service';
 import { OAuthTokenService } from './services/oauth-token-service';
 import { SsePingService } from './services/sse-ping-service';
-import { validateSystemRuntimes } from './utils/runtime-validator';
+import { validateSystemRuntimes, initializeCommandCache } from './utils/runtime-validator';
 
 /**
  * Validate registration token format and availability
@@ -164,6 +164,12 @@ export async function createServer() {
     validateSystemRuntimes(tempLogger);
     tempLogger.info({ operation: 'runtime_validation_complete' }, 'System runtime validation passed');
   }
+
+  // Initialize command path cache after validation
+  const commandCache = initializeCommandCache(tempLogger);
+
+  // Store command cache globally for access by process spawners
+  (global as any).DEPLOYSTACK_COMMAND_CACHE = commandCache;
 
   const server = fastify({
     logger: loggerConfig,

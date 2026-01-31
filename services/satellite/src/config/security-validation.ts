@@ -23,14 +23,12 @@ export interface ValidationResult {
 export const ALLOWED_COMMANDS = new Set(['npx', 'node', 'uvx', 'python', 'python3']);
 
 /**
- * Command path mappings for nsjail (which requires full paths)
+ * DEPRECATED: Command paths are now resolved dynamically at runtime
+ * See runtime-validator.ts for dynamic path resolution
+ * This is kept for backwards compatibility but should not be used
  */
 export const COMMAND_PATHS: Record<string, string> = {
-  'npx': '/usr/bin/npx',
-  'node': '/usr/bin/node',
-  'uvx': '/usr/bin/uvx',
-  'python': '/usr/bin/python',
-  'python3': '/usr/bin/python3'
+  // Paths resolved dynamically - see DEPLOYSTACK_COMMAND_CACHE global
 };
 
 /**
@@ -192,9 +190,13 @@ export function validateArgs(args: string[], logger?: Logger): ValidationResult 
 }
 
 /**
- * Resolves command to full path for nsjail execution
- * SECURE VERSION: Only returns paths for allowed commands
+ * DEPRECATED: Resolves command to full path for nsjail execution
  *
+ * This function is deprecated. Command paths are now resolved dynamically
+ * at startup and cached in DEPLOYSTACK_COMMAND_CACHE global.
+ * Use the cache directly via nsjail-spawner's getCommandPath() function.
+ *
+ * @deprecated Use dynamic path resolution from runtime-validator.ts
  * @param command - The command name (e.g., 'npx', 'node')
  * @param logger - Logger for security warnings
  * @returns Full path to command
@@ -207,16 +209,18 @@ export function resolveCommandPath(command: string, logger?: Logger): string {
     throw new Error(validation.error || 'Command not allowed');
   }
 
-  // Get the path from our known mappings
+  // Get path from runtime-resolved cache
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cache = (global as any).DEPLOYSTACK_COMMAND_CACHE as Map<string, string> | undefined;
   const normalizedCommand = command.trim().toLowerCase();
-  const path = COMMAND_PATHS[normalizedCommand];
 
-  if (!path) {
-    // This shouldn't happen if ALLOWED_COMMANDS and COMMAND_PATHS are in sync
-    throw new Error(`No path mapping for command '${command}'`);
+  if (cache && cache.has(normalizedCommand)) {
+    return cache.get(normalizedCommand)!;
   }
 
-  return path;
+  // Fallback for backwards compatibility (should not happen after initialization)
+  console.warn(`WARNING: Command ${command} not found in cache, using /usr/bin fallback`);
+  return `/usr/bin/${normalizedCommand}`;
 }
 
 /**
