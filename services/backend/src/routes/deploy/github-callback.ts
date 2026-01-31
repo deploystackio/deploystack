@@ -100,8 +100,8 @@ export default async function deployGitHubCallbackRoute(server: FastifyInstance)
         operation: 'github_app_installation_stored'
       }, 'GitHub App installation stored successfully');
 
-      // Redirect to frontend success page
-      return reply.redirect(`${frontendUrl}/deploy?installed=true`);
+      // Redirect to frontend deployment wizard
+      return reply.redirect(`${frontendUrl}/deploy/create?installed=true`);
     } catch (error) {
       server.log.error({
         error,
