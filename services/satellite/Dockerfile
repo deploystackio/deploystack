@@ -24,6 +24,11 @@ RUN pip3 install --break-system-packages uv && \
     which uvx && \
     uv --version
 
+# Install TypeScript globally for GitHub deployment builds
+# Available at /usr/local/bin/tsc for all Node.js MCP servers
+RUN npm install -g typescript && \
+    tsc --version
+
 # Create mcp-cache base directory with proper ownership
 RUN mkdir -p /opt/deploystack/mcp-cache && \
     chown -R deploystack:deploystack /opt/deploystack

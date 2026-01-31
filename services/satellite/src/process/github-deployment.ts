@@ -266,75 +266,119 @@ export class GitHubDeploymentHandler {
       temp_dir: tempDir
     }, 'Installing dependencies with npm install');
 
-    return new Promise((resolve, reject) => {
-      const npmInstall = spawn('npm', ['install'], {
-        cwd: tempDir,
-        stdio: 'pipe'
-      });
-
-      let stderr = '';
-
-      // Capture and emit stdout to backend
-      npmInstall.stdout.on('data', (data) => {
-        const output = data.toString().trim();
-        if (output) {
-          this.logBuffer.add({
-            installation_id: installationId,
-            team_id: teamId,
-            user_id: userId,
-            level: 'info',
-            message: `[npm install] ${output}`,
-            timestamp: new Date().toISOString()
-          });
+    // Use nsjail in production, direct spawn in development
+    if (this.processSpawner.shouldUseNsjail()) {
+      const result = await this.processSpawner.spawnBuildCommandWithNsjail(
+        'npm',
+        ['install'],
+        tempDir,
+        {
+          allowNetwork: true,  // npm needs network for package downloads
+          timeoutMs: 120000,   // 2 minutes
+          runtime: 'node'
         }
-      });
+      );
 
-      npmInstall.stderr.on('data', (data) => {
-        const output = data.toString().trim();
-        stderr += output;
+      // Emit logs to backend
+      if (result.stdout) {
+        this.logBuffer.add({
+          installation_id: installationId,
+          team_id: teamId,
+          user_id: userId,
+          level: 'info',
+          message: `[npm install] ${result.stdout.substring(0, 1000)}`,
+          timestamp: new Date().toISOString()
+        });
+      }
 
-        // Also emit stderr as warn logs
-        if (output) {
-          this.logBuffer.add({
-            installation_id: installationId,
-            team_id: teamId,
-            user_id: userId,
-            level: 'warn',
-            message: `[npm install] ${output}`,
-            timestamp: new Date().toISOString()
-          });
-        }
-      });
+      if (result.code !== 0) {
+        this.logBuffer.add({
+          installation_id: installationId,
+          team_id: teamId,
+          user_id: userId,
+          level: 'error',
+          message: `[npm install] ${result.stderr.substring(0, 500)}`,
+          timestamp: new Date().toISOString()
+        });
+        throw new Error(`npm install failed with code ${result.code}: ${result.stderr.substring(0, 200)}`);
+      }
 
-      npmInstall.on('exit', (code) => {
-        if (code === 0) {
-          this.logger.info({
-            operation: 'npm_install_success',
-            temp_dir: tempDir
-          }, 'Dependencies installed successfully');
-          resolve();
-        } else {
+      this.logger.info({
+        operation: 'npm_install_success',
+        temp_dir: tempDir
+      }, 'Dependencies installed successfully');
+    } else {
+      // Development mode - direct spawn
+      return new Promise((resolve, reject) => {
+        const npmInstall = spawn('npm', ['install'], {
+          cwd: tempDir,
+          stdio: 'pipe'
+        });
+
+        let stderr = '';
+
+        // Capture and emit stdout to backend
+        npmInstall.stdout.on('data', (data) => {
+          const output = data.toString().trim();
+          if (output) {
+            this.logBuffer.add({
+              installation_id: installationId,
+              team_id: teamId,
+              user_id: userId,
+              level: 'info',
+              message: `[npm install] ${output}`,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+
+        npmInstall.stderr.on('data', (data) => {
+          const output = data.toString().trim();
+          stderr += output;
+
+          // Also emit stderr as warn logs
+          if (output) {
+            this.logBuffer.add({
+              installation_id: installationId,
+              team_id: teamId,
+              user_id: userId,
+              level: 'warn',
+              message: `[npm install] ${output}`,
+              timestamp: new Date().toISOString()
+            });
+          }
+        });
+
+        npmInstall.on('exit', (code) => {
+          if (code === 0) {
+            this.logger.info({
+              operation: 'npm_install_success',
+              temp_dir: tempDir
+            }, 'Dependencies installed successfully');
+            resolve();
+          } else {
+            this.logger.error({
+              operation: 'npm_install_failed',
+              temp_dir: tempDir,
+              exit_code: code,
+              stderr: stderr.substring(0, 500) // Limit stderr output
+            }, `npm install failed with code ${code}`);
+
+            reject(new Error(`npm install failed with code ${code}: ${stderr.substring(0, 200)}`));
+          }
+        });
+
+        npmInstall.on('error', (error) => {
           this.logger.error({
-            operation: 'npm_install_failed',
+            operation: 'npm_install_error',
             temp_dir: tempDir,
-            exit_code: code,
-            stderr: stderr.substring(0, 500) // Limit stderr output
-          }, `npm install failed with code ${code}`);
+            error: error.message
+          }, 'npm install process error');
 
-          reject(new Error(`npm install failed with code ${code}: ${stderr.substring(0, 200)}`));
-        }
+          reject(new Error(`npm install process error: ${error.message}`));
+        });
       });
-
-      npmInstall.on('error', (error) => {
-        this.logger.error({
-          operation: 'npm_install_error',
-          temp_dir: tempDir,
-          error: error.message
-        }, 'npm install process error');
-
-        reject(new Error(`npm install process error: ${error.message}`));
-      });
-    });
+    }
   }
 
   /**
@@ -377,75 +421,119 @@ export class GitHubDeploymentHandler {
         temp_dir: tempDir
       }, 'Building package with npm run build');
 
-      return new Promise((resolve, reject) => {
-        const npmBuild = spawn('npm', ['run', 'build'], {
-          cwd: tempDir,
-          stdio: 'pipe'
-        });
-
-        let stderr = '';
-
-        // Capture and emit stdout to backend
-        npmBuild.stdout.on('data', (data) => {
-          const output = data.toString().trim();
-          if (output) {
-            this.logBuffer.add({
-              installation_id: installationId,
-              team_id: teamId,
-              user_id: userId,
-              level: 'info',
-              message: `[npm build] ${output}`,
-              timestamp: new Date().toISOString()
-            });
+      // Use nsjail in production, direct spawn in development
+      if (this.processSpawner.shouldUseNsjail()) {
+        const result = await this.processSpawner.spawnBuildCommandWithNsjail(
+          'npm',
+          ['run', 'build'],
+          tempDir,
+          {
+            allowNetwork: false,  // Build should not need network
+            timeoutMs: 120000,    // 2 minutes
+            runtime: 'node'
           }
-        });
+        );
 
-        npmBuild.stderr.on('data', (data) => {
-          const output = data.toString().trim();
-          stderr += output;
+        // Emit logs to backend
+        if (result.stdout) {
+          this.logBuffer.add({
+            installation_id: installationId,
+            team_id: teamId,
+            user_id: userId,
+            level: 'info',
+            message: `[npm build] ${result.stdout.substring(0, 1000)}`,
+            timestamp: new Date().toISOString()
+          });
+        }
 
-          // Also emit stderr as warn logs
-          if (output) {
-            this.logBuffer.add({
-              installation_id: installationId,
-              team_id: teamId,
-              user_id: userId,
-              level: 'warn',
-              message: `[npm build] ${output}`,
-              timestamp: new Date().toISOString()
-            });
-          }
-        });
+        if (result.code !== 0) {
+          this.logBuffer.add({
+            installation_id: installationId,
+            team_id: teamId,
+            user_id: userId,
+            level: 'error',
+            message: `[npm build] ${result.stderr.substring(0, 500)}`,
+            timestamp: new Date().toISOString()
+          });
+          throw new Error(`npm run build failed with code ${result.code}: ${result.stderr.substring(0, 200)}`);
+        }
 
-        npmBuild.on('exit', (code) => {
-          if (code === 0) {
-            this.logger.info({
-              operation: 'npm_build_success',
-              temp_dir: tempDir
-            }, 'Package built successfully');
-            resolve();
-          } else {
+        this.logger.info({
+          operation: 'npm_build_success',
+          temp_dir: tempDir
+        }, 'Package built successfully');
+      } else {
+        // Development mode - direct spawn
+        return new Promise((resolve, reject) => {
+          const npmBuild = spawn('npm', ['run', 'build'], {
+            cwd: tempDir,
+            stdio: 'pipe'
+          });
+
+          let stderr = '';
+
+          // Capture and emit stdout to backend
+          npmBuild.stdout.on('data', (data) => {
+            const output = data.toString().trim();
+            if (output) {
+              this.logBuffer.add({
+                installation_id: installationId,
+                team_id: teamId,
+                user_id: userId,
+                level: 'info',
+                message: `[npm build] ${output}`,
+                timestamp: new Date().toISOString()
+              });
+            }
+          });
+
+          npmBuild.stderr.on('data', (data) => {
+            const output = data.toString().trim();
+            stderr += output;
+
+            // Also emit stderr as warn logs
+            if (output) {
+              this.logBuffer.add({
+                installation_id: installationId,
+                team_id: teamId,
+                user_id: userId,
+                level: 'warn',
+                message: `[npm build] ${output}`,
+                timestamp: new Date().toISOString()
+              });
+            }
+          });
+
+          npmBuild.on('exit', (code) => {
+            if (code === 0) {
+              this.logger.info({
+                operation: 'npm_build_success',
+                temp_dir: tempDir
+              }, 'Package built successfully');
+              resolve();
+            } else {
+              this.logger.error({
+                operation: 'npm_build_failed',
+                temp_dir: tempDir,
+                exit_code: code,
+                stderr: stderr.substring(0, 500)
+              }, `npm run build failed with code ${code}`);
+
+              reject(new Error(`npm run build failed with code ${code}: ${stderr.substring(0, 200)}`));
+            }
+          });
+
+          npmBuild.on('error', (error) => {
             this.logger.error({
-              operation: 'npm_build_failed',
+              operation: 'npm_build_error',
               temp_dir: tempDir,
-              exit_code: code,
-              stderr: stderr.substring(0, 500)
-            }, `npm run build failed with code ${code}`);
+              error: error.message
+            }, 'npm run build process error');
 
-            reject(new Error(`npm run build failed with code ${code}: ${stderr.substring(0, 200)}`));
-          }
+            reject(new Error(`npm run build process error: ${error.message}`));
+          });
         });
-
-        npmBuild.on('error', (error) => {
-          this.logger.error({
-            operation: 'npm_build_error',
-            temp_dir: tempDir,
-            error: error.message
-          }, 'npm run build process error');
-
-          reject(new Error(`npm run build process error: ${error.message}`));
-        });
-      });
+      }
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
