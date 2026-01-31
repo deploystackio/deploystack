@@ -219,7 +219,14 @@ export function resolveCommandPath(command: string, logger?: Logger): string {
   }
 
   // Fallback for backwards compatibility (should not happen after initialization)
-  console.warn(`WARNING: Command ${command} not found in cache, using /usr/bin fallback`);
+  if (logger) {
+    logger.warn({
+      operation: 'command_cache_miss',
+      command,
+      normalizedCommand,
+      fallbackPath: `/usr/bin/${normalizedCommand}`
+    }, `Command ${command} not found in cache, using /usr/bin fallback`);
+  }
   return `/usr/bin/${normalizedCommand}`;
 }
 

@@ -20,7 +20,7 @@ const ALLOWED_BUILD_COMMANDS = new Set(['npm', 'uv', 'pip', 'pip3']);
  * Get command path from global cache
  * Falls back to /usr/bin if cache miss (should not happen after initialization)
  */
-function getCommandPath(command: string): string {
+function getCommandPath(command: string, logger?: Logger): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cache = (global as any).DEPLOYSTACK_COMMAND_CACHE as Map<string, string> | undefined;
 
@@ -29,7 +29,13 @@ function getCommandPath(command: string): string {
   }
 
   // Fallback to /usr/bin (should not happen after proper initialization)
-  console.warn(`WARNING: Command ${command} not found in cache, using /usr/bin fallback`);
+  if (logger) {
+    logger.warn({
+      operation: 'command_cache_miss',
+      command,
+      fallbackPath: `/usr/bin/${command}`
+    }, `Command ${command} not found in cache, using /usr/bin fallback`);
+  }
   return `/usr/bin/${command}`;
 }
 
@@ -134,7 +140,7 @@ export class ProcessSpawner {
 
     // Get path from runtime-resolved cache (dynamically found at startup)
     const normalizedCommand = command.trim().toLowerCase();
-    const path = getCommandPath(normalizedCommand);
+    const path = getCommandPath(normalizedCommand, this.logger);
 
     if (!path) {
       // This shouldn't happen if command cache was initialized
@@ -457,7 +463,7 @@ export class ProcessSpawner {
     }
 
     // Get command path from runtime-resolved cache
-    const commandPath = getCommandPath(normalizedCommand);
+    const commandPath = getCommandPath(normalizedCommand, this.logger);
     if (!commandPath) {
       throw new Error(`Command path not found for build command '${command}'`);
     }
