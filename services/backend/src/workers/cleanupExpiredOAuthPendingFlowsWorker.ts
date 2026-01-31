@@ -11,7 +11,7 @@ export class CleanupExpiredOAuthPendingFlowsWorker implements Worker {
 	) {}
 
 	async execute(_payload: unknown, jobId: string): Promise<WorkerResult> {
-		this.logger.debug({
+		this.logger.trace({
 			jobId,
 			operation: 'cleanup_expired_oauth_pending_flows'
 		}, 'Starting cleanup of expired OAuth pending flows');
@@ -33,7 +33,7 @@ export class CleanupExpiredOAuthPendingFlowsWorker implements Worker {
 					operation: 'cleanup_expired_oauth_pending_flows'
 				}, 'Cleaned up expired OAuth pending flows');
 			} else {
-				this.logger.debug({
+				this.logger.trace({
 					jobId,
 					operation: 'cleanup_expired_oauth_pending_flows'
 				}, 'No expired OAuth pending flows found');

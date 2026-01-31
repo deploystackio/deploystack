@@ -98,7 +98,7 @@ export function requireSatelliteAuth() {
         status: matchingSatellite.status as 'active' | 'inactive' | 'maintenance' | 'error'
       };
 
-      request.log.debug({
+      request.log.trace({
         operation: 'satellite_auth_success',
         satelliteId: matchingSatellite.id,
         satelliteName: matchingSatellite.name,

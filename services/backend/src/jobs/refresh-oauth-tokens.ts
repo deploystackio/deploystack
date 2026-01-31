@@ -30,7 +30,7 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 		const expiryThreshold = new Date(Date.now() + 10 * 60 * 1000);
 		const now = new Date();
 
-		logger.debug(
+		logger.trace(
 			{
 				operation: 'refresh_expiring_oauth_tokens',
 				expiryThreshold,
@@ -66,7 +66,7 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 			);
 
 		if (expiringTokens.length === 0) {
-			logger.debug(
+			logger.trace(
 				{ operation: 'refresh_expiring_oauth_tokens' },
 				'No tokens need refreshing'
 			);

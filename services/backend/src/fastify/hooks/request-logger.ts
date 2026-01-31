@@ -13,7 +13,7 @@ export const registerRequestLoggerHooks = (server: FastifyInstance): void => {
     
     // Start timing the request and log that it's been received
     reply.startTime = Date.now()
-    req.log.info({ url: req.url, method: req.method, requestId }, 'request received')
+    req.log.trace({ url: req.url, method: req.method, requestId }, 'request received')
     
     done()
   })
@@ -21,8 +21,8 @@ export const registerRequestLoggerHooks = (server: FastifyInstance): void => {
   // Add response logging with timing information
   server.addHook('onResponse', (req: FastifyRequest, reply: FastifyReply, done) => {
     const responseTime = Date.now() - reply.startTime
-    
-    req.log.info({
+
+    req.log.trace({
       url: req.url,
       method: req.method,
       statusCode: reply.statusCode,
