@@ -137,9 +137,22 @@ function handleRepoChange(repoId: any) {
   const repo = repositories.value.find(r => r.id.toString() === repoIdStr)
   if (!repo) return
 
+  // Reset state when switching repositories
+  selectedRepo.value = null
+  branch.value = ''
+  branches.value = []
+  branchesError.value = null
+
+  // Emit empty state to parent to disable Next button
+  emit('update:modelValue', {
+    url: '',
+    name: '',
+    branch: ''
+  })
+
+  // Now set the new repository
   selectedRepo.value = repo
   selectedRepoId.value = repoIdStr
-  branch.value = repo.default_branch
 
   // Fetch branches for the selected repository
   fetchBranches(repo)
@@ -147,11 +160,18 @@ function handleRepoChange(repoId: any) {
 
 // Watch for changes and emit to parent
 watch([selectedRepo, branch], () => {
-  if (selectedRepo.value) {
+  if (selectedRepo.value && branch.value) {
     emit('update:modelValue', {
       url: selectedRepo.value.clone_url,
       name: selectedRepo.value.full_name,
       branch: branch.value
+    })
+  } else {
+    // If repo or branch is missing, emit empty state
+    emit('update:modelValue', {
+      url: '',
+      name: '',
+      branch: ''
     })
   }
 })
