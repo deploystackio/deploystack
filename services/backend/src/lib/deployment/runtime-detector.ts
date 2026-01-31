@@ -21,6 +21,12 @@ export interface RuntimeDetectionResult {
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
   };
+  pyprojectToml?: {  // For Python projects
+    name?: string;
+    version?: string;
+    description?: string;
+    license?: string;
+  };
 }
 
 /**
@@ -109,6 +115,8 @@ export class RuntimeDetector {
     ref: string
   ): Promise<RuntimeDetectionResult | null> {
     // Try requirements.txt first
+    let mcpSdkInfo: McpSdkInfo | null = null;
+
     try {
       const { data: file } = await octokit.repos.getContent({
         owner,
@@ -129,15 +137,14 @@ export class RuntimeDetector {
           line.trim() === 'mcp'
         );
 
-        return {
-          runtime: 'python',
-          mcp_sdk: {
-            detected: !!mcpLine,
+        if (mcpLine) {
+          mcpSdkInfo = {
+            detected: true,
             version: mcpLine?.split(/==|>=/)[1]?.trim(),
             package: 'mcp',
             runtime: 'python'
-          }
-        };
+          };
+        }
       }
     } catch {
       // Continue to pyproject.toml
@@ -155,24 +162,62 @@ export class RuntimeDetector {
       if ('content' in file) {
         const content = Buffer.from(file.content, 'base64').toString('utf8');
 
-        // Simple check for "mcp" in dependencies
-        const hasMcp = content.includes('"mcp"') || content.includes("'mcp'");
+        // If we haven't found MCP SDK in requirements.txt, check pyproject.toml
+        if (!mcpSdkInfo) {
+          // Check for "mcp" in dependencies (handles both "mcp" and "mcp>=1.0.0" formats)
+          const hasMcp = /["']mcp["']/.test(content) || /["']mcp[><=]/.test(content);
 
-        // Try to extract version from pyproject.toml if present
-        const versionMatch = content.match(/mcp\s*=\s*["']([^"']+)["']/);
+          // Try to extract version from pyproject.toml if present
+          // Matches patterns like "mcp>=1.0.0" or "mcp==1.0.0"
+          const versionMatch = content.match(/["']mcp[><=]=?\s*([^"',\]]+)["']/);
 
-        return {
-          runtime: 'python',
-          mcp_sdk: {
-            detected: hasMcp,
-            version: versionMatch?.[1],
-            package: 'mcp',
-            runtime: 'python'
+          if (hasMcp) {
+            mcpSdkInfo = {
+              detected: true,
+              version: versionMatch?.[1],
+              package: 'mcp',
+              runtime: 'python'
+            };
           }
+        }
+
+        // Extract project metadata from [project] section (always do this)
+        const nameMatch = content.match(/^\s*name\s*=\s*["']([^"']+)["']/m);
+        const versionProjMatch = content.match(/^\s*version\s*=\s*["']([^"']+)["']/m);
+        const descriptionMatch = content.match(/^\s*description\s*=\s*["']([^"']+)["']/m);
+
+        // License can be either a simple string or a table with 'text' field
+        let licenseValue: string | undefined;
+        const licenseSimpleMatch = content.match(/^\s*license\s*=\s*["']([^"']+)["']/m);
+        const licenseTableMatch = content.match(/^\s*license\s*=\s*\{\s*text\s*=\s*["']([^"']+)["']/m);
+        licenseValue = licenseSimpleMatch?.[1] || licenseTableMatch?.[1];
+
+        const pyprojectToml = {
+          name: nameMatch?.[1],
+          version: versionProjMatch?.[1],
+          description: descriptionMatch?.[1],
+          license: licenseValue
         };
+
+        // Return if we found MCP SDK (from either requirements.txt or pyproject.toml)
+        if (mcpSdkInfo) {
+          return {
+            runtime: 'python',
+            mcp_sdk: mcpSdkInfo,
+            pyprojectToml
+          };
+        }
       }
     } catch {
       // Continue
+    }
+
+    // If we found MCP SDK in requirements.txt but no pyproject.toml, return without metadata
+    if (mcpSdkInfo) {
+      return {
+        runtime: 'python',
+        mcp_sdk: mcpSdkInfo
+      };
     }
 
     return null;  // No Python files found

@@ -127,8 +127,9 @@ export class DeploymentValidationService {
       try {
         const { data: repoData } = await octokit.repos.get({ owner, repo });
 
-        // Check if repository is empty (no commits)
-        if (repoData.size === 0 || !repoData.default_branch) {
+        // Check if repository is empty (only check for default branch, not size)
+        // Note: GitHub's size field is in KB and can be 0 for very small repos
+        if (!repoData.default_branch) {
           return {
             valid: false,
             error: `Repository ${owner}/${repo} is empty. Please push code to the repository before deploying.`,
@@ -256,13 +257,25 @@ export class DeploymentValidationService {
       // ============================================
       // STEP 6: Return Validation Metadata
       // ============================================
+      // For Python projects, use pyprojectToml metadata; for Node.js, use packageJson
+      const metadata = runtimeResult.runtime === 'python' && runtimeResult.pyprojectToml
+        ? {
+            name: runtimeResult.pyprojectToml.name,
+            version: runtimeResult.pyprojectToml.version,
+            description: runtimeResult.pyprojectToml.description,
+            license: runtimeResult.pyprojectToml.license
+          }
+        : {
+            name: runtimeResult.packageJson?.name,
+            version: runtimeResult.packageJson?.version,
+            description: runtimeResult.packageJson?.description,
+            license: runtimeResult.packageJson?.license
+          };
+
       return {
         valid: true,
         metadata: {
-          name: runtimeResult.packageJson?.name,
-          version: runtimeResult.packageJson?.version,
-          description: runtimeResult.packageJson?.description,
-          license: runtimeResult.packageJson?.license,
+          ...metadata,
           runtime: runtimeResult.runtime,
           mcp_sdk: runtimeResult.mcp_sdk,
           scripts: runtimeResult.scripts,
