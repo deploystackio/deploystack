@@ -264,10 +264,10 @@ export class GitHubDeploymentHandler {
     this.logger.debug({
       operation: 'npm_install_start',
       temp_dir: tempDir
-    }, 'Installing dependencies with npm install --omit=dev');
+    }, 'Installing dependencies with npm install');
 
     return new Promise((resolve, reject) => {
-      const npmInstall = spawn('npm', ['install', '--omit=dev'], {
+      const npmInstall = spawn('npm', ['install'], {
         cwd: tempDir,
         stdio: 'pipe'
       });
