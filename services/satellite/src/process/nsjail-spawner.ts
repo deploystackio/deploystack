@@ -396,8 +396,9 @@ export class ProcessSpawner {
         ...baseEnv,
         '-E', 'HOME=/build',
         '-E', 'NPM_CONFIG_CACHE=/build/.npm',
-        '-E', 'NPM_CONFIG_UPDATE_NOTIFIER=false',
-        '-E', 'NODE_ENV=production'
+        '-E', 'NPM_CONFIG_UPDATE_NOTIFIER=false'
+        // NODE_ENV=production removed - it prevents devDependencies installation
+        // which breaks TypeScript builds that need @types/node
       ];
     } else {
       return [
