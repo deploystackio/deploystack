@@ -255,7 +255,7 @@ export default async function deployGitHubRoutes(server: FastifyInstance) {
     schema: {
       tags: ['Deployment'],
       summary: 'Check GitHub App installation status',
-      description: 'Returns whether the team has installed the GitHub App',
+      description: 'Returns whether the team has an active GitHub App installation. Verifies against GitHub API and auto-cleans stale records.',
       security: [{ cookieAuth: [] }],
       params: {
         type: 'object',
@@ -294,11 +294,126 @@ export default async function deployGitHubRoutes(server: FastifyInstance) {
 
     const { teamId } = request.params as { teamId: string };
 
-    const hasInstallation = await credentialService.hasInstallation(teamId, 'github');
+    // Step 1: Check database for installation record
+    let installation = await credentialService.getInstallation(teamId, 'github');
 
-    const response: ConnectionStatusResponse = { connected: hasInstallation };
-    const jsonString = JSON.stringify(response);
-    return reply.status(200).type('application/json').send(jsonString);
+    if (!installation) {
+      // No database record - try to auto-detect and link
+      try {
+        const installations = await githubService.listInstallations();
+
+        if (installations.length > 0) {
+          // Found installations - select the best one (most recent, not suspended)
+          const selectedInstallation = installations[0];
+
+          // Auto-link to this team
+          await credentialService.storeInstallation({
+            teamId,
+            source: 'github',
+            installationId: selectedInstallation.id.toString()
+          });
+
+          server.log.info({
+            teamId,
+            installation_id: selectedInstallation.id,
+            account_login: selectedInstallation.account.login,
+            total_installations_found: installations.length,
+            operation: 'auto_linked_installation'
+          }, 'Auto-linked GitHub installation to team');
+
+          if (installations.length > 1) {
+            server.log.info({
+              teamId,
+              total_installations: installations.length,
+              selected_installation_id: selectedInstallation.id,
+              selected_account: selectedInstallation.account.login,
+              operation: 'multiple_installations_found'
+            }, 'Multiple GitHub installations found, selected most recent');
+          }
+
+          // Return connected
+          const response: ConnectionStatusResponse = { connected: true };
+          const jsonString = JSON.stringify(response);
+          return reply.status(200).type('application/json').send(jsonString);
+        }
+
+        // No installations found
+        server.log.info({
+          teamId,
+          operation: 'no_installations_found'
+        }, 'No GitHub installations found for user');
+
+        const response: ConnectionStatusResponse = { connected: false };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
+      } catch (error) {
+        // Failed to list installations - log and return false
+        server.log.warn({ error, teamId }, 'Failed to list GitHub installations during auto-detection');
+        const response: ConnectionStatusResponse = { connected: false };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
+      }
+    }
+
+    // Step 2: Verify installation still exists on GitHub
+    try {
+      const isValid = await githubService.verifyInstallation(installation.installationId);
+
+      if (!isValid) {
+        // Installation no longer exists on GitHub - clean up stale record
+        await credentialService.deleteInstallation(teamId, 'github');
+
+        server.log.info({
+          teamId,
+          installation_id: installation.installationId,
+          operation: 'stale_installation_cleaned'
+        }, 'Cleaned up stale GitHub installation record');
+
+        // After cleaning up stale record, retry auto-detection
+        try {
+          const installations = await githubService.listInstallations();
+
+          if (installations.length > 0) {
+            const selectedInstallation = installations[0];
+
+            await credentialService.storeInstallation({
+              teamId,
+              source: 'github',
+              installationId: selectedInstallation.id.toString()
+            });
+
+            server.log.info({
+              teamId,
+              installation_id: selectedInstallation.id,
+              account_login: selectedInstallation.account.login,
+              total_installations_found: installations.length,
+              operation: 'auto_linked_installation_after_cleanup'
+            }, 'Auto-linked GitHub installation to team after cleaning stale record');
+
+            const response: ConnectionStatusResponse = { connected: true };
+            const jsonString = JSON.stringify(response);
+            return reply.status(200).type('application/json').send(jsonString);
+          }
+        } catch (retryError) {
+          server.log.warn({ error: retryError, teamId }, 'Failed to auto-detect installation after cleanup');
+        }
+
+        const response: ConnectionStatusResponse = { connected: false };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
+      }
+
+      // Installation is valid and active
+      const response: ConnectionStatusResponse = { connected: true };
+      const jsonString = JSON.stringify(response);
+      return reply.status(200).type('application/json').send(jsonString);
+    } catch (error) {
+      // GitHub API error - return cached state optimistically
+      server.log.warn({ error, teamId }, 'GitHub API verification failed, returning cached state');
+      const response: ConnectionStatusResponse = { connected: true };
+      const jsonString = JSON.stringify(response);
+      return reply.status(200).type('application/json').send(jsonString);
+    }
   });
 
   // GET /api/teams/{teamId}/deploy/github/repositories
