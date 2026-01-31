@@ -294,6 +294,14 @@ export class ProcessSpawner {
     // Ensure team-specific cache directory exists before mounting
     const cacheDir = await this.ensureCacheDirectory(config.team_id, runtime);
 
+    // Log cgroup version for diagnostics
+    const cgroupVersion = existsSync('/sys/fs/cgroup/cgroup.controllers') ? 'v2' : 'v1';
+    this.logger.info({
+      operation: 'cgroup_version_detected',
+      version: cgroupVersion,
+      team_id: config.team_id
+    }, `Detected cgroup ${cgroupVersion}`);
+
     this.logger.info({
       operation: 'spawn_nsjail',
       installation_name: config.installation_name,
@@ -330,7 +338,9 @@ export class ProcessSpawner {
       '--rlimit_nofile', String(nsjailConfig.maxOpenFiles), // Max file descriptors
       '--rlimit_fsize', String(nsjailConfig.maxFileSizeMB), // Max file size (MB)
       '--time_limit', '0',                      // No wall-clock time limit
-      // Cgroup limits for precise resource control
+      // Cgroup v2 limits for precise resource control
+      '--use_cgroupv2',
+      '--cgroupv2_mount', '/sys/fs/cgroup',
       '--cgroup_mem_max', String(nsjailConfig.cgroupMemMaxBytes), // Physical memory limit (512MB)
       '--cgroup_pids_max', String(nsjailConfig.cgroupPidsMax),   // Process limit (1000)
       '-R', '/usr',                             // Read-only mount: /usr
@@ -474,7 +484,9 @@ export class ProcessSpawner {
       '--rlimit_nofile', String(nsjailConfig.maxOpenFiles),
       '--rlimit_fsize', String(nsjailConfig.maxFileSizeMB),
       '--time_limit', String(timeoutSeconds),
-      // Cgroup limits
+      // Cgroup v2 limits
+      '--use_cgroupv2',
+      '--cgroupv2_mount', '/sys/fs/cgroup',
       '--cgroup_mem_max', String(nsjailConfig.cgroupMemMaxBytes),
       '--cgroup_pids_max', String(nsjailConfig.cgroupPidsMax),
       // Read-only system mounts
