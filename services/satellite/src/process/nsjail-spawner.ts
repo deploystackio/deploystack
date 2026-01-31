@@ -354,6 +354,7 @@ export class ProcessSpawner {
       '-R', '/bin',                             // Read-only mount: /bin
       '-R', '/sbin',                            // Read-only mount: /sbin
       '-R', '/etc',                             // Read-only mount: /etc (includes resolv.conf)
+      '-R', '/opt/deploystack/.local/bin',      // User-local Python tools (uv, uvx, pip)
       '-T', `/tmp:size=${nsjailConfig.tmpfsSize}`, // Writable temp with size limit (100M)
       '-B', `${cacheDir}:/home/${runtime}`,    // Runtime-specific cache directory mount
       // Mount GitHub deployment directory if present
@@ -498,6 +499,7 @@ export class ProcessSpawner {
       '-R', '/bin',
       '-R', '/sbin',
       '-R', '/etc',
+      '-R', '/opt/deploystack/.local/bin',  // User-local Python tools (uv, uvx, pip)
       // Writable temp
       '-T', `/tmp:size=${nsjailConfig.tmpfsSize}`,
       // Working directory (read-write for install/build to work)
