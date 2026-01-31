@@ -56,9 +56,9 @@ export class JobQueueService {
       };
 
       await this.db.insert(this.queueJobs).values(jobData);
-      
-      this.logger.info({ jobId, type, scheduledFor, batchId }, 'Job created');
-      
+
+      this.logger.trace({ jobId, type, scheduledFor, batchId }, 'Job created');
+
       return jobData as Job;
     } catch (error) {
       this.logger.error({ error, type }, 'Failed to create job');
@@ -110,7 +110,7 @@ export class JobQueueService {
         })
         .where(eq(this.queueJobs.id, jobId));
 
-      this.logger.debug({ jobId }, 'Job marked as processing');
+      this.logger.trace({ jobId }, 'Job marked as processing');
     } catch (error) {
       this.logger.error({ error, jobId }, 'Failed to mark job as processing');
       throw error;
@@ -145,7 +145,7 @@ export class JobQueueService {
         .set(updateData)
         .where(eq(this.queueJobs.id, jobId));
 
-      this.logger.info({ jobId, status, error }, 'Job status updated');
+      this.logger.trace({ jobId, status, error }, 'Job status updated');
     } catch (error) {
       this.logger.error({ error, jobId, status }, 'Failed to update job status');
       throw error;

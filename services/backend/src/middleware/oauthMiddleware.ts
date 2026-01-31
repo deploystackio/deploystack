@@ -100,7 +100,7 @@ export function requireOAuthScope(requiredScope: string) {
     // Skip scope check if user authenticated via cookie (not OAuth2)
     if (!request.tokenPayload) {
       // User authenticated via cookie session - skip OAuth scope validation
-      request.log.debug({
+      request.log.trace({
         operation: 'oauth_scope_check',
         userId: request.user?.id,
         requiredScope,
@@ -147,7 +147,7 @@ export function requireAnyOAuthScope(requiredScopes: string[]) {
     // Skip scope check if user authenticated via cookie (not OAuth2)
     if (!request.tokenPayload) {
       // User authenticated via cookie session - skip OAuth scope validation
-      request.log.debug({
+      request.log.trace({
         operation: 'oauth_scope_check',
         userId: request.user?.id,
         requiredScopes,
@@ -244,7 +244,7 @@ export function requireAuthenticationAny() {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     // Check if user is already authenticated via cookie (from authHook)
     if (request.user && request.session) {
-      request.log.debug({
+      request.log.trace({
         operation: 'dual_auth_middleware',
         userId: request.user.id,
         authType: 'cookie',

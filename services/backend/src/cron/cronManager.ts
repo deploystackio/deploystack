@@ -62,7 +62,7 @@ export class CronManager {
 
     try {
       const task = cron.schedule(schedule, async () => {
-        this.logger.info({
+        this.logger.trace({
           job: jobName,
           jobType,
           schedule,
@@ -81,7 +81,7 @@ export class CronManager {
             maxAttempts ? { maxAttempts } : undefined
           );
 
-          this.logger.info({
+          this.logger.trace({
             job: jobName,
             jobId: job.id,
             jobType,

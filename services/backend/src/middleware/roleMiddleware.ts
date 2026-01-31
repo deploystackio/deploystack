@@ -336,7 +336,7 @@ export function requireTeamPermission(
 
       const userId = request.user.id;
 
-      request.log.debug({
+      request.log.trace({
         operation: 'team_permission_check',
         userId,
         teamId,

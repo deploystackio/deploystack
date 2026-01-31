@@ -37,13 +37,13 @@ export async function authHook(
     const sessionId = lucia.readSessionCookie(request.headers.cookie ?? '');
     
     if (!sessionId) {
-      request.log.debug('Auth hook: No session cookie found');
+      request.log.trace('Auth hook: No session cookie found');
       request.user = null;
       request.session = null;
       return; // Proceed as unauthenticated
     }
 
-    request.log.debug(`Auth hook: Found session ID: ${sessionId}`);
+    request.log.trace(`Auth hook: Found session ID: ${sessionId}`);
     
     // Manual session validation to avoid Lucia SQL syntax issues
     const db = getDb();
@@ -66,7 +66,7 @@ export async function authHook(
     .limit(1);
     
     if (sessionResult.length === 0) {
-      request.log.debug(`Auth hook: Session ${sessionId} not found`);
+      request.log.trace(`Auth hook: Session ${sessionId} not found`);
       const sessionCookie = lucia.createBlankSessionCookie();
       reply.setCookie(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
       request.user = null;
@@ -78,7 +78,7 @@ export async function authHook(
     
     // Check if session is expired
     if (sessionData.expiresAt < Date.now()) {
-      request.log.debug(`Auth hook: Session ${sessionId} is expired`);
+      request.log.trace(`Auth hook: Session ${sessionId} is expired`);
       // Delete expired session
       await db.delete(authSession).where(eq(authSession.id, sessionId));
       const sessionCookie = lucia.createBlankSessionCookie();
@@ -106,8 +106,8 @@ export async function authHook(
       fresh: false
     };
 
-    request.log.debug(`Auth hook: Session ${sessionId} is valid for user ${user.id}`);
-    
+    request.log.trace(`Auth hook: Session ${sessionId} is valid for user ${user.id}`);
+
     request.user = user;
     request.session = session;
     // No explicit done() call, Fastify awaits the promise

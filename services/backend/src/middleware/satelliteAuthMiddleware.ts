@@ -130,7 +130,7 @@ export function requireUserOrSatelliteAuth() {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     // Check if user is already authenticated via cookie (from authHook)
     if (request.user && request.session) {
-      request.log.debug({
+      request.log.trace({
         operation: 'hybrid_auth_middleware',
         userId: request.user.id,
         authType: 'user_cookie',

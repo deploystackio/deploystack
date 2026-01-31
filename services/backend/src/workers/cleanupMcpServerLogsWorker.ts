@@ -34,7 +34,7 @@ export class CleanupMcpServerLogsWorker implements Worker {
 
     const { maxLogsPerInstallation } = payload as CleanupPayload;
 
-    this.logger.info({
+    this.logger.trace({
       jobId,
       maxLogsPerInstallation,
       operation: 'cleanup_mcp_server_logs'
@@ -59,7 +59,7 @@ export class CleanupMcpServerLogsWorker implements Worker {
 
       const totalDeleted = serverLogsDeleted + requestLogsDeleted;
 
-      this.logger.info({
+      this.logger.trace({
         jobId,
         serverLogsDeleted,
         requestLogsDeleted,

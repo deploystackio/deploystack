@@ -146,13 +146,13 @@ export class JobProcessorService {
       }
 
       // Execute the worker
-      this.logger.info({ jobId: job.id, jobType: job.type, attempt: job.attempts + 1 }, 'Executing job');
-      
+      this.logger.trace({ jobId: job.id, jobType: job.type, attempt: job.attempts + 1 }, 'Executing job');
+
       const result: WorkerResult = await worker.execute(payload, job.id);
 
       if (result.success) {
         await this.jobQueueService.updateJobStatus(job.id, 'completed', undefined, result.data);
-        this.logger.info({ jobId: job.id, jobType: job.type }, 'Job completed successfully');
+        this.logger.trace({ jobId: job.id, jobType: job.type }, 'Job completed successfully');
 
         // Update batch progress if job is part of a batch
         if (job.batch_id) {

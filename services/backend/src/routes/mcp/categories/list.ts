@@ -79,7 +79,7 @@ export default async function listCategories(server: FastifyInstance) {
       const authType = request.tokenPayload ? 'oauth2' : 'cookie';
       const userId = request.user.id;
 
-      request.log.debug({
+      request.log.trace({
         operation: 'list_mcp_categories',
         userId,
         authType,

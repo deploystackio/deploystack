@@ -28,7 +28,7 @@ export class RefreshOAuthTokensWorker implements Worker {
 	async execute(payload: unknown, jobId: string): Promise<WorkerResult> {
 		const startTime = Date.now();
 
-		this.logger.info(
+		this.logger.trace(
 			{
 				jobId,
 				operation: 'refresh_oauth_tokens',
@@ -42,7 +42,7 @@ export class RefreshOAuthTokensWorker implements Worker {
 
 			const durationMs = Date.now() - startTime;
 
-			this.logger.info(
+			this.logger.trace(
 				{
 					jobId,
 					operation: 'refresh_oauth_tokens',

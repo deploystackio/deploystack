@@ -31,7 +31,7 @@ export class McpCredentialValidationWorker implements Worker {
   }
 
   async execute(payload: unknown, jobId: string): Promise<WorkerResult> {
-    this.logger.info({
+    this.logger.trace({
       jobId,
       operation: 'mcp_credential_validation'
     }, 'Starting MCP credential validation job');
@@ -39,7 +39,7 @@ export class McpCredentialValidationWorker implements Worker {
     try {
       const result = await this.healthCheckService.runCredentialValidation();
 
-      this.logger.info({
+      this.logger.trace({
         jobId,
         operation: 'mcp_credential_validation',
         ...result

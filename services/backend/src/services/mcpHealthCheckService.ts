@@ -676,14 +676,14 @@ export class McpHealthCheckService {
     oauthFailed: number;
     apiKeyRequested: number;
   }> {
-    this.logger.info({
+    this.logger.trace({
       operation: 'credential_validation_started'
     }, 'Starting credential validation run');
 
     const installations = await this.getInstallationsNeedingCredentialCheck();
 
     if (installations.length === 0) {
-      this.logger.debug({
+      this.logger.trace({
         operation: 'credential_validation_complete',
         installationsChecked: 0
       }, 'No installations need credential validation');
@@ -755,7 +755,7 @@ export class McpHealthCheckService {
       }
     }
 
-    this.logger.info({
+    this.logger.trace({
       operation: 'credential_validation_complete',
       installationsChecked: installations.length,
       oauthValidated,
