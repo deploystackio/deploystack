@@ -108,7 +108,7 @@ export class DeploymentService {
     repo: string
   ): Promise<BranchesResponse> {
     const response = await fetch(
-      `${this.baseUrl}/api/teams/${teamId}/deploy/github/repositories/${owner}/${repo}/branches`,
+      `${this.baseUrl}/api/teams/${teamId}/deploy/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches`,
       {
         method: 'GET',
         credentials: 'include'

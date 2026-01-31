@@ -564,8 +564,9 @@ export default async function deployGitHubRoutes(server: FastifyInstance) {
       // Get repository details for default branch
       const { data: repoData } = await octokit.repos.get({ owner, repo });
 
-      // Check if repository is empty
-      if (repoData.size === 0 || !repoData.default_branch) {
+      // Check if repository is empty (only check for default branch, not size)
+      // Note: GitHub's size field is in KB and can be 0 for very small repos
+      if (!repoData.default_branch) {
         const errorResponse: ErrorResponse = {
           success: false,
           error: `Repository ${owner}/${repo} is empty. Please push code to the repository before deploying.`
