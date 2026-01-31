@@ -385,22 +385,6 @@ export class McpInstallationService {
       installationName: data.installation_name
     }, 'Creating MCP installation');
 
-    // Check if installation name already exists in team
-    const existingInstallation = await this.db
-      .select()
-      .from(this.mcpServerInstallations)
-      .where(
-        and(
-          eq(this.mcpServerInstallations.team_id, teamId),
-          eq(this.mcpServerInstallations.installation_name, data.installation_name)
-        )
-      )
-      .limit(1);
-
-    if (existingInstallation.length > 0) {
-      throw new Error('An installation with this name already exists in the team');
-    }
-
     // Verify server exists
     const server = await this.db
       .select()
@@ -711,23 +695,6 @@ export class McpInstallationService {
     };
 
     if (data.installation_name !== undefined) {
-      // Check if new name conflicts with existing installations
-      const conflictingInstallation = await this.db
-        .select()
-        .from(this.mcpServerInstallations)
-        .where(
-          and(
-            eq(this.mcpServerInstallations.team_id, teamId),
-            eq(this.mcpServerInstallations.installation_name, data.installation_name),
-            eq(this.mcpServerInstallations.id, installationId) // Exclude current installation
-          )
-        )
-        .limit(1);
-
-      if (conflictingInstallation.length > 0) {
-        throw new Error('An installation with this name already exists in the team');
-      }
-
       updateData.installation_name = data.installation_name;
     }
 
