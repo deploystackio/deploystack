@@ -28,6 +28,12 @@ RUN pip3 install --break-system-packages uv && \
 RUN mkdir -p /opt/deploystack/mcp-cache && \
     chown -R deploystack:deploystack /opt/deploystack
 
+# Create GitHub deployment base directory for production tmpfs mounts
+# Required when NODE_ENV=production and platform=linux
+RUN mkdir -p /opt/mcp-deployments && \
+    chown deploystack:deploystack /opt/mcp-deployments && \
+    chmod 755 /opt/mcp-deployments
+
 WORKDIR /app
 
 # Create persistent_data directory with proper ownership

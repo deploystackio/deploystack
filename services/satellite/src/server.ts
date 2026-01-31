@@ -237,6 +237,24 @@ export async function createServer() {
     process.exit(1);
   }
 
+  // Validate GitHub deployment base directory permissions (production Linux only)
+  if (process.env.NODE_ENV === 'production' && process.platform === 'linux') {
+    const { githubDeploymentBaseDir } = await import('./config/nsjail');
+    const { validateDeploymentDirectory } = await import('./lib/deployment-directory-validator');
+
+    try {
+      await validateDeploymentDirectory(githubDeploymentBaseDir, server.log as any);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      server.log.fatal({
+        operation: 'deployment_directory_validation_failed',
+        path: githubDeploymentBaseDir,
+        error: errorMessage
+      }, 'Failed to validate GitHub deployment base directory - cannot continue');
+      process.exit(1);
+    }
+  }
+
   // Initialize MCP Activity Tracker for personal dashboard feature
   const activityTracker = new McpActivityTracker(server.log);
   server.decorate('activityTracker', activityTracker);
