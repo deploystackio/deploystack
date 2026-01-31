@@ -12,6 +12,7 @@ import { ProcessSpawner } from './nsjail-spawner';
 import { validateBuildScripts } from '../config/security-validation';
 import { TmpfsManager } from '../lib/tmpfs-manager';
 import { githubDeploymentBaseDir, nsjailConfig } from '../config/nsjail';
+import { selectBestPythonForDeployment } from '../utils/runtime-validator';
 
 /**
  * Parsed GitHub repository information
@@ -623,8 +624,71 @@ export class GitHubDeploymentHandler {
   }
 
   /**
+   * Detect if pyproject.toml is a simple script (not installable package)
+   *
+   * A simple script is one that:
+   * 1. Has no package structure (no src/ dir, no matching package dir), OR
+   * 2. Has [build-system] but the build will fail due to missing structure
+   *
+   * We detect this by checking if common Python script files exist at root level
+   * (server.py, main.py, app.py, __main__.py) - indicating it's meant to run directly
+   */
+  async isPyprojectSimpleScript(tempDir: string): Promise<boolean> {
+    const pyprojectPath = path.join(tempDir, 'pyproject.toml');
+    try {
+      const content = await fs.promises.readFile(pyprojectPath, 'utf8');
+
+      // Check if pyproject.toml has [build-system] section
+      const hasBuildSystem = content.includes('[build-system]');
+
+      // If no build-system, it's definitely a simple script (just dependency management)
+      if (!hasBuildSystem) {
+        return true;
+      }
+
+      // Has build-system - check if package structure exists
+      // Look for src/ directory or package directory matching project name
+      const hasSrcDir = await fileExists(path.join(tempDir, 'src'));
+
+      // Extract package name from pyproject.toml
+      const nameMatch = content.match(/^name\s*=\s*"([^"]+)"/m);
+      const packageName = nameMatch ? nameMatch[1].replace(/-/g, '_') : null;
+      const hasPackageDir = packageName ? await fileExists(path.join(tempDir, packageName)) : false;
+
+      // If it has proper package structure (src/ or package dir), it's installable
+      if (hasSrcDir || hasPackageDir) {
+        return false;
+      }
+
+      // No package structure - check if there are standalone script files at root
+      const scriptFiles = ['server.py', 'main.py', 'app.py', '__main__.py'];
+      for (const scriptFile of scriptFiles) {
+        if (await fileExists(path.join(tempDir, scriptFile))) {
+          // Found a standalone script - treat as simple script
+          this.logger.debug({
+            operation: 'python_pattern_detected',
+            pattern: 'simple_script',
+            reason: `Found ${scriptFile} at root without package structure`,
+            temp_dir: tempDir
+          }, `Detected simple Python script pattern (${scriptFile} without package structure)`);
+          return true;
+        }
+      }
+
+      // Has build-system, has scripts, but no package structure and no standalone scripts
+      // This will likely fail to build - treat as simple script to avoid build errors
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Install Python dependencies using uv or pip
-   * Uses uv sync for pyproject.toml projects, pip for requirements.txt
+   * Auto-detects three patterns:
+   * 1. Installable package (pyproject.toml with [build-system] + [project.scripts])
+   * 2. Simple script with pyproject.toml (just dependencies, no package structure)
+   * 3. Legacy script with requirements.txt
    */
   async installPythonDependencies(
     tempDir: string,
@@ -655,29 +719,113 @@ export class GitHubDeploymentHandler {
 
     let command: string;
     let args: string[];
+    let installMethod: string;
 
-    if (hasPyproject) {
-      // Modern Python: use uv sync
+    // Determine installation method
+    if (hasPyproject && !(await this.isPyprojectSimpleScript(tempDir))) {
+      // Pattern 1: Installable package with pyproject.toml
+      // Use uv sync to create venv and install package as editable
       command = 'uv';
       args = ['sync', '--no-dev'];
+      installMethod = 'uv sync (installable package)';
+
+      // Select best Python version for deployment
+      const pythonSelection = selectBestPythonForDeployment(this.logger, '3.10');
+
+      if (pythonSelection) {
+        // Use selected Python version
+        args.push('--python', pythonSelection.path);
+
+        this.logger.info({
+          operation: 'python_version_selected',
+          selected_version: pythonSelection.version,
+          selected_path: pythonSelection.path,
+          reason: pythonSelection.reason,
+          alternatives: pythonSelection.alternatives,
+          skipped: pythonSelection.skipped
+        }, `Selected Python ${pythonSelection.version} for GitHub deployment`);
+
+        // Notify user via log buffer
+        this.logBuffer.add({
+          installation_id: installationId,
+          team_id: teamId,
+          user_id: userId,
+          level: 'info',
+          message: `[python install] Using Python ${pythonSelection.version} (${pythonSelection.reason})`,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        // Fallback to system default Python
+        this.logger.warn({
+          operation: 'python_version_fallback',
+          reason: 'no_suitable_version_found'
+        }, 'Using system default Python - build may fail due to missing wheels');
+
+        this.logBuffer.add({
+          installation_id: installationId,
+          team_id: teamId,
+          user_id: userId,
+          level: 'warn',
+          message: '[python install] Using system default Python (no suitable version found)',
+          timestamp: new Date().toISOString()
+        });
+      }
+
       this.logger.debug({
         operation: 'python_install_start',
         temp_dir: tempDir,
-        method: 'uv sync'
-      }, 'Installing Python dependencies with uv sync --no-dev');
+        method: installMethod,
+        args
+      }, `Installing Python dependencies with ${installMethod}`);
+
+    } else if (hasPyproject) {
+      // Pattern 2: Simple script with pyproject.toml (no build-system or scripts)
+      // Use uv pip to just install dependencies into venv
+      command = 'uv';
+      args = ['venv', '.venv'];
+      installMethod = 'uv venv + uv pip (simple script)';
+
+      const pythonSelection = selectBestPythonForDeployment(this.logger, '3.10');
+      if (pythonSelection) {
+        args.push('--python', pythonSelection.path);
+
+        this.logBuffer.add({
+          installation_id: installationId,
+          team_id: teamId,
+          user_id: userId,
+          level: 'info',
+          message: `[python install] Using Python ${pythonSelection.version} for simple script`,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      this.logger.debug({
+        operation: 'python_install_start',
+        temp_dir: tempDir,
+        method: installMethod,
+        pattern: 'simple_script_pyproject'
+      }, 'Detected simple Python script with pyproject.toml (no build-system), creating venv');
+
     } else {
-      // Legacy Python: use pip
-      command = 'pip';
-      args = ['install', '-r', 'requirements.txt', '--no-cache-dir'];
+      // Pattern 3: Legacy Python with requirements.txt
+      command = 'uv';
+      args = ['venv', '.venv'];
+      installMethod = 'uv venv + uv pip (requirements.txt)';
+
       this.logger.debug({
         operation: 'python_install_start',
         temp_dir: tempDir,
-        method: 'pip install'
-      }, 'Installing Python dependencies with pip install');
+        method: installMethod,
+        pattern: 'simple_script_requirements'
+      }, 'Detected simple Python script with requirements.txt, creating venv');
     }
+
+    // For simple scripts, we need two steps: 1) create venv, 2) install deps
+    const isSimpleScript = installMethod.includes('simple script') || installMethod.includes('requirements.txt');
 
     // Use nsjail in production, direct spawn in development
     if (this.processSpawner.shouldUseNsjail()) {
+      // Step 1: Create venv (for simple scripts) or sync (for packages)
       const result = await this.processSpawner.spawnBuildCommandWithNsjail(
         command,
         args,
@@ -713,78 +861,244 @@ export class GitHubDeploymentHandler {
         throw new Error(`${command} ${args.join(' ')} failed with code ${result.code}: ${result.stderr.substring(0, 200)}`);
       }
 
+      // Step 2: For simple scripts, install dependencies into the venv
+      if (isSimpleScript) {
+        const depFile = hasPyproject ? 'pyproject.toml' : 'requirements.txt';
+        let pipArgs: string[];
+
+        if (hasPyproject) {
+          // Parse dependencies from pyproject.toml and install them directly
+          const pyprojectPath = path.join(tempDir, 'pyproject.toml');
+          const pyprojectContent = await fs.promises.readFile(pyprojectPath, 'utf8');
+
+          // Extract dependencies array from [project] section
+          const depsMatch = pyprojectContent.match(/dependencies\s*=\s*\[([\s\S]*?)\]/);
+          if (depsMatch) {
+            const depsContent = depsMatch[1];
+            // Parse individual dependencies (handle both "pkg" and 'pkg' quotes)
+            const deps = depsContent
+              .split(',')
+              .map(d => d.trim())
+              .filter(d => d.length > 0)
+              .map(d => d.replace(/^["']|["']$/g, '')); // Remove quotes
+
+            if (deps.length > 0) {
+              pipArgs = ['pip', 'install', ...deps];
+            } else {
+              // No dependencies found, skip install
+              this.logger.info({
+                operation: 'python_deps_skip',
+                temp_dir: tempDir,
+                reason: 'no_dependencies_in_pyproject'
+              }, 'No dependencies found in pyproject.toml, skipping install');
+              pipArgs = [];
+            }
+          } else {
+            // No dependencies section found
+            this.logger.info({
+              operation: 'python_deps_skip',
+              temp_dir: tempDir,
+              reason: 'no_dependencies_section'
+            }, 'No [project.dependencies] section in pyproject.toml, skipping install');
+            pipArgs = [];
+          }
+        } else {
+          // Use requirements.txt
+          pipArgs = ['pip', 'install', '-r', 'requirements.txt'];
+        }
+
+        // Skip if no dependencies to install
+        if (pipArgs.length === 0) {
+          this.logger.info({
+            operation: 'python_install_success',
+            temp_dir: tempDir,
+            method: installMethod
+          }, 'Python venv created successfully (no dependencies to install)');
+          return;
+        }
+
+        this.logger.debug({
+          operation: 'python_deps_install_start',
+          temp_dir: tempDir,
+          dep_file: depFile
+        }, `Installing dependencies from ${depFile} into venv`);
+
+        const depsResult = await this.processSpawner.spawnBuildCommandWithNsjail(
+          'uv',
+          pipArgs,
+          tempDir,
+          {
+            allowNetwork: true,
+            timeoutMs: 180000,
+            runtime: 'python'
+          }
+        );
+
+        if (depsResult.stdout) {
+          this.logBuffer.add({
+            installation_id: installationId,
+            team_id: teamId,
+            user_id: userId,
+            level: 'info',
+            message: `[uv pip] ${depsResult.stdout.substring(0, 1000)}`,
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        if (depsResult.code !== 0) {
+          this.logBuffer.add({
+            installation_id: installationId,
+            team_id: teamId,
+            user_id: userId,
+            level: 'error',
+            message: `[uv pip] ${depsResult.stderr.substring(0, 500)}`,
+            timestamp: new Date().toISOString()
+          });
+          throw new Error(`uv pip install failed with code ${depsResult.code}: ${depsResult.stderr.substring(0, 200)}`);
+        }
+      }
+
       this.logger.info({
         operation: 'python_install_success',
         temp_dir: tempDir,
-        method: command
+        method: installMethod
       }, 'Python dependencies installed successfully');
     } else {
       // Development mode - direct spawn
-      return new Promise((resolve, reject) => {
-        const proc = spawn(command, args, {
-          cwd: tempDir,
-          stdio: 'pipe'
-        });
+      // Helper to run a command and return a promise
+      const runCommand = (cmd: string, cmdArgs: string[]): Promise<void> => {
+        return new Promise((resolve, reject) => {
+          const proc = spawn(cmd, cmdArgs, {
+            cwd: tempDir,
+            stdio: 'pipe'
+          });
 
-        let stderr = '';
+          let stderr = '';
 
-        proc.stdout.on('data', (data) => {
-          const output = data.toString().trim();
-          if (output) {
-            this.logBuffer.add({
-              installation_id: installationId,
-              team_id: teamId,
-              user_id: userId,
-              level: 'info',
-              message: `[${command}] ${output}`,
-              timestamp: new Date().toISOString()
-            });
-          }
-        });
+          proc.stdout.on('data', (data) => {
+            const output = data.toString().trim();
+            if (output) {
+              this.logBuffer.add({
+                installation_id: installationId,
+                team_id: teamId,
+                user_id: userId,
+                level: 'info',
+                message: `[${cmd}] ${output}`,
+                timestamp: new Date().toISOString()
+              });
+            }
+          });
 
-        proc.stderr.on('data', (data) => {
-          const output = data.toString().trim();
-          stderr += output;
-          if (output) {
-            this.logBuffer.add({
-              installation_id: installationId,
-              team_id: teamId,
-              user_id: userId,
-              level: 'warn',
-              message: `[${command}] ${output}`,
-              timestamp: new Date().toISOString()
-            });
-          }
-        });
+          proc.stderr.on('data', (data) => {
+            const output = data.toString().trim();
+            stderr += output;
+            if (output) {
+              // uv outputs progress/status to stderr, not actual warnings
+              // Only treat as warn if it contains error indicators
+              const isError = output.toLowerCase().includes('error') ||
+                             output.toLowerCase().includes('failed') ||
+                             output.includes('×');
 
-        proc.on('exit', (code) => {
-          if (code === 0) {
-            this.logger.info({
-              operation: 'python_install_success',
-              temp_dir: tempDir,
-              method: command
-            }, 'Python dependencies installed successfully');
-            resolve();
-          } else {
+              this.logBuffer.add({
+                installation_id: installationId,
+                team_id: teamId,
+                user_id: userId,
+                level: isError ? 'warn' : 'info',
+                message: `[${cmd}] ${output}`,
+                timestamp: new Date().toISOString()
+              });
+            }
+          });
+
+          proc.on('exit', (code) => {
+            if (code === 0) {
+              resolve();
+            } else {
+              this.logger.error({
+                operation: 'python_command_failed',
+                temp_dir: tempDir,
+                command: cmd,
+                exit_code: code,
+                stderr: stderr.substring(0, 500)
+              }, `${cmd} failed with code ${code}`);
+              reject(new Error(`${cmd} failed with code ${code}: ${stderr.substring(0, 200)}`));
+            }
+          });
+
+          proc.on('error', (error) => {
             this.logger.error({
-              operation: 'python_install_failed',
+              operation: 'python_command_error',
               temp_dir: tempDir,
-              exit_code: code,
-              stderr: stderr.substring(0, 500)
-            }, `${command} failed with code ${code}`);
-            reject(new Error(`${command} failed with code ${code}: ${stderr.substring(0, 200)}`));
-          }
+              command: cmd,
+              error: error.message
+            }, `${cmd} process error`);
+            reject(new Error(`${cmd} process error: ${error.message}`));
+          });
         });
+      };
 
-        proc.on('error', (error) => {
-          this.logger.error({
-            operation: 'python_install_error',
+      // Step 1: Run initial command (venv creation or sync)
+      await runCommand(command, args);
+
+      // Step 2: For simple scripts, install dependencies
+      if (isSimpleScript) {
+        const depFile = hasPyproject ? 'pyproject.toml' : 'requirements.txt';
+        let pipArgs: string[];
+
+        if (hasPyproject) {
+          // Parse dependencies from pyproject.toml and install them directly
+          const pyprojectPath = path.join(tempDir, 'pyproject.toml');
+          const pyprojectContent = await fs.promises.readFile(pyprojectPath, 'utf8');
+
+          // Extract dependencies array from [project] section
+          const depsMatch = pyprojectContent.match(/dependencies\s*=\s*\[([\s\S]*?)\]/);
+          if (depsMatch) {
+            const depsContent = depsMatch[1];
+            // Parse individual dependencies (handle both "pkg" and 'pkg' quotes)
+            const deps = depsContent
+              .split(',')
+              .map(d => d.trim())
+              .filter(d => d.length > 0)
+              .map(d => d.replace(/^["']|["']$/g, '')); // Remove quotes
+
+            if (deps.length > 0) {
+              pipArgs = ['pip', 'install', ...deps];
+            } else {
+              // No dependencies, skip
+              pipArgs = [];
+            }
+          } else {
+            // No dependencies section
+            pipArgs = [];
+          }
+        } else {
+          // Use requirements.txt
+          pipArgs = ['pip', 'install', '-r', 'requirements.txt'];
+        }
+
+        // Install dependencies if any
+        if (pipArgs.length > 0) {
+          this.logger.debug({
+            operation: 'python_deps_install_start',
             temp_dir: tempDir,
-            error: error.message
-          }, `${command} process error`);
-          reject(new Error(`${command} process error: ${error.message}`));
-        });
-      });
+            dep_file: depFile,
+            dependencies: hasPyproject ? pipArgs.slice(2) : undefined
+          }, `Installing dependencies from ${depFile} into venv`);
+
+          await runCommand('uv', pipArgs);
+        } else {
+          this.logger.info({
+            operation: 'python_deps_skip',
+            temp_dir: tempDir
+          }, 'No dependencies to install');
+        }
+      }
+
+      this.logger.info({
+        operation: 'python_install_success',
+        temp_dir: tempDir,
+        method: installMethod
+      }, 'Python dependencies installed successfully');
     }
   }
 
@@ -851,7 +1165,11 @@ export class GitHubDeploymentHandler {
         entry_point: mainPath
       }, 'Using __main__.py as entry point');
 
-      return { command: 'python3', entryPoint: mainPath };
+      // Use venv Python if available
+      const venvPython = path.join(tempDir, '.venv', 'bin', 'python');
+      const command = await fileExists(venvPython) ? venvPython : 'python3';
+
+      return { command, entryPoint: mainPath };
     }
 
     // Try src/__main__.py (common pattern)
@@ -863,10 +1181,34 @@ export class GitHubDeploymentHandler {
         entry_point: srcMainPath
       }, 'Using src/__main__.py as entry point');
 
-      return { command: 'python3', entryPoint: srcMainPath };
+      // Use venv Python if available
+      const venvPython = path.join(tempDir, '.venv', 'bin', 'python');
+      const command = await fileExists(venvPython) ? venvPython : 'python3';
+
+      return { command, entryPoint: srcMainPath };
     }
 
-    throw new Error('Cannot resolve Python entry point: no scripts in pyproject.toml and no __main__.py found');
+    // Try common script names (server.py, main.py, app.py)
+    const commonScriptNames = ['server.py', 'main.py', 'app.py', 'run.py'];
+    for (const scriptName of commonScriptNames) {
+      const scriptPath = path.join(tempDir, scriptName);
+      if (await fileExists(scriptPath)) {
+        this.logger.info({
+          operation: 'python_entry_resolved_script',
+          temp_dir: tempDir,
+          script_name: scriptName,
+          entry_point: scriptPath
+        }, `Using ${scriptName} as entry point`);
+
+        // Use venv Python if available
+        const venvPython = path.join(tempDir, '.venv', 'bin', 'python');
+        const command = await fileExists(venvPython) ? venvPython : 'python3';
+
+        return { command, entryPoint: scriptPath };
+      }
+    }
+
+    throw new Error('Cannot resolve Python entry point: no scripts in pyproject.toml, no __main__.py, and no common script files (server.py, main.py, app.py) found');
   }
 
   /**
@@ -1063,7 +1405,7 @@ export class GitHubDeploymentHandler {
       let updatedConfig: MCPServerConfig;
 
       if (command === 'python3') {
-        // Running with python3 interpreter - make path relative
+        // Running with system python3 interpreter - make script path relative
         const relativeEntryPoint = path.relative(deploymentDir, entryPoint);
         updatedConfig = {
           ...config,
@@ -1071,8 +1413,18 @@ export class GitHubDeploymentHandler {
           args: [relativeEntryPoint],
           temp_dir: deploymentDir
         };
+      } else if (command.includes('.venv/bin/python')) {
+        // Running with venv Python - use relative paths for both command and script
+        const relativeCommand = path.relative(deploymentDir, command);
+        const relativeEntryPoint = path.relative(deploymentDir, entryPoint);
+        updatedConfig = {
+          ...config,
+          command: relativeCommand,  // .venv/bin/python
+          args: [relativeEntryPoint],  // server.py
+          temp_dir: deploymentDir
+        };
       } else {
-        // Running directly (entry point is executable script from venv)
+        // Running directly (entry point is executable script from venv bin)
         const relativeCommand = path.relative(deploymentDir, entryPoint);
         updatedConfig = {
           ...config,

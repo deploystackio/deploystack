@@ -9,7 +9,11 @@ import { spawnSync } from 'child_process';
  */
 
 interface Logger {
+  trace?: (obj: Record<string, unknown>, msg: string) => void;
+  debug?: (obj: Record<string, unknown>, msg: string) => void;
   info: (obj: Record<string, unknown>, msg: string) => void;
+  warn?: (obj: Record<string, unknown>, msg: string) => void;
+  error?: (obj: Record<string, unknown>, msg: string) => void;
   fatal: (obj: Record<string, unknown>, msg: string) => void;
 }
 
@@ -361,6 +365,321 @@ export function initializeCommandCache(logger: Logger): Map<string, string> {
  * Exported for potential reuse in process spawner
  */
 export { buildEnhancedPath };
+
+/**
+ * Python version information
+ */
+export interface PythonVersionInfo {
+  version: string;        // Full version (e.g., "3.13.9")
+  majorMinor: string;     // Major.minor (e.g., "3.13")
+  path: string;           // Absolute path to binary
+  command: string;        // Command name (e.g., "python3.13")
+}
+
+/**
+ * Python version selection result
+ */
+export interface PythonSelectionResult {
+  version: string;        // Selected version
+  path: string;           // Absolute path
+  command: string;        // Command name
+  reason: string;         // Why this version was selected
+  alternatives: string[]; // Other available versions
+  skipped: string[];      // Versions skipped (e.g., bleeding edge)
+}
+
+/**
+ * Discover all Python 3.x versions available on the system
+ * Searches for python3.X binaries using existing PATH infrastructure
+ */
+export function discoverPythonVersions(logger?: Logger): PythonVersionInfo[] {
+  const versions: PythonVersionInfo[] = [];
+
+  // Check python3.X versions (3.8 through 3.20 to be future-proof)
+  for (let minor = 8; minor <= 20; minor++) {
+    const command = `python3.${minor}`;
+    const path = resolveCommandPath(command);
+
+    if (path) {
+      try {
+        const result = spawnSync(command, ['--version'], {
+          encoding: 'utf-8',
+          timeout: 5000,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: {
+            ...process.env,
+            PATH: buildEnhancedPath()
+          }
+        });
+
+        if (result.status === 0) {
+          const versionOutput = (result.stdout || result.stderr).trim();
+          const versionMatch = versionOutput.match(/Python (\d+\.\d+\.\d+)/);
+
+          if (versionMatch) {
+            const fullVersion = versionMatch[1];
+            const majorMinor = `3.${minor}`;
+
+            versions.push({
+              version: fullVersion,
+              majorMinor,
+              path,
+              command
+            });
+
+            if (logger?.trace) {
+              logger.trace({
+                operation: 'python_version_discovered',
+                command,
+                version: fullVersion,
+                path
+              }, `Found Python ${fullVersion} at ${path}`);
+            }
+          }
+        }
+      } catch (error) {
+        // Silently skip - command exists but version check failed
+        if (logger?.trace) {
+          logger.trace({
+            operation: 'python_version_check_failed',
+            command,
+            error: error instanceof Error ? error.message : String(error)
+          }, `Failed to check version for ${command}`);
+        }
+      }
+    }
+  }
+
+  // Also check generic python3
+  const python3Path = resolveCommandPath('python3');
+  if (python3Path) {
+    try {
+      const result = spawnSync('python3', ['--version'], {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          PATH: buildEnhancedPath()
+        }
+      });
+
+      if (result.status === 0) {
+        const versionOutput = (result.stdout || result.stderr).trim();
+        const versionMatch = versionOutput.match(/Python (\d+\.\d+\.\d+)/);
+
+        if (versionMatch) {
+          const fullVersion = versionMatch[1];
+          const majorMinorMatch = fullVersion.match(/(\d+\.\d+)/);
+
+          if (majorMinorMatch) {
+            const majorMinor = majorMinorMatch[1];
+
+            // Only add if not already discovered
+            const alreadyFound = versions.some(v => v.version === fullVersion);
+            if (!alreadyFound) {
+              versions.push({
+                version: fullVersion,
+                majorMinor,
+                path: python3Path,
+                command: 'python3'
+              });
+
+              if (logger?.trace) {
+                logger.trace({
+                  operation: 'python_version_discovered',
+                  command: 'python3',
+                  version: fullVersion,
+                  path: python3Path
+                }, `Found Python ${fullVersion} at ${python3Path}`);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // Silently skip
+      if (logger?.trace) {
+        logger.trace({
+          operation: 'python_version_check_failed',
+          command: 'python3',
+          error: error instanceof Error ? error.message : String(error)
+        }, 'Failed to check version for python3');
+      }
+    }
+  }
+
+  return versions;
+}
+
+/**
+ * Check if a Python version is considered "bleeding edge"
+ * Bleeding edge = latest minor version (most likely to lack pre-built wheels)
+ */
+function isBleedingEdgePython(version: PythonVersionInfo, allVersions: PythonVersionInfo[]): boolean {
+  // Extract all unique major.minor versions
+  const minorVersions = allVersions
+    .map(v => {
+      const match = v.majorMinor.match(/3\.(\d+)/);
+      return match ? parseInt(match[1], 10) : 0;
+    })
+    .filter(v => v > 0);
+
+  if (minorVersions.length === 0) return false;
+
+  // Find the latest minor version
+  const latestMinor = Math.max(...minorVersions);
+
+  // Check if this version is the latest
+  const versionMinor = parseInt(version.majorMinor.split('.')[1], 10);
+  return versionMinor === latestMinor;
+}
+
+/**
+ * Select best Python version for GitHub deployments
+ * Prefers stable versions with mature wheel ecosystem, avoids bleeding edge
+ *
+ * @param logger - Optional logger for debugging
+ * @param minVersion - Optional minimum version requirement (e.g., "3.10")
+ * @returns Selection result or null if no suitable version found
+ */
+export function selectBestPythonForDeployment(
+  logger?: Logger,
+  minVersion?: string
+): PythonSelectionResult | null {
+  const startTime = Date.now();
+
+  if (logger?.debug) {
+    logger.debug({
+      operation: 'python_version_selection_start',
+      min_version: minVersion
+    }, 'Starting Python version selection for deployment');
+  }
+
+  // Discover all available versions
+  const allVersions = discoverPythonVersions(logger);
+
+  if (allVersions.length === 0) {
+    if (logger?.warn) {
+      logger.warn({
+        operation: 'python_version_selection_failed',
+        reason: 'no_versions_found'
+      }, 'No Python versions found on system');
+    }
+    return null;
+  }
+
+  // Filter by minimum version if specified
+  let candidateVersions = allVersions;
+  if (minVersion) {
+    const minMajorMinor = minVersion.match(/(\d+\.\d+)/)?.[1];
+    if (minMajorMinor) {
+      const [minMajor, minMinor] = minMajorMinor.split('.').map(Number);
+      candidateVersions = allVersions.filter(v => {
+        const [major, minor] = v.majorMinor.split('.').map(Number);
+        return major > minMajor || (major === minMajor && minor >= minMinor);
+      });
+
+      if (candidateVersions.length === 0) {
+        if (logger?.warn) {
+          logger.warn({
+            operation: 'python_version_selection_failed',
+            reason: 'min_version_not_met',
+            min_version: minVersion,
+            available_versions: allVersions.map(v => v.version)
+          }, `No Python versions meet minimum requirement: ${minVersion}`);
+        }
+        return null;
+      }
+    }
+  }
+
+  // Categorize versions
+  const bleedingEdge: PythonVersionInfo[] = [];
+  const stable: PythonVersionInfo[] = [];
+
+  for (const version of candidateVersions) {
+    if (isBleedingEdgePython(version, allVersions)) {
+      bleedingEdge.push(version);
+    } else {
+      stable.push(version);
+    }
+  }
+
+  // Selection strategy:
+  // 1. Prefer newest stable version (best wheel availability)
+  // 2. Fall back to bleeding edge if no stable versions
+  // 3. Sort by minor version descending
+
+  let selected: PythonVersionInfo | null = null;
+  let reason = '';
+
+  if (stable.length > 0) {
+    // Sort stable versions by minor version (descending)
+    stable.sort((a, b) => {
+      const aMinor = parseInt(a.majorMinor.split('.')[1], 10);
+      const bMinor = parseInt(b.majorMinor.split('.')[1], 10);
+      return bMinor - aMinor;
+    });
+
+    selected = stable[0];
+    reason = 'Current stable version with mature wheel ecosystem';
+  } else if (bleedingEdge.length > 0) {
+    // No stable versions - use bleeding edge as last resort
+    bleedingEdge.sort((a, b) => {
+      const aMinor = parseInt(a.majorMinor.split('.')[1], 10);
+      const bMinor = parseInt(b.majorMinor.split('.')[1], 10);
+      return bMinor - aMinor;
+    });
+
+    selected = bleedingEdge[0];
+    reason = 'Bleeding edge version (no stable alternatives available)';
+  }
+
+  if (!selected) {
+    if (logger?.warn) {
+      logger.warn({
+        operation: 'python_version_selection_failed',
+        reason: 'no_candidates'
+      }, 'No suitable Python version found');
+    }
+    return null;
+  }
+
+  // Build result
+  const alternatives = candidateVersions
+    .filter(v => v.version !== selected.version)
+    .map(v => v.version);
+
+  const skipped = bleedingEdge
+    .filter(v => v.version !== selected.version)
+    .map(v => `${v.version} (bleeding edge)`);
+
+  const duration = Date.now() - startTime;
+
+  if (logger) {
+    logger.info({
+      operation: 'python_version_selection_complete',
+      selected_version: selected.version,
+      selected_path: selected.path,
+      reason,
+      alternatives,
+      skipped,
+      duration_ms: duration,
+      total_versions: allVersions.length,
+      candidate_versions: candidateVersions.length
+    }, `Selected Python ${selected.version} for deployment (${reason})`);
+  }
+
+  return {
+    version: selected.version,
+    path: selected.path,
+    command: selected.command,
+    reason,
+    alternatives,
+    skipped
+  };
+}
 
 /**
  * Validate system runtimes before satellite starts

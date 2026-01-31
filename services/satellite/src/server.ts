@@ -22,7 +22,7 @@ import { McpActivityTracker } from './services/mcp-activity-tracker';
 import { ToolSearchService } from './services/tool-search-service';
 import { OAuthTokenService } from './services/oauth-token-service';
 import { SsePingService } from './services/sse-ping-service';
-import { validateSystemRuntimes, initializeCommandCache } from './utils/runtime-validator';
+import { validateSystemRuntimes, initializeCommandCache, discoverPythonVersions } from './utils/runtime-validator';
 
 /**
  * Validate registration token format and availability
@@ -140,9 +140,10 @@ export async function createServer() {
   
   // Create a temporary logger for early validation
   const tempLogger = {
-    
+    trace: (obj: any, msg: string) => process.stdout.write(`TRACE: ${msg}\n`),
+    debug: (obj: any, msg: string) => process.stdout.write(`DEBUG: ${msg}\n`),
     info: (obj: any, msg: string) => process.stdout.write(`INFO: ${msg}\n`),
-    
+    warn: (obj: any, msg: string) => process.stderr.write(`WARN: ${msg}\n`),
     fatal: (obj: any, msg: string) => process.stderr.write(`FATAL: ${msg}\n`)
   };
   
@@ -170,6 +171,20 @@ export async function createServer() {
 
   // Store command cache globally for access by process spawners
   (global as any).DEPLOYSTACK_COMMAND_CACHE = commandCache;
+
+  // Discover and log available Python versions for debugging
+  const pythonVersions = discoverPythonVersions(tempLogger);
+  if (pythonVersions.length > 0) {
+    tempLogger.info({
+      operation: 'python_versions_discovered',
+      versions: pythonVersions.map(v => `${v.version} (${v.command})`),
+      total_count: pythonVersions.length
+    }, `Discovered ${pythonVersions.length} Python version(s) on system`);
+  } else {
+    tempLogger.warn({
+      operation: 'python_versions_not_found'
+    }, 'No Python 3.x versions found on system - Python MCP deployments may fail');
+  }
 
   const server = fastify({
     logger: loggerConfig,
