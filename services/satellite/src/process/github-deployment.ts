@@ -13,6 +13,11 @@ import { validateBuildScripts } from '../config/security-validation';
 import { TmpfsManager } from '../lib/tmpfs-manager';
 import { githubDeploymentBaseDir, nsjailConfig } from '../config/nsjail';
 import { selectBestPythonForDeployment } from '../utils/runtime-validator';
+import {
+  isPyprojectSimpleScript,
+  parsePyprojectDependencies,
+  resolvePythonEntryPoint
+} from '../utils/python-helpers';
 
 /**
  * Parsed GitHub repository information
@@ -623,65 +628,6 @@ export class GitHubDeploymentHandler {
     }
   }
 
-  /**
-   * Detect if pyproject.toml is a simple script (not installable package)
-   *
-   * A simple script is one that:
-   * 1. Has no package structure (no src/ dir, no matching package dir), OR
-   * 2. Has [build-system] but the build will fail due to missing structure
-   *
-   * We detect this by checking if common Python script files exist at root level
-   * (server.py, main.py, app.py, __main__.py) - indicating it's meant to run directly
-   */
-  async isPyprojectSimpleScript(tempDir: string): Promise<boolean> {
-    const pyprojectPath = path.join(tempDir, 'pyproject.toml');
-    try {
-      const content = await fs.promises.readFile(pyprojectPath, 'utf8');
-
-      // Check if pyproject.toml has [build-system] section
-      const hasBuildSystem = content.includes('[build-system]');
-
-      // If no build-system, it's definitely a simple script (just dependency management)
-      if (!hasBuildSystem) {
-        return true;
-      }
-
-      // Has build-system - check if package structure exists
-      // Look for src/ directory or package directory matching project name
-      const hasSrcDir = await fileExists(path.join(tempDir, 'src'));
-
-      // Extract package name from pyproject.toml
-      const nameMatch = content.match(/^name\s*=\s*"([^"]+)"/m);
-      const packageName = nameMatch ? nameMatch[1].replace(/-/g, '_') : null;
-      const hasPackageDir = packageName ? await fileExists(path.join(tempDir, packageName)) : false;
-
-      // If it has proper package structure (src/ or package dir), it's installable
-      if (hasSrcDir || hasPackageDir) {
-        return false;
-      }
-
-      // No package structure - check if there are standalone script files at root
-      const scriptFiles = ['server.py', 'main.py', 'app.py', '__main__.py'];
-      for (const scriptFile of scriptFiles) {
-        if (await fileExists(path.join(tempDir, scriptFile))) {
-          // Found a standalone script - treat as simple script
-          this.logger.debug({
-            operation: 'python_pattern_detected',
-            pattern: 'simple_script',
-            reason: `Found ${scriptFile} at root without package structure`,
-            temp_dir: tempDir
-          }, `Detected simple Python script pattern (${scriptFile} without package structure)`);
-          return true;
-        }
-      }
-
-      // Has build-system, has scripts, but no package structure and no standalone scripts
-      // This will likely fail to build - treat as simple script to avoid build errors
-      return true;
-    } catch {
-      return false;
-    }
-  }
 
   /**
    * Install Python dependencies using uv or pip
@@ -721,8 +667,8 @@ export class GitHubDeploymentHandler {
     let args: string[];
     let installMethod: string;
 
-    // Determine installation method
-    if (hasPyproject && !(await this.isPyprojectSimpleScript(tempDir))) {
+    // Determine installation method using pattern detection from python-helpers
+    if (hasPyproject && !(await isPyprojectSimpleScript(tempDir))) {
       // Pattern 1: Installable package with pyproject.toml
       // Use uv sync to create venv and install package as editable
       command = 'uv';
@@ -867,39 +813,19 @@ export class GitHubDeploymentHandler {
         let pipArgs: string[];
 
         if (hasPyproject) {
-          // Parse dependencies from pyproject.toml and install them directly
+          // Parse dependencies from pyproject.toml using extracted helper
           const pyprojectPath = path.join(tempDir, 'pyproject.toml');
-          const pyprojectContent = await fs.promises.readFile(pyprojectPath, 'utf8');
+          const deps = await parsePyprojectDependencies(pyprojectPath);
 
-          // Extract dependencies array from [project] section
-          const depsMatch = pyprojectContent.match(/dependencies\s*=\s*\[([\s\S]*?)\]/);
-          if (depsMatch) {
-            const depsContent = depsMatch[1];
-            // Parse individual dependencies (handle both "pkg" and 'pkg' quotes)
-            const deps = depsContent
-              .split(',')
-              .map(d => d.trim())
-              .filter(d => d.length > 0)
-              .map(d => d.replace(/^["']|["']$/g, '')); // Remove quotes
-
-            if (deps.length > 0) {
-              pipArgs = ['pip', 'install', ...deps];
-            } else {
-              // No dependencies found, skip install
-              this.logger.info({
-                operation: 'python_deps_skip',
-                temp_dir: tempDir,
-                reason: 'no_dependencies_in_pyproject'
-              }, 'No dependencies found in pyproject.toml, skipping install');
-              pipArgs = [];
-            }
+          if (deps.length > 0) {
+            pipArgs = ['pip', 'install', ...deps];
           } else {
-            // No dependencies section found
+            // No dependencies found, skip install
             this.logger.info({
               operation: 'python_deps_skip',
               temp_dir: tempDir,
-              reason: 'no_dependencies_section'
-            }, 'No [project.dependencies] section in pyproject.toml, skipping install');
+              reason: 'no_dependencies_in_pyproject'
+            }, 'No dependencies found in pyproject.toml, skipping install');
             pipArgs = [];
           }
         } else {
@@ -1104,6 +1030,7 @@ export class GitHubDeploymentHandler {
 
   /**
    * Resolve Python package entry point from pyproject.toml or __main__.py
+   * Delegates to resolvePythonEntryPoint() from python-helpers.ts
    */
   async resolvePythonPackageEntry(tempDir: string): Promise<{ command: string; entryPoint: string }> {
     this.logger.debug({
@@ -1111,104 +1038,20 @@ export class GitHubDeploymentHandler {
       temp_dir: tempDir
     }, 'Resolving Python package entry point');
 
-    // Try pyproject.toml first
-    const pyprojectPath = path.join(tempDir, 'pyproject.toml');
-    if (await fileExists(pyprojectPath)) {
-      const content = await fs.promises.readFile(pyprojectPath, 'utf8');
+    const result = await resolvePythonEntryPoint(tempDir);
 
-      // Look for [project.scripts] section
-      const scriptsMatch = content.match(/\[project\.scripts\]\s*\n([^[]+)/);
-      if (scriptsMatch) {
-        const firstScriptMatch = scriptsMatch[1].match(/^(\w+)\s*=/m);
-        if (firstScriptMatch) {
-          const scriptName = firstScriptMatch[1];
-          // Entry point is installed in .venv/bin/ after uv sync
-          const entryPoint = path.join(tempDir, '.venv', 'bin', scriptName);
-
-          this.logger.info({
-            operation: 'python_entry_resolved',
-            temp_dir: tempDir,
-            script_name: scriptName,
-            entry_point: entryPoint
-          }, `Resolved Python entry point: ${scriptName}`);
-
-          return { command: entryPoint, entryPoint };
-        }
-      }
-
-      // Look for [project.gui-scripts] as fallback
-      const guiMatch = content.match(/\[project\.gui-scripts\]\s*\n([^[]+)/);
-      if (guiMatch) {
-        const firstScriptMatch = guiMatch[1].match(/^(\w+)\s*=/m);
-        if (firstScriptMatch) {
-          const scriptName = firstScriptMatch[1];
-          const entryPoint = path.join(tempDir, '.venv', 'bin', scriptName);
-
-          this.logger.info({
-            operation: 'python_entry_resolved',
-            temp_dir: tempDir,
-            script_name: scriptName,
-            entry_point: entryPoint
-          }, `Resolved Python GUI entry point: ${scriptName}`);
-
-          return { command: entryPoint, entryPoint };
-        }
-      }
+    if (!result) {
+      throw new Error('Cannot resolve Python entry point: no scripts in pyproject.toml, no __main__.py, and no common script files (server.py, main.py, app.py, run.py) found');
     }
 
-    // Fallback: look for __main__.py
-    const mainPath = path.join(tempDir, '__main__.py');
-    if (await fileExists(mainPath)) {
-      this.logger.info({
-        operation: 'python_entry_resolved_main',
-        temp_dir: tempDir,
-        entry_point: mainPath
-      }, 'Using __main__.py as entry point');
+    this.logger.info({
+      operation: 'python_entry_resolved',
+      temp_dir: tempDir,
+      command: result.command,
+      entry_point: result.entryPoint
+    }, `Resolved Python entry point: ${result.command}`);
 
-      // Use venv Python if available
-      const venvPython = path.join(tempDir, '.venv', 'bin', 'python');
-      const command = await fileExists(venvPython) ? venvPython : 'python3';
-
-      return { command, entryPoint: mainPath };
-    }
-
-    // Try src/__main__.py (common pattern)
-    const srcMainPath = path.join(tempDir, 'src', '__main__.py');
-    if (await fileExists(srcMainPath)) {
-      this.logger.info({
-        operation: 'python_entry_resolved_src_main',
-        temp_dir: tempDir,
-        entry_point: srcMainPath
-      }, 'Using src/__main__.py as entry point');
-
-      // Use venv Python if available
-      const venvPython = path.join(tempDir, '.venv', 'bin', 'python');
-      const command = await fileExists(venvPython) ? venvPython : 'python3';
-
-      return { command, entryPoint: srcMainPath };
-    }
-
-    // Try common script names (server.py, main.py, app.py)
-    const commonScriptNames = ['server.py', 'main.py', 'app.py', 'run.py'];
-    for (const scriptName of commonScriptNames) {
-      const scriptPath = path.join(tempDir, scriptName);
-      if (await fileExists(scriptPath)) {
-        this.logger.info({
-          operation: 'python_entry_resolved_script',
-          temp_dir: tempDir,
-          script_name: scriptName,
-          entry_point: scriptPath
-        }, `Using ${scriptName} as entry point`);
-
-        // Use venv Python if available
-        const venvPython = path.join(tempDir, '.venv', 'bin', 'python');
-        const command = await fileExists(venvPython) ? venvPython : 'python3';
-
-        return { command, entryPoint: scriptPath };
-      }
-    }
-
-    throw new Error('Cannot resolve Python entry point: no scripts in pyproject.toml, no __main__.py, and no common script files (server.py, main.py, app.py) found');
+    return result;
   }
 
   /**
