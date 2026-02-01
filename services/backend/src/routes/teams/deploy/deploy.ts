@@ -508,11 +508,24 @@ export default async function deployRoutes(server: FastifyInstance) {
       // Extract validated metadata
       const { metadata } = repoValidationResult;
       const commitSha = metadata!.commit_sha;
-      const packageName = metadata!.name;
+      let packageName = metadata!.name;
       const packageVersion = metadata!.version;
       const packageDescription = metadata!.description;
       const packageLicense = metadata!.license;
       const runtime = metadata!.runtime;
+
+      // Parse GitHub URL early (needed for fallback and server creation)
+      const { owner, repo } = parseGitHubUrl(repository_url);
+
+      // Fallback: Generate package name from repository name if not present
+      // Common for Python projects with only requirements.txt (no pyproject.toml)
+      if (!packageName) {
+        packageName = repo; // e.g., "mcp-test-fastmcp"
+        request.log.info({
+          generatedPackageName: packageName,
+          source: 'repository_name'
+        }, 'Generated package name from repository (no pyproject.toml)');
+      }
 
       request.log.info({
         packageName,
@@ -520,9 +533,6 @@ export default async function deployRoutes(server: FastifyInstance) {
         runtime,
         mcpSdkDetected: metadata!.mcp_sdk.detected
       }, 'Repository validated successfully');
-
-      // Parse GitHub URL for owner/repo (needed for server creation)
-      const { owner, repo } = parseGitHubUrl(repository_url);
 
       // ============================================
       // STEP 7: Create mcpServers Entry

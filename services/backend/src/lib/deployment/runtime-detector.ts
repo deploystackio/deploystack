@@ -137,11 +137,26 @@ export class RuntimeDetector {
           line.trim() === 'mcp'
         );
 
+        // FastMCP framework (high-level MCP framework, 70% market share)
+        const fastmcpLine = requirements.find(line =>
+          line.trim().startsWith('fastmcp==') ||
+          line.trim().startsWith('fastmcp>=') ||
+          line.trim() === 'fastmcp'
+        );
+
+        // Prioritize official SDK, but FastMCP is also a valid MCP framework
         if (mcpLine) {
           mcpSdkInfo = {
             detected: true,
             version: mcpLine?.split(/==|>=/)[1]?.trim(),
             package: 'mcp',
+            runtime: 'python'
+          };
+        } else if (fastmcpLine) {
+          mcpSdkInfo = {
+            detected: true,
+            version: fastmcpLine?.split(/==|>=/)[1]?.trim(),
+            package: 'fastmcp',
             runtime: 'python'
           };
         }
@@ -164,18 +179,30 @@ export class RuntimeDetector {
 
         // If we haven't found MCP SDK in requirements.txt, check pyproject.toml
         if (!mcpSdkInfo) {
-          // Check for "mcp" in dependencies (handles both "mcp" and "mcp>=1.0.0" formats)
+          // Check for official "mcp" SDK (handles both "mcp" and "mcp>=1.0.0" formats)
           const hasMcp = /["']mcp["']/.test(content) || /["']mcp[><=]/.test(content);
+
+          // Check for FastMCP framework
+          const hasFastmcp = /["']fastmcp["']/.test(content) || /["']fastmcp[><=]/.test(content);
 
           // Try to extract version from pyproject.toml if present
           // Matches patterns like "mcp>=1.0.0" or "mcp==1.0.0"
-          const versionMatch = content.match(/["']mcp[><=]=?\s*([^"',\]]+)["']/);
+          const mcpVersionMatch = content.match(/["']mcp[><=]=?\s*([^"',\]]+)["']/);
+          const fastmcpVersionMatch = content.match(/["']fastmcp[><=]=?\s*([^"',\]]+)["']/);
 
+          // Prioritize official SDK, but FastMCP is also a valid MCP framework
           if (hasMcp) {
             mcpSdkInfo = {
               detected: true,
-              version: versionMatch?.[1],
+              version: mcpVersionMatch?.[1],
               package: 'mcp',
+              runtime: 'python'
+            };
+          } else if (hasFastmcp) {
+            mcpSdkInfo = {
+              detected: true,
+              version: fastmcpVersionMatch?.[1],
+              package: 'fastmcp',
               runtime: 'python'
             };
           }
