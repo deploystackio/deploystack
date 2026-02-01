@@ -1,5 +1,4 @@
 import { spawn } from 'child_process';
-import { mkdir } from 'fs/promises';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Logger } from 'pino';
@@ -26,6 +25,18 @@ import {
   downloadRepository,
   extractTarball
 } from '../utils/tarball-operations';
+import {
+  emitBuildResult,
+  type BuildCommandMetadata
+} from '../utils/build-logging';
+import {
+  readPackageJson,
+  hasBuildScript
+} from '../utils/package-json-reader';
+import {
+  createDeploymentDirectory,
+  type DeploymentDirConfig
+} from '../utils/deployment-directory';
 
 // Re-export GitHubInfo for backward compatibility
 export type { GitHubInfo };
@@ -102,26 +113,10 @@ export class GitHubDeploymentHandler {
       );
 
       // Emit logs to backend
-      if (result.stdout) {
-        this.logBuffer.add({
-          installation_id: installationId,
-          team_id: teamId,
-          user_id: userId,
-          level: 'info',
-          message: `[npm install] ${result.stdout.substring(0, 1000)}`,
-          timestamp: new Date().toISOString()
-        });
-      }
+      const metadata: BuildCommandMetadata = { installation_id: installationId, team_id: teamId, user_id: userId };
+      emitBuildResult(this.logBuffer, metadata, 'npm install', result);
 
       if (result.code !== 0) {
-        this.logBuffer.add({
-          installation_id: installationId,
-          team_id: teamId,
-          user_id: userId,
-          level: 'error',
-          message: `[npm install] ${result.stderr.substring(0, 500)}`,
-          timestamp: new Date().toISOString()
-        });
         throw new Error(`npm install failed with code ${result.code}: ${result.stderr.substring(0, 200)}`);
       }
 
@@ -213,13 +208,8 @@ export class GitHubDeploymentHandler {
     userId?: string
   ): Promise<void> {
     try {
-      // Read package.json to check for build script
-      const packageJsonPath = path.join(tempDir, 'package.json');
-      const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
-      const packageJson = JSON.parse(packageJsonContent);
-
       // Check if there's a build script
-      if (!packageJson.scripts?.build) {
+      if (!(await hasBuildScript(tempDir))) {
         this.logger.debug({
           operation: 'npm_build_skip',
           temp_dir: tempDir
@@ -257,26 +247,10 @@ export class GitHubDeploymentHandler {
         );
 
         // Emit logs to backend
-        if (result.stdout) {
-          this.logBuffer.add({
-            installation_id: installationId,
-            team_id: teamId,
-            user_id: userId,
-            level: 'info',
-            message: `[npm build] ${result.stdout.substring(0, 1000)}`,
-            timestamp: new Date().toISOString()
-          });
-        }
+        const metadata: BuildCommandMetadata = { installation_id: installationId, team_id: teamId, user_id: userId };
+        emitBuildResult(this.logBuffer, metadata, 'npm build', result);
 
         if (result.code !== 0) {
-          this.logBuffer.add({
-            installation_id: installationId,
-            team_id: teamId,
-            user_id: userId,
-            level: 'error',
-            message: `[npm build] ${result.stderr.substring(0, 500)}`,
-            timestamp: new Date().toISOString()
-          });
           throw new Error(`npm run build failed with code ${result.code}: ${result.stderr.substring(0, 200)}`);
         }
 
@@ -603,26 +577,10 @@ export class GitHubDeploymentHandler {
           }
         );
 
-        if (depsResult.stdout) {
-          this.logBuffer.add({
-            installation_id: installationId,
-            team_id: teamId,
-            user_id: userId,
-            level: 'info',
-            message: `[uv pip] ${depsResult.stdout.substring(0, 1000)}`,
-            timestamp: new Date().toISOString()
-          });
-        }
+        const metadata: BuildCommandMetadata = { installation_id: installationId, team_id: teamId, user_id: userId };
+        emitBuildResult(this.logBuffer, metadata, 'uv pip', depsResult);
 
         if (depsResult.code !== 0) {
-          this.logBuffer.add({
-            installation_id: installationId,
-            team_id: teamId,
-            user_id: userId,
-            level: 'error',
-            message: `[uv pip] ${depsResult.stderr.substring(0, 500)}`,
-            timestamp: new Date().toISOString()
-          });
           throw new Error(`uv pip install failed with code ${depsResult.code}: ${depsResult.stderr.substring(0, 200)}`);
         }
       }
@@ -855,51 +813,19 @@ export class GitHubDeploymentHandler {
     );
 
     // Create deployment directory
-    let deploymentDir: string;
+    const deploymentDirConfig: DeploymentDirConfig = {
+      teamId: config.team_id,
+      installationId: config.installation_id,
+      useTmpfs,
+      tmpfsSize: nsjailConfig.deploymentTmpfsSize,
+      baseDir: githubDeploymentBaseDir
+    };
 
-    if (useTmpfs) {
-      // Production: Use tmpfs with 300MB quota
-      deploymentDir = `${githubDeploymentBaseDir}/${config.team_id}/${config.installation_id}`;
-
-      this.logger.debug({
-        operation: 'deployment_tmpfs_create_start',
-        deployment_dir: deploymentDir,
-        tmpfs_size: nsjailConfig.deploymentTmpfsSize
-      }, `Creating tmpfs with ${nsjailConfig.deploymentTmpfsSize} quota`);
-
-      try {
-        await this.tmpfsManager.createTmpfs(deploymentDir, {
-          size: nsjailConfig.deploymentTmpfsSize,
-          mode: '0755'
-        });
-
-        this.logger.info({
-          operation: 'deployment_tmpfs_created',
-          deployment_dir: deploymentDir,
-          size: nsjailConfig.deploymentTmpfsSize
-        }, `tmpfs created with kernel-enforced ${nsjailConfig.deploymentTmpfsSize} quota`);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.logger.error({
-          operation: 'deployment_tmpfs_failed',
-          deployment_dir: deploymentDir,
-          error: errorMessage
-        }, 'Failed to create tmpfs for deployment');
-
-        throw new Error(`Failed to create deployment tmpfs: ${errorMessage}`);
-      }
-    } else {
-      // Development: Use regular /tmp directory
-      const { v4: uuidv4 } = await import('uuid');
-      deploymentDir = `/tmp/mcp-${uuidv4()}`;
-
-      this.logger.debug({
-        operation: 'deployment_dir_create_dev',
-        deployment_dir: deploymentDir
-      }, 'Creating deployment directory (development mode, no tmpfs)');
-
-      await mkdir(deploymentDir, { recursive: true });
-    }
+    const deploymentDir = await createDeploymentDirectory(
+      deploymentDirConfig,
+      this.tmpfsManager,
+      this.logger
+    );
 
     // Extract tarball to deployment directory
     await extractTarball(tarballBuffer, deploymentDir, this.logger, this.tmpfsManager);
@@ -918,8 +844,7 @@ export class GitHubDeploymentHandler {
       // Defense-in-depth: Re-validate build scripts before execution
       const packageJsonPath = path.join(deploymentDir, 'package.json');
       if (await fileExists(packageJsonPath)) {
-        const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
-        const packageJson = JSON.parse(packageJsonContent);
+        const packageJson = await readPackageJson(deploymentDir);
 
         if (packageJson.scripts) {
           const validation = validateBuildScripts(packageJson.scripts);
