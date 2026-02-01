@@ -27,19 +27,21 @@ Deploy MCP servers from GitHub to HTTP endpoints in 30 seconds. Works with n8n, 
 
 Most MCP servers are **stdio-only**. But workflow automation platforms need **HTTP endpoints**.
 
-| Platform | What They Need | The Problem |
-|----------|---------------|-------------|
-| **n8n** | HTTP URLs for MCP Client node | stdio doesn't work |
-| **Dify** | HTTP/SSE endpoints (v1.6+) | No stdio support |
-| **Voiceflow** | Remote MCP endpoints | "Local MCP NOT supported" |
-| **Langflow** | HTTP/SSE for production | Local processes won't scale |
+| Platform      | What They Need                | The Problem                 |
+| ------------- | ----------------------------- | --------------------------- |
+| **n8n**       | HTTP URLs for MCP Client node | stdio doesn't work          |
+| **Dify**      | HTTP/SSE endpoints (v1.6+)    | No stdio support            |
+| **Voiceflow** | Remote MCP endpoints          | "Local MCP NOT supported"   |
+| **Langflow**  | HTTP/SSE for production       | Local processes won't scale |
 
 Current workarounds are painful:
+
 - `mcp-remote` requires local Node.js setup
 - Docker containers need DevOps expertise
 - DIY hosting (Fly.io, Railway) takes hours
 
 **And for teams**, the problems multiply:
+
 - Credentials scattered across Slack DMs and `.env` files
 - No visibility into who uses which tools
 - Onboarding new developers takes hours
@@ -108,7 +110,7 @@ Don't have your own MCP server? Browse our catalog of popular servers:
 
 ### Deploy from GitHub
 
-```
+```bash
 GitHub Repo → DeployStack → HTTP Endpoint → Your MCP Client
 ```
 
@@ -120,9 +122,11 @@ GitHub Repo → DeployStack → HTTP Endpoint → Your MCP Client
 ### 98% Token Reduction
 
 Traditional MCP setup loads all tools into context:
+
 - 10 servers × 15 tools = 150 tools = 75,000 tokens consumed
 
 DeployStack's hierarchical router exposes only 2 meta-tools:
+
 - `discover_mcp_tools` - find relevant tools
 - `execute_mcp_tool` - run the tool you need
 - Result: 1,372 tokens instead of 75,000
@@ -161,16 +165,16 @@ Full visibility into MCP usage:
 
 Compatible with any MCP client that supports HTTP/SSE:
 
-| Workflow Platforms | AI Coding Tools | Other Clients |
-|-------------------|-----------------|---------------|
-| n8n | Claude Code | Any HTTP MCP client |
-| Dify | Cursor | Custom integrations |
-| Voiceflow | VS Code | |
-| Langflow | Windsurf | |
+| Workflow Platforms | AI Coding Tools | Other Clients       |
+| ------------------ | --------------- | ------------------- |
+| n8n                | Claude Code     | Any HTTP MCP client |
+| Dify               | Cursor          | Custom integrations |
+| Voiceflow          | VS Code         |                     |
+| Langflow           | Windsurf        |                     |
 
 ## Architecture
 
-```
+```text
 ┌─────────────┐     ┌─────────────────┐     ┌─────────────┐
 │   GitHub    │────▶│   DeployStack   │────▶│  HTTP URL   │
 │    Repo     │     │    Satellite    │     │   Endpoint  │
@@ -186,12 +190,12 @@ Compatible with any MCP client that supports HTTP/SSE:
 
 **Two deployment options:**
 
-| Global Satellites | Team Satellites |
-|------------------|-----------------|
-| Managed by DeployStack | Deploy on your infrastructure |
-| Zero setup | Full data control |
-| Free tier available | Enterprise security |
-| `satellite.deploystack.io` | `satellite.yourcompany.com` |
+| Global Satellites          | Team Satellites               |
+| -------------------------- | ----------------------------- |
+| Managed by DeployStack     | Deploy on your infrastructure |
+| Zero setup                 | Full data control             |
+| Free tier available        | Enterprise security           |
+| `satellite.deploystack.io` | `satellite.yourcompany.com`   |
 
 ## Quick Start
 
@@ -201,12 +205,14 @@ Create a free account at [cloud.deploystack.io](https://cloud.deploystack.io)
 
 ### 2. Add MCP Servers
 
-**Option A: Deploy from GitHub**
+#### Option A: Deploy from GitHub
+
 - Connect your GitHub account
 - Select a repository with an MCP server
 - Click Deploy
 
-**Option B: Use Catalog**
+#### Option B: Use Catalog
+
 - Browse the MCP server catalog
 - Click Install on any server
 - Configure credentials if needed
@@ -337,6 +343,7 @@ We welcome contributions. Here's how:
 5. Submit a pull request
 
 **Areas where we need help:**
+
 - MCP server integrations
 - Documentation improvements
 - Satellite infrastructure
