@@ -13,6 +13,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
@@ -152,6 +159,10 @@ const isTextarea = (item: any) => {
   return item.type === 'textarea' ||
          (item.description && item.description.toLowerCase().includes('json')) ||
          (item.placeholder && item.placeholder.length > 100)
+}
+
+const isBoolean = (item: any) => {
+  return item?.type === 'boolean'
 }
 
 const validateForm = () => {
@@ -447,7 +458,22 @@ const modalTitle = computed(() => {
           <div class="space-y-2">
             <Label for="config-value">{{ editingScope === 'team' ? 'Team Value' : 'User Value' }}</Label>
 
-            <div v-if="editingItem && isTextarea(editingItem)" class="relative">
+            <!-- Boolean select -->
+            <Select
+              v-if="editingItem && isBoolean(editingItem)"
+              v-model="editingValue"
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select value" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="false">false</SelectItem>
+                <SelectItem value="true">true</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <!-- Textarea for long values -->
+            <div v-else-if="editingItem && isTextarea(editingItem)" class="relative">
               <Textarea
                 id="config-value"
                 v-model="editingValue"
@@ -458,6 +484,7 @@ const modalTitle = computed(() => {
               />
             </div>
 
+            <!-- Regular input -->
             <div v-else class="relative">
               <Input
                 id="config-value"
