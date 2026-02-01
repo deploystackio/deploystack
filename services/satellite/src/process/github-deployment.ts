@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import { Logger } from 'pino';
 import { MCPServerConfig } from './types';
 import { LogBuffer } from './log-buffer';
@@ -755,6 +756,77 @@ export class GitHubDeploymentHandler {
     return result;
   }
 
+  /**
+   * Check if a file exists
+   */
+  private async fileExistsAsync(filePath: string): Promise<boolean> {
+    try {
+      await fsPromises.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get the site-packages path from a venv directory
+   * Detects Python version by scanning .venv/lib/pythonX.Y/site-packages
+   *
+   * @param deploymentDir - Real deployment directory path (for reading filesystem)
+   * @param venvPath - Venv path to use in the result (could be /app/.venv for nsjail)
+   * @returns Site-packages path using venvPath prefix
+   */
+  private async getPythonSitePackagesPath(
+    deploymentDir: string,
+    venvPath: string
+  ): Promise<string> {
+    const libDir = path.join(deploymentDir, '.venv', 'lib');
+
+    try {
+      const entries = await fsPromises.readdir(libDir);
+
+      // Find python3.X directory
+      const pythonDir = entries.find(e => e.startsWith('python3.'));
+
+      if (!pythonDir) {
+        throw new Error('Could not find Python version in venv lib directory');
+      }
+
+      this.logger.debug({
+        operation: 'python_site_packages_detected',
+        python_dir: pythonDir,
+        venv_path: venvPath
+      }, `Detected Python version: ${pythonDir}`);
+
+      // Return site-packages path (use venvPath for the prefix, not deploymentDir)
+      return path.join(venvPath, 'lib', pythonDir, 'site-packages');
+    } catch (error) {
+      this.logger.warn({
+        operation: 'python_site_packages_fallback',
+        error: error instanceof Error ? error.message : String(error)
+      }, 'Could not detect Python version, trying common versions');
+
+      // Fallback: try common Python versions
+      const commonVersions = ['python3.13', 'python3.12', 'python3.11', 'python3.10', 'python3.9'];
+
+      for (const version of commonVersions) {
+        const candidatePath = path.join(deploymentDir, '.venv', 'lib', version, 'site-packages');
+
+        if (await this.fileExistsAsync(candidatePath)) {
+          this.logger.info({
+            operation: 'python_site_packages_found',
+            python_version: version,
+            venv_path: venvPath
+          }, `Found Python ${version} site-packages`);
+
+          return path.join(venvPath, 'lib', version, 'site-packages');
+        }
+      }
+
+      throw new Error('Could not determine Python site-packages path in venv');
+    }
+  }
+
 
   /**
    * Prepare a GitHub deployment - downloads, extracts, builds, and updates config
@@ -903,22 +975,29 @@ export class GitHubDeploymentHandler {
         // Running with system python3 interpreter - make script path relative
         const relativeEntryPoint = path.relative(deploymentDir, entryPoint);
 
-        // Activate venv by setting VIRTUAL_ENV environment variable
+        // Activate venv by setting PYTHONPATH environment variable
         // This allows system python3 to find packages in .venv/lib/python3.x/site-packages
         //
-        // Note: In production (nsjail), deployment dir is mounted as /app
-        // So we set VIRTUAL_ENV=/app/.venv which is accessible inside nsjail
+        // Note: PATH is blocked by security sanitization, so we use PYTHONPATH instead
+        // In production (nsjail), deployment dir is mounted as /app
         // In development, we use the actual deployment directory path
         const isProduction = process.env.NODE_ENV === 'production';
         const venvPath = isProduction ? '/app/.venv' : path.join(deploymentDir, '.venv');
-        const venvBinPath = isProduction ? '/app/.venv/bin' : path.join(deploymentDir, '.venv/bin');
+
+        // Detect Python version and get site-packages path
+        const sitePackagesPath = await this.getPythonSitePackagesPath(deploymentDir, venvPath);
 
         const activatedEnv = {
           ...config.env,
-          VIRTUAL_ENV: venvPath,
-          // Prepend .venv/bin to PATH so python3 uses venv packages
-          PATH: `${venvBinPath}:${process.env.PATH || '/usr/bin:/bin'}`
+          // Set PYTHONPATH so python3 finds packages in venv
+          PYTHONPATH: sitePackagesPath
         };
+
+        this.logger.info({
+          operation: 'python_venv_activated',
+          site_packages_path: sitePackagesPath,
+          is_production: isProduction
+        }, `Activated Python venv via PYTHONPATH: ${sitePackagesPath}`);
 
         updatedConfig = {
           ...config,

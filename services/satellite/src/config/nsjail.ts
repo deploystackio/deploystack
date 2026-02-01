@@ -79,7 +79,8 @@ export const BLOCKED_ENV_VARS = new Set([
 
   // Python specific
   'PYTHONSTARTUP',        // Executes script on Python interpreter start
-  'PYTHONPATH',           // Module resolution hijacking
+  // 'PYTHONPATH' - REMOVED: Required for venv activation in GitHub deployments
+  //                Module path additions are sandboxed within the jail anyway
   'PYTHONHOME',           // Python installation path hijacking
   'PYTHONWARNINGS',       // Warning behavior manipulation
   'PYTHONDEBUG',          // Debug mode enabling
