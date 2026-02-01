@@ -107,7 +107,6 @@ function checkCommand(command: string, versionFlag: string): CommandCheckResult 
       timeout: 5000,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: true,
       env: {
         ...process.env,
         PATH: buildEnhancedPath()
