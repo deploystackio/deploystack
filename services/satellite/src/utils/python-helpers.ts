@@ -185,19 +185,15 @@ export async function resolvePythonEntryPoint(
   // Fallback: look for __main__.py
   const mainPath = path.join(tempDir, '__main__.py');
   if (await fileExists(mainPath)) {
-    // Use venv Python if available
-    const venvPython = path.join(tempDir, '.venv', 'bin', 'python');
-    const command = await fileExists(venvPython) ? venvPython : 'python3';
-    return { command, entryPoint: mainPath };
+    // Use system python3 (security validated, venv packages available via working directory)
+    return { command: 'python3', entryPoint: mainPath };
   }
 
   // Try src/__main__.py (common pattern)
   const srcMainPath = path.join(tempDir, 'src', '__main__.py');
   if (await fileExists(srcMainPath)) {
-    // Use venv Python if available
-    const venvPython = path.join(tempDir, '.venv', 'bin', 'python');
-    const command = await fileExists(venvPython) ? venvPython : 'python3';
-    return { command, entryPoint: srcMainPath };
+    // Use system python3 (security validated, venv packages available via working directory)
+    return { command: 'python3', entryPoint: srcMainPath };
   }
 
   // Try common script names (server.py, main.py, app.py, run.py)
@@ -205,10 +201,8 @@ export async function resolvePythonEntryPoint(
   for (const scriptName of commonScriptNames) {
     const scriptPath = path.join(tempDir, scriptName);
     if (await fileExists(scriptPath)) {
-      // Use venv Python if available
-      const venvPython = path.join(tempDir, '.venv', 'bin', 'python');
-      const command = await fileExists(venvPython) ? venvPython : 'python3';
-      return { command, entryPoint: scriptPath };
+      // Use system python3 (security validated, venv packages available via working directory)
+      return { command: 'python3', entryPoint: scriptPath };
     }
   }
 

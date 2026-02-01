@@ -902,24 +902,34 @@ export class GitHubDeploymentHandler {
       if (command === 'python3') {
         // Running with system python3 interpreter - make script path relative
         const relativeEntryPoint = path.relative(deploymentDir, entryPoint);
+
+        // Activate venv by setting VIRTUAL_ENV environment variable
+        // This allows system python3 to find packages in .venv/lib/python3.x/site-packages
+        //
+        // Note: In production (nsjail), deployment dir is mounted as /app
+        // So we set VIRTUAL_ENV=/app/.venv which is accessible inside nsjail
+        // In development, we use the actual deployment directory path
+        const isProduction = process.env.NODE_ENV === 'production';
+        const venvPath = isProduction ? '/app/.venv' : path.join(deploymentDir, '.venv');
+        const venvBinPath = isProduction ? '/app/.venv/bin' : path.join(deploymentDir, '.venv/bin');
+
+        const activatedEnv = {
+          ...config.env,
+          VIRTUAL_ENV: venvPath,
+          // Prepend .venv/bin to PATH so python3 uses venv packages
+          PATH: `${venvBinPath}:${process.env.PATH || '/usr/bin:/bin'}`
+        };
+
         updatedConfig = {
           ...config,
           command: 'python3',
           args: [relativeEntryPoint],
-          temp_dir: deploymentDir
-        };
-      } else if (command.includes('.venv/bin/python')) {
-        // Running with venv Python - use relative paths for both command and script
-        const relativeCommand = path.relative(deploymentDir, command);
-        const relativeEntryPoint = path.relative(deploymentDir, entryPoint);
-        updatedConfig = {
-          ...config,
-          command: relativeCommand,  // .venv/bin/python
-          args: [relativeEntryPoint],  // server.py
-          temp_dir: deploymentDir
+          temp_dir: deploymentDir,
+          env: activatedEnv
         };
       } else {
         // Running directly (entry point is executable script from venv bin)
+        // Used for Pattern 1 (Installable Package) where [project.scripts] creates executables
         const relativeCommand = path.relative(deploymentDir, entryPoint);
         updatedConfig = {
           ...config,
