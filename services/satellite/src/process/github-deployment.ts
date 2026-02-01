@@ -18,15 +18,15 @@ import {
   parsePyprojectDependencies,
   resolvePythonEntryPoint
 } from '../utils/python-helpers';
+import {
+  parseGitHubUrl,
+  resolvePackageEntry,
+  detectRuntime,
+  type GitHubInfo
+} from '../utils/node-helpers';
 
-/**
- * Parsed GitHub repository information
- */
-export interface GitHubInfo {
-  owner: string;
-  repo: string;
-  ref: string;
-}
+// Re-export GitHubInfo for backward compatibility
+export type { GitHubInfo };
 
 /**
  * Helper to check if a file exists
@@ -58,52 +58,6 @@ export class GitHubDeploymentHandler {
     this.tmpfsManager = new TmpfsManager(logger);
   }
 
-  /**
-   * Parse GitHub URL from package manager arguments
-   * Supports:
-   *   - github:owner/repo#ref (for npx)
-   *   - git+https://github.com/owner/repo.git@ref (for uvx/pip)
-   */
-  parseGitHubUrl(command: string, args: string[]): GitHubInfo | null {
-    // Check if this is a supported package manager command
-    const supportedCommands = ['npx', 'uvx'];
-    if (!supportedCommands.includes(command)) {
-      return null;
-    }
-
-    // Try npm/npx format: github:owner/repo#ref
-    const githubArg = args.find(arg => arg.startsWith('github:'));
-    if (githubArg) {
-      const match = githubArg.match(/^github:([^/]+)\/([^#]+)#(.+)$/);
-      if (match) {
-        return {
-          owner: match[1],
-          repo: match[2],
-          ref: match[3]
-        };
-      }
-    }
-
-    // Try Python/uvx format: git+https://github.com/owner/repo.git@ref
-    const gitPlusArg = args.find(arg => arg.startsWith('git+https://github.com/'));
-    if (gitPlusArg) {
-      const match = gitPlusArg.match(/^git\+https:\/\/github\.com\/([^/]+)\/([^.]+)\.git@(.+)$/);
-      if (match) {
-        return {
-          owner: match[1],
-          repo: match[2],
-          ref: match[3]
-        };
-      }
-    }
-
-    this.logger.warn({
-      operation: 'github_url_parse_failed',
-      args,
-      command
-    }, `Failed to parse GitHub URL from ${command} arguments`);
-    return null;
-  }
 
   /**
    * Check if a config requires GitHub deployment
@@ -554,79 +508,6 @@ export class GitHubDeploymentHandler {
     }
   }
 
-  /**
-   * Resolve package entry point from package.json
-   */
-  async resolvePackageEntry(tempDir: string): Promise<string> {
-    this.logger.debug({
-      operation: 'package_entry_resolve_start',
-      temp_dir: tempDir
-    }, 'Resolving package entry point from package.json');
-
-    try {
-      const packageJsonPath = path.join(tempDir, 'package.json');
-      const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf8');
-      const packageJson = JSON.parse(packageJsonContent);
-
-      // Check for bin field (can be string or object)
-      if (packageJson.bin) {
-        let entryPoint: string;
-
-        if (typeof packageJson.bin === 'string') {
-          // bin: "dist/index.js"
-          entryPoint = packageJson.bin;
-        } else if (typeof packageJson.bin === 'object') {
-          // bin: { "server-name": "dist/index.js" }
-          // Use the first entry
-          const binEntries = Object.values(packageJson.bin);
-          if (binEntries.length === 0) {
-            throw new Error('bin field is empty object');
-          }
-          entryPoint = binEntries[0] as string;
-        } else {
-          throw new Error(`Invalid bin field type: ${typeof packageJson.bin}`);
-        }
-
-        const absolutePath = path.join(tempDir, entryPoint);
-
-        this.logger.info({
-          operation: 'package_entry_resolved',
-          temp_dir: tempDir,
-          entry_point: entryPoint,
-          absolute_path: absolutePath
-        }, `Resolved package entry point: ${entryPoint}`);
-
-        return absolutePath;
-      }
-
-      // Fallback to main field
-      if (packageJson.main) {
-        const absolutePath = path.join(tempDir, packageJson.main);
-
-        this.logger.info({
-          operation: 'package_entry_resolved_main',
-          temp_dir: tempDir,
-          main: packageJson.main,
-          absolute_path: absolutePath
-        }, `Using main field as entry point: ${packageJson.main}`);
-
-        return absolutePath;
-      }
-
-      throw new Error('No bin or main field found in package.json');
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      this.logger.error({
-        operation: 'package_entry_resolve_failed',
-        temp_dir: tempDir,
-        error: errorMessage
-      }, 'Failed to resolve package entry point');
-
-      throw new Error(`Failed to resolve package entry point: ${errorMessage}`);
-    }
-  }
 
 
   /**
@@ -1054,23 +935,6 @@ export class GitHubDeploymentHandler {
     return result;
   }
 
-  /**
-   * Detect runtime from extracted repository files
-   */
-  async detectRuntime(tempDir: string): Promise<'node' | 'python' | 'unknown'> {
-    // Check for Node.js
-    if (await fileExists(path.join(tempDir, 'package.json'))) {
-      return 'node';
-    }
-
-    // Check for Python
-    if (await fileExists(path.join(tempDir, 'pyproject.toml')) ||
-        await fileExists(path.join(tempDir, 'requirements.txt'))) {
-      return 'python';
-    }
-
-    return 'unknown';
-  }
 
   /**
    * Prepare a GitHub deployment - downloads, extracts, builds, and updates config
@@ -1095,7 +959,7 @@ export class GitHubDeploymentHandler {
     }, `GitHub deployment detected (${config.runtime || 'unknown'} runtime), downloading repository via Octokit`);
 
     // Parse GitHub URL from package manager arguments
-    const githubInfo = this.parseGitHubUrl(config.command, config.args || []);
+    const githubInfo = parseGitHubUrl(config.command, config.args || [], this.logger);
     if (!githubInfo) {
       throw new Error('Failed to parse GitHub URL from package manager arguments');
     }
@@ -1178,7 +1042,7 @@ export class GitHubDeploymentHandler {
     await this.extractTarball(tarballBuffer, deploymentDir);
 
     // Detect runtime from extracted files or use config runtime
-    const runtime = config.runtime || await this.detectRuntime(deploymentDir);
+    const runtime = config.runtime || await detectRuntime(deploymentDir);
 
     this.logger.info({
       operation: 'github_deployment_runtime_detected',
@@ -1214,7 +1078,7 @@ export class GitHubDeploymentHandler {
       await this.buildPackage(deploymentDir, config.installation_id, config.team_id, config.user_id);
 
       // Resolve Node.js package entry point
-      const entryPoint = await this.resolvePackageEntry(deploymentDir);
+      const entryPoint = await resolvePackageEntry(deploymentDir, this.logger);
 
       // Make entry point relative to deployment dir for nsjail mounting
       const relativeEntryPoint = path.relative(deploymentDir, entryPoint);
