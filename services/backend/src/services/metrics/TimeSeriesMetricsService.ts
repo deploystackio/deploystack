@@ -105,7 +105,7 @@ export abstract class TimeSeriesMetricsService {
     const start = new Date(now.getTime() - milliseconds);
     const end = now;
 
-    this.logger.debug({
+    this.logger.trace({
       operation: 'parse_time_range',
       input: range,
       start: start.toISOString(),
@@ -142,7 +142,7 @@ export abstract class TimeSeriesMetricsService {
       currentSeconds += intervalSeconds;
     }
 
-    this.logger.debug({
+    this.logger.trace({
       operation: 'generate_bucket_timestamps',
       interval,
       start: start.toISOString(),
@@ -188,7 +188,7 @@ export abstract class TimeSeriesMetricsService {
       }
     }
 
-    this.logger.debug({
+    this.logger.trace({
       operation: 'fill_missing_buckets',
       expectedBuckets: timestamps.length,
       actualBuckets: buckets.length,
@@ -236,7 +236,7 @@ export abstract class TimeSeriesMetricsService {
       }
     }
 
-    this.logger.debug({
+    this.logger.trace({
       operation: 'calculate_summary',
       bucketCount: buckets.length,
       metricKeys,

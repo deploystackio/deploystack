@@ -38,7 +38,7 @@ export class McpClientActivityMetricsService extends TimeSeriesMetricsService {
   }
 
   async queryBuckets(params: McpActivityQueryParams): Promise<BucketData[]> {
-    this.logger.debug({
+    this.logger.trace({
       operation: 'query_buckets',
       metricType: this.getMetricType(),
       filters: params.filters,
@@ -105,7 +105,7 @@ export class McpClientActivityMetricsService extends TimeSeriesMetricsService {
     satelliteId?: string,
     authIdentifier?: string
   ) {
-    this.logger.debug({
+    this.logger.trace({
       operation: 'get_metrics',
       userId,
       teamId,
