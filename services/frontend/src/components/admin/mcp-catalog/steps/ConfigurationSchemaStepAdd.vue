@@ -742,6 +742,13 @@ const validateForm = () => {
     }
   }
 
+  // Validate value field for template items
+  if (formDataLocal.value.category === 'template') {
+    if (!formDataLocal.value.value || !formDataLocal.value.value.trim()) {
+      errors.value = t('mcpCatalog.form.configurationSchema.modal.validation.valueRequired')
+    }
+  }
+
   formErrors.value = errors
   return Object.keys(errors).length === 0
 }
@@ -984,6 +991,32 @@ watch(localData, () => {
     })
   }
 }, { deep: true })
+
+// Watch for category changes to auto-populate value for template arguments
+watch(() => formDataLocal.value.category, (newCategory, oldCategory) => {
+  // When changing TO template category
+  if (newCategory === 'template' && oldCategory !== 'template') {
+    // For arguments: auto-populate value with name if value is empty
+    if (formDataLocal.value.type === 'arg' && !formDataLocal.value.value) {
+      formDataLocal.value.value = formDataLocal.value.name
+    }
+    // For env/headers/query params: keep existing value or leave empty for user to fill
+
+    // Always lock template items by default
+    formDataLocal.value.locked = true
+  }
+
+  // When changing FROM template to team/user
+  if (oldCategory === 'template' && newCategory !== 'template') {
+    // Unlock the item (team/user items can be unlocked)
+    formDataLocal.value.locked = false
+
+    // For arguments: clear the value (team/user args don't need pre-filled values)
+    if (formDataLocal.value.type === 'arg') {
+      formDataLocal.value.value = ''
+    }
+  }
+})
 </script>
 
 <template>

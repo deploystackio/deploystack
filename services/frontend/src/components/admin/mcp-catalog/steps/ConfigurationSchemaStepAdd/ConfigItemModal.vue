@@ -111,6 +111,43 @@ const updateFormField = (field: keyof ConfigItem, value: any) => {
           </div>
         </div>
 
+        <!-- Value Field (for template items and editing) -->
+        <div v-if="formData.category === 'template' || formData.type === 'arg'" class="space-y-2">
+          <Label for="item-value">
+            {{ $t('mcpCatalog.form.configurationSchema.modal.fields.value.label') }}
+            <span v-if="formData.category !== 'template'" class="text-muted-foreground text-xs ml-2">
+              ({{ $t('mcpCatalog.form.configurationSchema.modal.fields.value.optionalForTeamUser') }})
+            </span>
+          </Label>
+          <Input
+            id="item-value"
+            :model-value="formData.value"
+            @update:model-value="(value) => updateFormField('value', value)"
+            :placeholder="
+              formData.type === 'arg'
+                ? $t('mcpCatalog.form.configurationSchema.modal.fields.value.placeholderArg')
+                : formData.type === 'env'
+                  ? $t('mcpCatalog.form.configurationSchema.modal.fields.value.placeholderEnv')
+                  : formData.type === 'header'
+                    ? $t('mcpCatalog.form.configurationSchema.modal.fields.value.placeholderHeader')
+                    : $t('mcpCatalog.form.configurationSchema.modal.fields.value.placeholderQueryParam')
+            "
+            :class="{ 'border-destructive': formErrors.value }"
+            class="font-mono"
+            :required="formData.category === 'template'"
+          />
+          <div v-if="formErrors.value" class="text-sm text-destructive">
+            {{ formErrors.value }}
+          </div>
+          <p class="text-sm text-muted-foreground">
+            {{
+              formData.category === 'template'
+                ? $t('mcpCatalog.form.configurationSchema.modal.fields.value.helpTextTemplate')
+                : $t('mcpCatalog.form.configurationSchema.modal.fields.value.helpTextTeamUser')
+            }}
+          </p>
+        </div>
+
         <!-- Category -->
         <div class="space-y-2">
           <Label for="item-category">{{ $t('mcpCatalog.form.configurationSchema.modal.fields.category.label') }}</Label>

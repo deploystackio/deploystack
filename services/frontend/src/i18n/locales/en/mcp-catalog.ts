@@ -305,7 +305,14 @@ export default {
           },
           value: {
             label: 'Value',
-            placeholder: 'Example: --verbose or package-name'
+            optionalForTeamUser: 'optional for team/user items',
+            placeholder: 'Enter value',
+            placeholderArg: 'e.g., -y, --transport, stdio',
+            placeholderEnv: 'e.g., 1.0, production, true',
+            placeholderHeader: 'e.g., application/json, Bearer token',
+            placeholderQueryParam: 'e.g., api-key-value, true',
+            helpTextTemplate: 'This value will be locked and passed to the MCP server at runtime',
+            helpTextTeamUser: 'Optional: Set a default value for this configuration item'
           },
           category: {
             label: 'Category',
@@ -334,7 +341,7 @@ export default {
         validation: {
           nameRequired: 'Name is required',
           nameExists: 'Name already exists for this type',
-          valueRequired: 'Value is required for template arguments'
+          valueRequired: 'Value is required for template items'
         }
       }
     },
