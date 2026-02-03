@@ -37,7 +37,7 @@
     "ajv-formats": "^3.0.1",
     "arctic": "^3.7.0",
     "drizzle-orm": "^0.45.1",
-    "fastify": "^5.7.1",
+    "fastify": "^5.7.4",
     "fastify-favicon": "^5.0.0",
     "lucia": "^3.2.2",
     "nanoid": "^5.1.6",
