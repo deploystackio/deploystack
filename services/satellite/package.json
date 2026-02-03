@@ -16,7 +16,7 @@
   "dependencies": {
     "@fastify/http-proxy": "^11.4.1",
     "@fastify/swagger": "^9.6.1",
-    "@fastify/swagger-ui": "^5.2.4",
+    "@fastify/swagger-ui": "^5.2.5",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "@octokit/rest": "^22.0.1",
     "dotenv": "^17.2.3",
