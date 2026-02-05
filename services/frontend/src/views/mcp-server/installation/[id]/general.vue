@@ -95,7 +95,7 @@ onUnmounted(() => {
       </div>
 
       <!-- General Tab Content -->
-      <GeneralTab v-else-if="installation" :key="refreshKey" :installation="installation" :status-data="statusData" />
+      <GeneralTab v-else-if="installation" :key="refreshKey" :installation="installation" :status-data="statusData" :user-team-role="userTeamRole" />
     </div>
   </NavbarLayout>
 </template>

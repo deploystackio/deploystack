@@ -27,6 +27,10 @@ const SATELLITE_REGISTRATION_SCHEMA = {
       type: 'string',
       description: 'Publicly accessible satellite URL (optional - auto-detected if not provided)'
     },
+    region: {
+      type: 'string',
+      description: 'Satellite region (optional, backend-configurable)'
+    },
     system_info: {
       type: 'object',
       properties: {
@@ -93,6 +97,7 @@ interface RegistrationRequest {
   name: string;
   capabilities?: string[];
   satellite_url?: string; // Optional - auto-detected if not provided
+  region?: string; // Optional - backend-configurable region
   system_info?: {
     os: string;
     arch: string;
@@ -195,7 +200,7 @@ export default async function satelliteRegisterRoute(server: FastifyInstance) {
     const db = getDb();
 
     try {
-      const { name, capabilities = ['stdio', 'http', 'sse'], system_info, satellite_url } = request.body as RegistrationRequest;
+      const { name, capabilities = ['stdio', 'http', 'sse'], system_info, satellite_url, region } = request.body as RegistrationRequest;
       const tokenData = request.registrationToken!;
 
       // Extract token scope and determine satellite type
@@ -241,7 +246,8 @@ export default async function satelliteRegisterRoute(server: FastifyInstance) {
         name: name,
         satellite_type: satelliteType,
         team_id: teamId,
-        satellite_url: finalSatelliteUrl,
+        satellite_url: finalSatelliteUrl || 'http://127.0.0.1:3001',
+        region: region || null,
         status: 'inactive' as const, // Requires admin activation
         capabilities: JSON.stringify(capabilities),
         api_key_hash: apiKeyHash,
@@ -260,6 +266,7 @@ export default async function satelliteRegisterRoute(server: FastifyInstance) {
             satellite_type: satelliteData.satellite_type,
             team_id: satelliteData.team_id,
             satellite_url: satelliteData.satellite_url,
+            region: region || existingSatellites[0].region,
             status: satelliteData.status,
             capabilities: satelliteData.capabilities,
             api_key_hash: satelliteData.api_key_hash,

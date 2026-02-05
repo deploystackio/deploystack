@@ -26,6 +26,8 @@ interface Props {
   // Optional selection support
   selectedCount?: number
   totalRows?: number
+  // Optional translation prefix (defaults to 'mcpCatalog')
+  translationPrefix?: string
 }
 
 interface Emits {
@@ -35,7 +37,8 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   isLoading: false,
-  pageSizeOptions: () => [10, 20, 30, 40, 50]
+  pageSizeOptions: () => [10, 20, 30, 40, 50],
+  translationPrefix: 'mcpCatalog'
 })
 
 const emit = defineEmits<Emits>()
@@ -92,7 +95,7 @@ function handlePageSizeChange(newPageSize: unknown) {
       v-if="hasSelection"
       class="flex-1 text-sm text-muted-foreground"
     >
-      {{ t('mcpCatalog.pagination.rowsSelected', {
+      {{ t(`${translationPrefix}.pagination.rowsSelected`, {
         selected: selectedCount,
         total: totalRows
       }) }}
@@ -106,7 +109,7 @@ function handlePageSizeChange(newPageSize: unknown) {
           for="rows-per-page"
           class="text-sm font-medium"
         >
-          {{ t('mcpCatalog.pagination.rowsPerPage') }}
+          {{ t(`${translationPrefix}.pagination.rowsPerPage`) }}
         </Label>
         <Select
           :model-value="String(pageSize)"
@@ -133,7 +136,7 @@ function handlePageSizeChange(newPageSize: unknown) {
 
       <!-- Page info -->
       <div class="flex w-fit items-center justify-center text-sm font-medium">
-        {{ t('mcpCatalog.pagination.pageInfo', {
+        {{ t(`${translationPrefix}.pagination.pageInfo`, {
           current: currentPage,
           total: totalPages
         }) }}
@@ -149,7 +152,7 @@ function handlePageSizeChange(newPageSize: unknown) {
           :disabled="!canGoPrevious"
           @click="firstPage"
         >
-          <span class="sr-only">{{ t('mcpCatalog.pagination.firstPage') }}</span>
+          <span class="sr-only">{{ t(`${translationPrefix}.pagination.firstPage`) }}</span>
           <ChevronsLeft class="size-4" />
         </Button>
 
@@ -161,7 +164,7 @@ function handlePageSizeChange(newPageSize: unknown) {
           :disabled="!canGoPrevious"
           @click="previousPage"
         >
-          <span class="sr-only">{{ t('mcpCatalog.pagination.previousPage') }}</span>
+          <span class="sr-only">{{ t(`${translationPrefix}.pagination.previousPage`) }}</span>
           <ChevronLeft class="size-4" />
         </Button>
 
@@ -173,7 +176,7 @@ function handlePageSizeChange(newPageSize: unknown) {
           :disabled="!canGoNext"
           @click="nextPage"
         >
-          <span class="sr-only">{{ t('mcpCatalog.pagination.nextPage') }}</span>
+          <span class="sr-only">{{ t(`${translationPrefix}.pagination.nextPage`) }}</span>
           <ChevronRight class="size-4" />
         </Button>
 
@@ -185,7 +188,7 @@ function handlePageSizeChange(newPageSize: unknown) {
           :disabled="!canGoNext"
           @click="lastPage"
         >
-          <span class="sr-only">{{ t('mcpCatalog.pagination.lastPage') }}</span>
+          <span class="sr-only">{{ t(`${translationPrefix}.pagination.lastPage`) }}</span>
           <ChevronsRight class="size-4" />
         </Button>
       </div>

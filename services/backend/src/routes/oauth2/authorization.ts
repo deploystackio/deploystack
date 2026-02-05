@@ -116,7 +116,7 @@ export default async function authorizationRoute(server: FastifyInstance) {
         consent: string;
         resource?: string;
       };
-      const { client_id, redirect_uri, state, code_challenge, code_challenge_method, response_type, team_id, consent } = body;
+      const { client_id, redirect_uri, state, code_challenge, code_challenge_method, response_type, team_id, consent, resource } = body;
 
       // Use default scopes if not provided
       const scope = body.scope || DEFAULT_OAUTH_SCOPES;
@@ -193,6 +193,7 @@ export default async function authorizationRoute(server: FastifyInstance) {
         state,
         code_challenge,
         code_challenge_method,
+        resource,
         request.log
       );
 
@@ -369,6 +370,7 @@ export default async function authorizationRoute(server: FastifyInstance) {
           state,
           code_challenge,
           code_challenge_method,
+          resource,
           request.log
         );
 
@@ -474,6 +476,7 @@ export default async function authorizationRoute(server: FastifyInstance) {
         state,
         code_challenge,
         code_challenge_method,
+        resource,
         request.log
       );
 

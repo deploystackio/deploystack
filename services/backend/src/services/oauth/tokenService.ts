@@ -28,6 +28,7 @@ export interface AccessTokenPayload {
   team_name: string;      // Team name
   team_role: string;      // User's role in team
   team_permissions: string[]; // Team permissions
+  aud?: string[];         // RFC 8707 Resource Indicator - Audience claim
 }
 
 export class TokenService {
@@ -79,10 +80,11 @@ export class TokenService {
     teamId: string,
     scope: string,
     clientId: string,
+    resource: string | undefined,
     logger?: FastifyBaseLogger
   ): Promise<string> {
     const { db, schema } = this.getDbAndSchema();
-    
+
     try {
       // Get user information
       const userResult = await (db as any)
@@ -107,7 +109,17 @@ export class TokenService {
       const user = userResult[0];
       const tokenId = generateId(32);
       const rawToken = generateId(64); // 512-bit token
-      
+
+      // Generate audience claim from resource parameter (RFC 8707)
+      let aud: string[] | undefined;
+      if (resource) {
+        // Use provided resource as audience
+        aud = [resource];
+      } else {
+        // Fallback: generic team audience for backward compatibility
+        aud = [`deploystack:team:${teamId}`];
+      }
+
       // Create token payload with team context
       const payload: AccessTokenPayload = {
         user: {
@@ -124,6 +136,7 @@ export class TokenService {
         team_name: teamData.name,
         team_role: teamData.role,
         team_permissions: teamData.permissions,
+        aud, // RFC 8707 Resource Indicator
       };
 
       // Create JWT-like token (base64 encoded JSON for simplicity)
@@ -160,6 +173,8 @@ export class TokenService {
         userId,
         clientId,
         scope,
+        resource,
+        aud,
         tokenId,
         expiresAt: expiresAt.toISOString(),
       }, 'Access token generated successfully');

@@ -102,10 +102,11 @@ describe('MCP Categories Routes', () => {
       params: {},
       user: { id: 'test-user-id', role: 'user' },
       log: {
-        error: vi.fn(),
-        info: vi.fn(),
+        trace: vi.fn(),
         debug: vi.fn(),
+        info: vi.fn(),
         warn: vi.fn(),
+        error: vi.fn(),
       }
     } as any;
 

@@ -14924,7 +14924,7 @@
         "tags": [
           "Deployment"
         ],
-        "description": "Returns whether the team has installed the GitHub App",
+        "description": "Returns whether the team has an active GitHub App installation. Verifies against GitHub API and auto-cleans stale records.",
         "parameters": [
           {
             "schema": {
@@ -15948,6 +15948,653 @@
                     "error"
                   ],
                   "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/deploy/github/servers/{serverId}/branch": {
+      "post": {
+        "summary": "Update GitHub branch for deployed MCP server",
+        "tags": [
+          "Deployment"
+        ],
+        "description": "Updates the branch for a GitHub-deployed MCP server and notifies satellites to redeploy. Only team admins can update branches. Only GitHub-deployed servers (source='github') can have their branch updated. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "branch": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "New branch name to deploy from (e.g., prod, staging)"
+                  }
+                },
+                "required": [
+                  "branch"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Branch updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "server_id": {
+                          "type": "string"
+                        },
+                        "previous_branch": {
+                          "type": "string"
+                        },
+                        "new_branch": {
+                          "type": "string"
+                        },
+                        "commit_sha": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "description": "Branch updated successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (invalid branch, non-GitHub server, catalog server, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request (invalid branch, non-GitHub server, catalog server, etc.)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (not team admin, feature disabled)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden (not team admin, feature disabled)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Server not found or does not belong to team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Server not found or does not belong to team"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/deploy/github/servers/{serverId}/status": {
+      "get": {
+        "summary": "Check GitHub deployment status",
+        "tags": [
+          "Deployment"
+        ],
+        "description": "Compares deployed commit SHA with latest remote SHA from GitHub. Returns whether a new commit is available for redeployment.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deployment status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "current_sha": {
+                          "type": "string",
+                          "description": "Currently deployed commit SHA"
+                        },
+                        "remote_sha": {
+                          "type": "string",
+                          "description": "Latest commit SHA from GitHub"
+                        },
+                        "has_new_commit": {
+                          "type": "boolean",
+                          "description": "Whether remote SHA differs from current SHA"
+                        },
+                        "branch": {
+                          "type": "string",
+                          "description": "Git branch name"
+                        },
+                        "last_deployed_at": {
+                          "type": "string",
+                          "description": "Timestamp of last deployment (ISO 8601)"
+                        }
+                      },
+                      "required": [
+                        "current_sha",
+                        "remote_sha",
+                        "has_new_commit",
+                        "branch",
+                        "last_deployed_at"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Deployment status"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (non-GitHub server, missing fields, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request (non-GitHub server, missing fields, etc.)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (feature disabled, insufficient permissions)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden (feature disabled, insufficient permissions)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Server not found or does not belong to team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Server not found or does not belong to team"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error (GitHub API failure, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error (GitHub API failure, etc.)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{teamId}/deploy/github/servers/{serverId}/redeploy": {
+      "post": {
+        "summary": "Trigger GitHub redeployment",
+        "tags": [
+          "Deployment"
+        ],
+        "description": "Fetches latest commit SHA from GitHub, updates database, and notifies all satellites to redeploy all team member instances. Allows force restart even if SHA unchanged.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "teamId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "serverId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Redeploy triggered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "server_id": {
+                          "type": "string",
+                          "description": "MCP server ID"
+                        },
+                        "previous_sha": {
+                          "type": "string",
+                          "description": "Commit SHA before redeploy"
+                        },
+                        "new_sha": {
+                          "type": "string",
+                          "description": "Latest commit SHA from GitHub"
+                        },
+                        "instances_notified": {
+                          "type": "number",
+                          "description": "Number of satellite instances notified"
+                        },
+                        "branch": {
+                          "type": "string",
+                          "description": "Git branch name"
+                        }
+                      },
+                      "required": [
+                        "server_id",
+                        "previous_sha",
+                        "new_sha",
+                        "instances_notified",
+                        "branch"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message",
+                    "data"
+                  ],
+                  "description": "Redeploy triggered successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request (non-GitHub server, missing fields, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request (non-GitHub server, missing fields, etc.)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden (feature disabled, insufficient permissions)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden (feature disabled, insufficient permissions)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Server not found or does not belong to team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Server not found or does not belong to team"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error (GitHub API failure, database error, etc.)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error (GitHub API failure, database error, etc.)"
                 }
               }
             }
@@ -41201,6 +41848,10 @@
                     "type": "string",
                     "description": "Publicly accessible satellite URL (optional - auto-detected if not provided)"
                   },
+                  "region": {
+                    "type": "string",
+                    "description": "Satellite region (optional, backend-configurable)"
+                  },
                   "system_info": {
                     "type": "object",
                     "properties": {
@@ -41975,9 +42626,52 @@
                     "type": "string",
                     "description": "Satellite software version"
                   },
-                  "satellite_url": {
-                    "type": "string",
-                    "description": "Publicly accessible satellite URL (optional - only sent on first heartbeat after startup)"
+                  "mcp_status": {
+                    "type": "object",
+                    "properties": {
+                      "summary": {
+                        "type": "object",
+                        "properties": {
+                          "total_instances": {
+                            "type": "number"
+                          },
+                          "active_instances": {
+                            "type": "number"
+                          },
+                          "dormant_instances": {
+                            "type": "number"
+                          },
+                          "total_tools": {
+                            "type": "number"
+                          },
+                          "online_servers": {
+                            "type": "number"
+                          },
+                          "offline_servers": {
+                            "type": "number"
+                          },
+                          "error_servers": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "instances": {
+                        "type": "array",
+                        "items": {
+                          "type": "object"
+                        }
+                      },
+                      "tool_names": {
+                        "type": "array",
+                        "items": {
+                          "type": "object"
+                        }
+                      },
+                      "server_status_counts": {
+                        "type": "object"
+                      }
+                    },
+                    "description": "MCP server runtime status snapshot (optional)"
                   }
                 },
                 "required": [
@@ -42474,6 +43168,18 @@
                               }
                             },
                             "description": "Metadata about which fields contain secrets and should be masked in satellite logs"
+                          },
+                          "git_commit_sha": {
+                            "type": "string",
+                            "description": "Git commit SHA for GitHub deployments (used to reconstruct args dynamically)"
+                          },
+                          "repository_url": {
+                            "type": "string",
+                            "description": "GitHub repository URL for GitHub deployments"
+                          },
+                          "git_branch": {
+                            "type": "string",
+                            "description": "Git branch name for GitHub deployments"
                           }
                         },
                         "required": [
@@ -42934,6 +43640,15 @@
                                   "type": "string"
                                 }
                               },
+                              "satellite_url": {
+                                "type": "string"
+                              },
+                              "region": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
                               "last_heartbeat": {
                                 "type": [
                                   "null",
@@ -43042,6 +43757,241 @@
                       "type": "string"
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/manage/{id}": {
+      "get": {
+        "summary": "Get satellite by ID",
+        "tags": [
+          "Satellite Management"
+        ],
+        "description": "Get detailed information about a specific satellite. Requires global_admin role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Satellite ID"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Satellite details retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "satellite_type": {
+                          "type": "string",
+                          "enum": [
+                            "global",
+                            "team"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "inactive",
+                            "maintenance",
+                            "error"
+                          ]
+                        },
+                        "capabilities": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "satellite_url": {
+                          "type": "string"
+                        },
+                        "region": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "last_heartbeat": {
+                          "type": [
+                            "null",
+                            "string"
+                          ]
+                        },
+                        "system_info": {
+                          "type": [
+                            "null",
+                            "object"
+                          ],
+                          "additionalProperties": true
+                        },
+                        "created_at": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        },
+                        "team": {
+                          "type": [
+                            "null",
+                            "object"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "slug": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "created_by_user": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "username": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Satellite details retrieved successfully"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Satellite not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Satellite not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal server error"
                 }
               }
             }
@@ -43214,6 +44164,1059 @@
                       "type": "string"
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/manage/{satelliteId}": {
+      "patch": {
+        "summary": "Update satellite",
+        "tags": [
+          "Satellite Management"
+        ],
+        "description": "Update satellite status and capabilities. Requires global_admin role. Requires Content-Type: application/json header when sending request body.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "Satellite name"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "inactive",
+                      "maintenance",
+                      "error"
+                    ],
+                    "description": "Satellite status"
+                  },
+                  "capabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of supported MCP server types"
+                  },
+                  "satellite_url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Satellite URL (e.g., http://127.0.0.1:3001)"
+                  },
+                  "region": {
+                    "type": "string",
+                    "description": "Satellite region (e.g., us-east-1, eu-central-1)"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Satellite ID is required"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Satellite updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "satellite_type": {
+                          "type": "string",
+                          "enum": [
+                            "global",
+                            "team"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "inactive",
+                            "maintenance",
+                            "error"
+                          ]
+                        },
+                        "capabilities": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "satellite_url": {
+                          "type": "string"
+                        },
+                        "region": {
+                          "type": "string"
+                        },
+                        "updated_at": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Satellite updated successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid input"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete satellite",
+        "tags": [
+          "Satellite Management"
+        ],
+        "description": "Delete a satellite. Requires global_admin role. Satellite must be inactive and have no MCP installations. No Content-Type header required for this DELETE request.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Satellite ID is required"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Satellite deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "message"
+                  ],
+                  "description": "Satellite deleted successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Satellite is not inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Satellite is not inactive"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Satellite does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Satellite does not exist"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Satellite has active MCP installations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Conflict - Satellite has active MCP installations"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/manage/{satelliteId}/heartbeats": {
+      "get": {
+        "summary": "List satellite heartbeats",
+        "tags": [
+          "Satellite Management"
+        ],
+        "description": "Retrieve paginated list of satellite heartbeat records. Returns latest heartbeats first. Requires global_admin role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of heartbeats to return (1-100, default: 20)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "description": "Number of heartbeats to skip (≥0, default: 0)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Satellite ID is required"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Heartbeats retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "heartbeats": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "satellite_id": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "active",
+                                  "degraded",
+                                  "error"
+                                ]
+                              },
+                              "system_metrics": {
+                                "type": "string"
+                              },
+                              "process_count": {
+                                "type": "number"
+                              },
+                              "healthy_process_count": {
+                                "type": "number"
+                              },
+                              "error_count": {
+                                "type": "number"
+                              },
+                              "response_time_ms": {
+                                "type": [
+                                  "null",
+                                  "number"
+                                ]
+                              },
+                              "uptime_seconds": {
+                                "type": [
+                                  "null",
+                                  "number"
+                                ]
+                              },
+                              "version": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "timestamp": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "satellite_id",
+                              "status",
+                              "system_metrics",
+                              "process_count",
+                              "healthy_process_count",
+                              "error_count",
+                              "timestamp"
+                            ]
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "number"
+                            },
+                            "limit": {
+                              "type": "number"
+                            },
+                            "offset": {
+                              "type": "number"
+                            },
+                            "has_more": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "limit",
+                            "offset",
+                            "has_more"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "heartbeats",
+                        "pagination"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Heartbeats retrieved successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid pagination parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Satellite does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Satellite does not exist"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/satellites/manage/{satelliteId}/commands": {
+      "get": {
+        "summary": "List satellite commands",
+        "tags": [
+          "Satellite Management"
+        ],
+        "description": "Retrieve paginated list of satellite command records. Returns latest commands first. Requires global_admin role.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of commands to return (1-100, default: 20)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "description": "Number of commands to skip (≥0, default: 0)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "in": "path",
+            "name": "satelliteId",
+            "required": true,
+            "description": "Satellite ID is required"
+          }
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Commands retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "commands": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "satellite_id": {
+                                "type": "string"
+                              },
+                              "command_type": {
+                                "type": "string",
+                                "enum": [
+                                  "spawn",
+                                  "kill",
+                                  "restart",
+                                  "configure",
+                                  "health_check",
+                                  "invalidate_user_token_cache"
+                                ]
+                              },
+                              "priority": {
+                                "type": "string",
+                                "enum": [
+                                  "immediate",
+                                  "high",
+                                  "normal",
+                                  "low"
+                                ]
+                              },
+                              "payload": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "acknowledged",
+                                  "executing",
+                                  "completed",
+                                  "failed"
+                                ]
+                              },
+                              "target_team_id": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "correlation_id": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "retry_count": {
+                                "type": "number"
+                              },
+                              "max_retries": {
+                                "type": "number"
+                              },
+                              "error_message": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "result": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "created_by": {
+                                "type": [
+                                  "null",
+                                  "string"
+                                ]
+                              },
+                              "created_at": {
+                                "type": "string"
+                              },
+                              "updated_at": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "satellite_id",
+                              "command_type",
+                              "priority",
+                              "payload",
+                              "status",
+                              "retry_count",
+                              "max_retries",
+                              "created_at",
+                              "updated_at"
+                            ]
+                          }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "number"
+                            },
+                            "limit": {
+                              "type": "number"
+                            },
+                            "offset": {
+                              "type": "number"
+                            },
+                            "has_more": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "limit",
+                            "offset",
+                            "has_more"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "commands",
+                        "pagination"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "data"
+                  ],
+                  "description": "Commands retrieved successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Invalid pagination parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Bad Request - Invalid pagination parameters"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Unauthorized"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Forbidden - Insufficient permissions"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - Satellite does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Not Found - Satellite does not exist"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "default": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "error"
+                  ],
+                  "description": "Internal Server Error"
                 }
               }
             }

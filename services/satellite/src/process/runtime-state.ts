@@ -342,6 +342,14 @@ export class RuntimeState extends EventEmitter {
   }
 
   /**
+   * Clear dormant config for a server (returns true if it existed)
+   * Used for redeploy to force fresh download from GitHub
+   */
+  clearDormantConfig(installationName: string): boolean {
+    return this.dormantProcessConfigs.delete(installationName);
+  }
+
+  /**
    * Remove a server completely by installation name (handles both active and dormant)
    * This is the method to call when a server is being uninstalled
    */
@@ -386,5 +394,36 @@ export class RuntimeState extends EventEmitter {
       installationName: name,
       config
     }));
+  }
+
+  /**
+   * Check if a team has any processes (active or dormant) using a specific runtime cache
+   * Used to determine if runtime cache directory can be safely deleted
+   */
+  hasProcessesUsingRuntimeCache(teamId: string, runtime: string): boolean {
+    // Check active processes
+    const teamProcesses = this.getTeamProcesses(teamId);
+    if (teamProcesses.some(p => (p.config.runtime || 'node') === runtime)) {
+      return true;
+    }
+
+    // Check dormant configs (processes that might respawn)
+    for (const dormantConfig of this.dormantProcessConfigs.values()) {
+      if (dormantConfig.team_id === teamId &&
+          (dormantConfig.runtime || 'node') === runtime) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Get all processes for a team filtered by runtime
+   * Useful for debugging and logging cache cleanup decisions
+   */
+  getTeamProcessesByRuntime(teamId: string, runtime: string): RuntimeProcessInfo[] {
+    return this.getTeamProcesses(teamId)
+      .filter(p => (p.config.runtime || 'node') === runtime);
   }
 }

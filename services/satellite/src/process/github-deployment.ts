@@ -829,6 +829,58 @@ export class GitHubDeploymentHandler {
 
 
   /**
+   * Reconstruct GitHub package reference args from config
+   * Template args contain base GitHub ref (owner/repo), git_commit_sha provides current SHA
+   * This ensures redeployed servers use LATEST SHA, not stale template_args
+   */
+  private reconstructGitHubArgs(config: MCPServerConfig): string[] | undefined {
+    // Debug logging to understand why reconstruction might fail
+    this.logger.trace({
+      operation: 'github_args_reconstruction_check',
+      installation_name: config.installation_name,
+      source: config.source,
+      has_git_commit_sha: !!config.git_commit_sha,
+      git_commit_sha: config.git_commit_sha,
+      has_args: !!config.args,
+      args: config.args
+    }, 'Checking if GitHub args reconstruction is needed');
+
+    // Only reconstruct for GitHub deployments with git_commit_sha field
+    if (config.source !== 'github' || !config.git_commit_sha || !config.args) {
+      this.logger.trace({
+        operation: 'github_args_reconstruction_skipped',
+        reason: !config.git_commit_sha ? 'missing_git_commit_sha' :
+                config.source !== 'github' ? 'not_github_source' :
+                !config.args ? 'missing_args' : 'unknown',
+        source: config.source,
+        git_commit_sha: config.git_commit_sha
+      }, 'Skipping GitHub args reconstruction');
+      return undefined; // Not a GitHub deployment or missing data, use original args
+    }
+
+    const reconstructed: string[] = [];
+
+    for (const arg of config.args) {
+      // Node.js: "github:owner/repo" -> "github:owner/repo#SHA"
+      if (arg.startsWith('github:') && !arg.includes('#')) {
+        reconstructed.push(`${arg}#${config.git_commit_sha}`);
+        continue;
+      }
+
+      // Python: "git+https://github.com/owner/repo.git" -> "git+https://github.com/owner/repo.git@SHA"
+      if (arg.startsWith('git+https://github.com/') && !arg.includes('@')) {
+        reconstructed.push(`${arg}@${config.git_commit_sha}`);
+        continue;
+      }
+
+      // All other args pass through unchanged
+      reconstructed.push(arg);
+    }
+
+    return reconstructed;
+  }
+
+  /**
    * Prepare a GitHub deployment - downloads, extracts, builds, and updates config
    * Returns the updated config with local paths
    * Supports both Node.js and Python runtimes
@@ -836,6 +888,21 @@ export class GitHubDeploymentHandler {
   async prepareDeployment(config: MCPServerConfig): Promise<MCPServerConfig> {
     if (!this.backendClient) {
       throw new Error('BackendClient not available for GitHub deployment');
+    }
+
+    // Reconstruct args with current SHA for GitHub deployments
+    const reconstructedArgs = this.reconstructGitHubArgs(config);
+    if (reconstructedArgs) {
+      this.logger.trace({
+        operation: 'github_args_reconstructed',
+        installation_name: config.installation_name,
+        original_args: config.args,
+        reconstructed_args: reconstructedArgs,
+        git_commit_sha: config.git_commit_sha
+      }, 'Reconstructed GitHub args with current commit SHA');
+
+      // Use reconstructed args for deployment
+      config = { ...config, args: reconstructedArgs };
     }
 
     const useTmpfs = process.env.NODE_ENV === 'production' || process.env.MCP_USE_TMPFS === 'true';

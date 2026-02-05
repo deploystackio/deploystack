@@ -32,12 +32,12 @@ describe('authHook', () => {
     mockRequest = {
       headers: {},
       log: {
+        trace: vi.fn(),
         debug: vi.fn(),
-        error: vi.fn(),
         info: vi.fn(),
         warn: vi.fn(),
+        error: vi.fn(),
         fatal: vi.fn(),
-        trace: vi.fn(),
         child: vi.fn(),
         level: 'info',
         silent: vi.fn(),
@@ -151,7 +151,7 @@ describe('authHook', () => {
 
       expect(mockRequest.user).toBeNull();
       expect(mockRequest.session).toBeNull();
-      expect(mockRequest.log!.debug).toHaveBeenCalledWith('Auth hook: No session cookie found');
+      expect(mockRequest.log!.trace).toHaveBeenCalledWith('Auth hook: No session cookie found');
     });
 
     it('should handle empty cookie header', async () => {
@@ -183,7 +183,7 @@ describe('authHook', () => {
       expect(mockRequest.user).toBeNull();
       expect(mockRequest.session).toBeNull();
       expect(mockReply.setCookie).toHaveBeenCalledWith('session', '', {});
-      expect(mockRequest.log!.debug).toHaveBeenCalledWith(`Auth hook: Session ${sessionId} not found`);
+      expect(mockRequest.log!.trace).toHaveBeenCalledWith(`Auth hook: Session ${sessionId} not found`);
     });
 
     it('should handle expired session', async () => {
@@ -220,7 +220,7 @@ describe('authHook', () => {
       expect(mockRequest.session).toBeNull();
       expect(mockDb.delete).toHaveBeenCalled();
       expect(mockReply.setCookie).toHaveBeenCalledWith('session', '', {});
-      expect(mockRequest.log!.debug).toHaveBeenCalledWith(`Auth hook: Session ${sessionId} is expired`);
+      expect(mockRequest.log!.trace).toHaveBeenCalledWith(`Auth hook: Session ${sessionId} is expired`);
     });
 
     it('should handle valid session successfully', async () => {
@@ -270,7 +270,7 @@ describe('authHook', () => {
         fresh: false,
       });
 
-      expect(mockRequest.log!.debug).toHaveBeenCalledWith(`Auth hook: Session ${sessionId} is valid for user user-123`);
+      expect(mockRequest.log!.trace).toHaveBeenCalledWith(`Auth hook: Session ${sessionId} is valid for user user-123`);
     });
 
     // Note: Test for missing auth tables in schema is skipped because Vitest doesn't

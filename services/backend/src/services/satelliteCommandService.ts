@@ -442,6 +442,70 @@ export class SatelliteCommandService {
   }
 
   /**
+   * Convenience method for MCP redeploy events (GitHub deployments)
+   * Creates immediate priority configure commands to force restart even if SHA unchanged
+   * Uses the satellite_id from mcpServerInstallations for targeted delivery
+   */
+  async notifyMcpRedeploy(
+    installationId: string,
+    teamId: string,
+    userId?: string,
+    metadata?: { commit_sha?: string; branch?: string }
+  ): Promise<SatelliteCommand[]> {
+    // Get satellite_id for this installation
+    const installation = await this.db
+      .select({
+        satellite_id: mcpServerInstallations.satellite_id
+      })
+      .from(mcpServerInstallations)
+      .where(eq(mcpServerInstallations.id, installationId))
+      .limit(1);
+
+    const satelliteId = installation?.[0]?.satellite_id;
+
+    const commandPayload = {
+      commandType: 'configure' as const,
+      priority: 'immediate' as const,
+      payload: {
+        event: 'mcp_redeploy',
+        installation_id: installationId,
+        team_id: teamId,
+        user_id: userId,
+        ...metadata
+      },
+      targetTeamId: teamId,
+      expiresInMinutes: 5
+    };
+
+    // If satellite_id is specified, send to that specific satellite
+    if (satelliteId) {
+      this.logger.info({
+        installationId,
+        satelliteId,
+        teamId,
+        userId,
+        metadata
+      }, 'Sending configure command (redeploy) to specific satellite');
+
+      const command = await this.createCommandForSpecificSatellite(
+        satelliteId,
+        commandPayload
+      );
+      return [command];
+    }
+
+    // Otherwise, broadcast to all global satellites (backward compatibility)
+    this.logger.info({
+      installationId,
+      teamId,
+      userId,
+      metadata
+    }, 'Sending configure command (redeploy) to all global satellites (no specific satellite set)');
+
+    return await this.createCommandForAllGlobalSatellites(commandPayload);
+  }
+
+  /**
    * Convenience method for MCP deletion events
    * Creates immediate priority configure commands for all global satellites
    */

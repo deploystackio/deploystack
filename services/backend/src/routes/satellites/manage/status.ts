@@ -16,7 +16,7 @@ export default async function updateSatelliteStatusRoute(server: FastifyInstance
   server.patch<UpdateStatusParams>(
     '/satellites/manage/:satelliteId/status',
     {
-      preHandler: [requirePermission('satellites.manage')],
+      preValidation: requirePermission('satellites.manage'),
       schema: {
         tags: ['Satellite Management'],
         summary: 'Update satellite status',

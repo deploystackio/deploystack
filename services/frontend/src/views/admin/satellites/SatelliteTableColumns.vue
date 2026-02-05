@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import {
   Table,
   TableBody,
@@ -28,11 +29,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ChevronDown, CircleCheck, CircleMinus, CircleAlert, CircleX } from 'lucide-vue-next'
+import { ChevronDown } from 'lucide-vue-next'
 import type { Satellite } from '@/services/satelliteService'
 import { SatelliteService } from '@/services/satelliteService'
+import { SatelliteStatusBadge } from '@/components/admin/satellites'
 
 const { t } = useI18n()
+const router = useRouter()
 
 interface Props {
   satellites: Satellite[]
@@ -106,6 +109,11 @@ const getTypeText = (type: Satellite['satellite_type']): string => {
       return type
   }
 }
+
+// Navigate to satellite detail page
+const navigateToSatellite = (satelliteId: string) => {
+  router.push(`/admin/satellites/${satelliteId}/general`)
+}
 </script>
 
 <template>
@@ -139,7 +147,12 @@ const getTypeText = (type: Satellite['satellite_type']): string => {
               {{ t('satellites.table.noData') }}
             </TableCell>
           </TableRow>
-          <TableRow v-for="satellite in sortedSatellites" :key="satellite.id">
+          <TableRow
+            v-for="satellite in sortedSatellites"
+            :key="satellite.id"
+            class="cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800"
+            @click="navigateToSatellite(satellite.id)"
+          >
           <TableCell class="font-medium">
             {{ satellite.name }}
           </TableCell>
@@ -149,25 +162,7 @@ const getTypeText = (type: Satellite['satellite_type']): string => {
             </Badge>
           </TableCell>
           <TableCell>
-            <div class="inline-flex items-center justify-center rounded-full border px-1.5 py-0.5 text-xs font-medium text-muted-foreground gap-1">
-              <CircleCheck
-                v-if="satellite.status === 'active'"
-                class="size-3 fill-green-500 text-green-500 dark:fill-green-400 dark:text-green-400"
-              />
-              <CircleMinus
-                v-else-if="satellite.status === 'inactive'"
-                class="size-3 text-muted-foreground"
-              />
-              <CircleAlert
-                v-else-if="satellite.status === 'maintenance'"
-                class="size-3 fill-yellow-500 text-yellow-500 dark:fill-yellow-400 dark:text-yellow-400"
-              />
-              <CircleX
-                v-else-if="satellite.status === 'error'"
-                class="size-3 fill-red-500 text-red-500 dark:fill-red-400 dark:text-red-400"
-              />
-              <span>{{ getStatusText(satellite.status) }}</span>
-            </div>
+            <SatelliteStatusBadge :status="satellite.status" />
           </TableCell>
           <TableCell class="text-sm text-muted-foreground">
             {{ SatelliteService.formatLastHeartbeat(satellite.last_heartbeat) }}
@@ -184,7 +179,7 @@ const getTypeText = (type: Satellite['satellite_type']): string => {
               </Badge>
             </div>
           </TableCell>
-          <TableCell>
+          <TableCell @click.stop>
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <Button

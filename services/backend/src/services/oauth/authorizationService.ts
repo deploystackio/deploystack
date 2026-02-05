@@ -29,6 +29,7 @@ export interface AuthorizationCode {
   state: string;
   codeChallenge: string;
   codeChallengeMethod: string;
+  resource?: string; // RFC 8707 Resource Indicator
 }
 
 export class AuthorizationService {
@@ -295,10 +296,11 @@ export class AuthorizationService {
     state: string,
     codeChallenge: string,
     codeChallengeMethod: string,
+    resource: string | undefined,
     logger?: FastifyBaseLogger
   ): Promise<string> {
     const { db, schema } = this.getDbAndSchema();
-    
+
     try {
       // Clean up any expired or pending authorization requests for this user/client combo
       // This helps prevent accumulation of unused records
@@ -313,14 +315,14 @@ export class AuthorizationService {
             lt(schema.oauthAuthorizationCodes.expires_at, now)
           )
         );
-      
+
       const requestId = generateId(32);
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-      
+
       // Generate a unique placeholder code for pending authorization
       // This prevents UNIQUE constraint violations when multiple auth requests are made
       const placeholderCode = `pending_${generateId(32)}`;
-      
+
       // Store authorization request (temporary, for consent page)
       const authRequest = {
         id: requestId,
@@ -333,6 +335,7 @@ export class AuthorizationService {
         code_challenge: codeChallenge,
         code_challenge_method: codeChallengeMethod,
         code: placeholderCode,
+        resource: resource || null, // RFC 8707 Resource Indicator
         used: false,
         expires_at: expiresAt,
       };
@@ -345,6 +348,7 @@ export class AuthorizationService {
         userId,
         clientId,
         scope,
+        resource,
         expiresAt: expiresAt.toISOString(),
       }, 'Authorization request stored');
 
@@ -601,6 +605,7 @@ export class AuthorizationService {
         state: authCode.state,
         codeChallenge: authCode.code_challenge,
         codeChallengeMethod: authCode.code_challenge_method,
+        resource: authCode.resource || undefined, // RFC 8707 Resource Indicator
       };
     } catch (error) {
       logger?.error({

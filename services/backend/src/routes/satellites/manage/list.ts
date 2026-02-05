@@ -20,7 +20,7 @@ export default async function listSatellitesRoute(server: FastifyInstance) {
   server.get<ListSatellitesParams>(
     '/satellites/manage',
     {
-      preHandler: [requirePermission('satellites.view')],
+      preValidation: requirePermission('satellites.view'),
       schema: {
         tags: ['Satellite Management'],
         summary: 'List all satellites',
@@ -79,6 +79,8 @@ export default async function listSatellitesRoute(server: FastifyInstance) {
                         satellite_type: { type: 'string', enum: ['global', 'team'] },
                         status: { type: 'string', enum: ['active', 'inactive', 'maintenance', 'error'] },
                         capabilities: { type: 'array', items: { type: 'string' } },
+                        satellite_url: { type: 'string' },
+                        region: { type: ['string', 'null'] },
                         last_heartbeat: { type: ['string', 'null'] },
                         system_info: { type: ['object', 'null'] },
                         created_at: { type: 'string' },
@@ -195,6 +197,8 @@ export default async function listSatellitesRoute(server: FastifyInstance) {
             satellite_type: satellites.satellite_type,
             status: satellites.status,
             capabilities: satellites.capabilities,
+            satellite_url: satellites.satellite_url,
+            region: satellites.region,
             last_heartbeat: satellites.last_heartbeat,
             system_info: satellites.system_info,
             created_at: satellites.created_at,
@@ -225,6 +229,8 @@ export default async function listSatellitesRoute(server: FastifyInstance) {
           satellite_type: row.satellite_type,
           status: row.status,
           capabilities: row.capabilities ? JSON.parse(row.capabilities) : [],
+          satellite_url: row.satellite_url,
+          region: row.region,
           last_heartbeat: row.last_heartbeat?.toISOString() || null,
           system_info: row.system_info ? JSON.parse(row.system_info) : null,
           created_at: row.created_at.toISOString(),

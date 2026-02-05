@@ -24,8 +24,16 @@ declare module 'fastify' {
 }
 
 /**
+ * Add RFC 9728 Link header for OAuth discovery to all responses
+ * This enables MCP clients to discover protected resource metadata proactively
+ */
+function addResourceMetadataLinkHeader(reply: FastifyReply) {
+  reply.header('Link', '</.well-known/oauth-protected-resource>; rel="oauth-protected-resource"');
+}
+
+/**
  * Middleware to require valid OAuth2 Bearer token for multi-team access
- * 
+ *
  * @param introspectionService - Service for validating OAuth tokens
  * @param activityTracker - Optional tracker for MCP client activity (for personal dashboard)
  */
@@ -35,6 +43,9 @@ export function requireAuthentication(
 ) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     try {
+      // Add RFC 9728 Link header to ALL responses (success and error)
+      addResourceMetadataLinkHeader(reply);
+
       const authHeader = request.headers.authorization;
 
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -169,18 +180,22 @@ export function requireScope(requiredScope: string) {
 }
 
 /**
- * Send 401 Unauthorized with WWW-Authenticate header
+ * Send 401 Unauthorized with RFC 9728 compliant WWW-Authenticate header
  */
 function sendAuthenticationRequired(reply: FastifyReply, _request: FastifyRequest) {
-  const backendUrl = process.env.DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000';
-  // Public URL for OAuth - what MCP clients will use to reach the backend
-  const backendPublicUrl = process.env.DEPLOYSTACK_BACKEND_PUBLIC_URL || backendUrl;
+  const satelliteUrl = process.env.DEPLOYSTACK_SATELLITE_URL || `http://localhost:${process.env.PORT || 3001}`;
 
+  // RFC 9728: Point to protected resource metadata for discovery
+  const resourceMetadataUri = `${satelliteUrl}/.well-known/oauth-protected-resource`;
+
+  // RFC 9728 compliant WWW-Authenticate header
   const wwwAuthenticate = `Bearer realm="DeployStack MCP Satellite", ` +
-    `authorizationUri="${backendPublicUrl}/api/oauth2/auth", ` +
-    `tokenUri="${backendPublicUrl}/api/oauth2/token", ` +
-    `resource="deploystack:mcp:satellite"`;
+    `resource_metadata="${resourceMetadataUri}", ` +
+    `scope="mcp:read mcp:tools:execute", ` +
+    `error="invalid_token", ` +
+    `error_description="Bearer token required"`;
 
+  // RFC 9728 compliant error response body
   const errorResponse = {
     jsonrpc: '2.0',
     error: {
@@ -188,8 +203,9 @@ function sendAuthenticationRequired(reply: FastifyReply, _request: FastifyReques
       message: 'Authentication required',
       data: {
         message: 'Bearer token required for MCP access',
-        authorization_uri: `${backendPublicUrl}/api/oauth2/auth`,
-        token_uri: `${backendPublicUrl}/api/oauth2/token`
+        oauth_error: 'invalid_token',
+        resource_metadata_uri: resourceMetadataUri,
+        scopes_required: ['mcp:read']
       }
     },
     id: null
@@ -204,9 +220,18 @@ function sendAuthenticationRequired(reply: FastifyReply, _request: FastifyReques
 }
 
 /**
- * Send 401 Invalid Token error
+ * Send 401 Invalid Token error with RFC 9728 compliant headers
  */
 function sendInvalidTokenError(reply: FastifyReply, request: FastifyRequest, validationResult: TokenValidationResult) {
+  const satelliteUrl = process.env.DEPLOYSTACK_SATELLITE_URL || `http://localhost:${process.env.PORT || 3001}`;
+  const resourceMetadataUri = `${satelliteUrl}/.well-known/oauth-protected-resource`;
+
+  // RFC 9728 compliant WWW-Authenticate header
+  const wwwAuthenticate = `Bearer realm="DeployStack MCP Satellite", ` +
+    `resource_metadata="${resourceMetadataUri}", ` +
+    `error="invalid_token", ` +
+    `error_description="${validationResult.error_description || 'Token validation failed'}"`;
+
   const errorResponse = {
     jsonrpc: '2.0',
     error: {
@@ -214,20 +239,35 @@ function sendInvalidTokenError(reply: FastifyReply, request: FastifyRequest, val
       message: 'Invalid token',
       data: {
         message: validationResult.error_description || 'Token validation failed',
-        error: validationResult.error
+        oauth_error: 'invalid_token',
+        resource_metadata_uri: resourceMetadataUri
       }
     },
     id: null
   };
 
   const jsonString = JSON.stringify(errorResponse);
-  return reply.status(401).type('application/json').send(jsonString);
+  return reply
+    .status(401)
+    .header('WWW-Authenticate', wwwAuthenticate)
+    .type('application/json')
+    .send(jsonString);
 }
 
 /**
- * Send 403 Insufficient Scope error
+ * Send 403 Insufficient Scope error with RFC 9728 compliant headers
  */
 function sendInsufficientScopeError(reply: FastifyReply, request: FastifyRequest, requiredScope: string) {
+  const satelliteUrl = process.env.DEPLOYSTACK_SATELLITE_URL || `http://localhost:${process.env.PORT || 3001}`;
+  const resourceMetadataUri = `${satelliteUrl}/.well-known/oauth-protected-resource`;
+
+  // RFC 9728 compliant WWW-Authenticate header
+  const wwwAuthenticate = `Bearer realm="DeployStack MCP Satellite", ` +
+    `resource_metadata="${resourceMetadataUri}", ` +
+    `scope="${requiredScope}", ` +
+    `error="insufficient_scope", ` +
+    `error_description="Token missing required scope: ${requiredScope}"`;
+
   const errorResponse = {
     jsonrpc: '2.0',
     error: {
@@ -235,14 +275,20 @@ function sendInsufficientScopeError(reply: FastifyReply, request: FastifyRequest
       message: 'Insufficient scope',
       data: {
         message: `Token missing required scope: ${requiredScope}`,
-        required_scope: requiredScope
+        oauth_error: 'insufficient_scope',
+        required_scopes: [requiredScope],
+        resource_metadata_uri: resourceMetadataUri
       }
     },
     id: null
   };
 
   const jsonString = JSON.stringify(errorResponse);
-  return reply.status(403).type('application/json').send(jsonString);
+  return reply
+    .status(403)
+    .header('WWW-Authenticate', wwwAuthenticate)
+    .type('application/json')
+    .send(jsonString);
 }
 
 /**

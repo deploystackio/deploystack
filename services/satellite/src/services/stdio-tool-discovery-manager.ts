@@ -334,25 +334,40 @@ export class StdioToolDiscoveryManager {
    * NOT called on dormant termination - tools remain cached for fast respawn
    */
   clearServerTools(installationName: string): void {
-    const toolSet = this.toolsByServer.get(installationName);
-    if (!toolSet) {
-      return;
-    }
-
     let clearedCount = 0;
-    for (const namespacedName of toolSet) {
-      if (this.toolCache.delete(namespacedName)) {
-        clearedCount++;
+
+    // Approach 1: Clear from toolsByServer index (if it exists)
+    const toolSet = this.toolsByServer.get(installationName);
+    if (toolSet) {
+      for (const namespacedName of toolSet) {
+        if (this.toolCache.delete(namespacedName)) {
+          clearedCount++;
+        }
       }
     }
 
+    // Approach 2: Defensive - scan toolCache for any orphaned tools
+    // This handles cases where toolsByServer is out of sync
+    let orphanedCount = 0;
+    for (const [namespacedName, tool] of this.toolCache.entries()) {
+      if (tool.serverName === installationName) {
+        if (this.toolCache.delete(namespacedName)) {
+          orphanedCount++;
+        }
+      }
+    }
+
+    // Remove server from index
     this.toolsByServer.delete(installationName);
 
+    // Log what was actually cleared
     this.logger.info({
       operation: 'stdio_tools_cleared',
       installation_name: installationName,
-      tools_cleared: clearedCount
-    }, `Cleared ${clearedCount} tools for ${installationName}`);
+      tools_cleared: clearedCount,
+      orphaned_tools_cleared: orphanedCount,
+      total_cleared: clearedCount + orphanedCount
+    }, `Cleared ${clearedCount + orphanedCount} tools for ${installationName}`);
   }
 
   /**

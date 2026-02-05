@@ -22,6 +22,7 @@ export type EventType =
   | 'mcp.server.respawned'
   | 'mcp.server.status_changed'
   | 'mcp.server.logs'
+  | 'mcp.server.log_rate_limit_exceeded'
   | 'mcp.request.logs'
   | 'mcp.tools.discovered'
   | 'mcp.tools.updated'
@@ -158,6 +159,13 @@ export interface EventDataMap {
       metadata?: Record<string, unknown>;
       timestamp: string;
     }>;
+  };
+
+  'mcp.server.log_rate_limit_exceeded': {
+    installation_id: string;
+    dropped_count: number;
+    time_window_seconds: number;
+    rate_limit: number;
   };
 
   'mcp.request.logs': {

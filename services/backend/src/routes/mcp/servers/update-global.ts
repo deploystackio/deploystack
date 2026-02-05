@@ -1,6 +1,7 @@
 import { type FastifyInstance } from 'fastify';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { McpCatalogService } from '../../../services/mcpCatalogService';
+import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
 import { getDb } from '../../../db';
 import { EVENT_NAMES } from '../../../events';
 import type { EventContext } from '../../../events/types';
@@ -50,6 +51,7 @@ interface UpdateGlobalServerRequest {
   status?: 'active' | 'deprecated' | 'maintenance' | 'disabled';
   featured?: boolean;
   auto_install_new_default_team?: boolean;
+  requires_oauth?: boolean;
 }
 
 interface UpdateGlobalServerSuccessResponse {
@@ -145,13 +147,67 @@ export default async function updateGlobalServer(server: FastifyInstance) {
           serverId,
           serverVisibility: existingServer.visibility
         }, 'Attempted to update non-global server through global endpoint');
-        
+
         const errorResponse: ErrorResponse = {
           success: false,
           error: 'Server not found or not a global server'
         };
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(404).type('application/json').send(jsonString);
+      }
+
+      // Determine effective transport type and remotes for OAuth detection
+      const effectiveTransportType = updateData.transport_type || existingServer.transport_type;
+      const effectiveRemotes = updateData.remotes || existingServer.remotes;
+
+      // OAuth detection for remote MCP servers (HTTP/SSE)
+      if (effectiveTransportType === 'http' || effectiveTransportType === 'sse') {
+        if (effectiveRemotes && effectiveRemotes.length > 0 && effectiveRemotes[0].url) {
+          try {
+            request.log.info({
+              operation: 'update_global_mcp_server',
+              step: 'oauth_detection',
+              mcpServerUrl: effectiveRemotes[0].url,
+              transportType: effectiveTransportType
+            }, 'Starting OAuth detection for remote MCP server');
+
+            const oauthService = new OAuthDiscoveryService(request.log);
+            const oauthResult = await oauthService.detectAndDiscoverOAuth(effectiveRemotes[0].url);
+
+            // Add to updateData so it gets saved
+            updateData.requires_oauth = oauthResult.requiresOauth;
+
+            request.log.info({
+              operation: 'update_global_mcp_server',
+              step: 'oauth_detection',
+              mcpServerUrl: effectiveRemotes[0].url,
+              requiresOauth: updateData.requires_oauth,
+              hasMetadata: !!oauthResult.metadata
+            }, 'OAuth detection completed for updated server');
+          } catch (error) {
+            request.log.warn({
+              operation: 'update_global_mcp_server',
+              step: 'oauth_detection',
+              mcpServerUrl: effectiveRemotes[0].url,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            }, 'OAuth detection failed, defaulting to requires_oauth=false');
+            updateData.requires_oauth = false;
+          }
+        } else {
+          request.log.debug({
+            operation: 'update_global_mcp_server',
+            step: 'oauth_detection_skipped',
+            reason: 'No remotes URL available'
+          }, 'Skipping OAuth detection - no URL available');
+        }
+      } else if (effectiveTransportType === 'stdio') {
+        // Explicitly set requires_oauth=false for stdio servers
+        updateData.requires_oauth = false;
+        request.log.debug({
+          operation: 'update_global_mcp_server',
+          step: 'oauth_detection_skipped',
+          transportType: effectiveTransportType
+        }, 'Setting requires_oauth=false for stdio server');
       }
 
       request.log.info({

@@ -56,6 +56,10 @@ export const {
   MCP_SERVER_DELETED,
   MCP_DEPLOYMENT_CREATED,
 
+  // Satellite Events
+  SATELLITE_UPDATED,
+  SATELLITE_DELETED,
+
   // System Events
   SYSTEM_STARTUP,
   SYSTEM_SHUTDOWN,

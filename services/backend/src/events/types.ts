@@ -440,6 +440,46 @@ export interface CoreEventData {
     };
   };
 
+  [EVENT_NAMES.SATELLITE_UPDATED]: {
+    satellite: {
+      id: string;
+      name: string;
+      satellite_type: 'global' | 'team';
+    };
+    updatedBy: {
+      id: string;
+      email: string;
+    };
+    changes: {
+      status?: {
+        from: string;
+        to: string;
+      };
+      capabilities?: {
+        from: string[];
+        to: string[];
+      };
+    };
+    metadata: {
+      ip: string;
+    };
+  };
+
+  [EVENT_NAMES.SATELLITE_DELETED]: {
+    satellite: {
+      id: string;
+      name: string;
+      satellite_type: 'global' | 'team';
+    };
+    deletedBy: {
+      id: string;
+      email: string;
+    };
+    metadata: {
+      ip: string;
+    };
+  };
+
   [EVENT_NAMES.SYSTEM_STARTUP]: {
     version: string;
     environment: string;

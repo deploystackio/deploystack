@@ -64,6 +64,18 @@ export interface McpServerConfig {
   /** User ID that owns this instance (per-user process) */
   user_id?: string;
 
+  /** User slug for identification */
+  user_slug?: string;
+
+  /** Instance status from mcpServerInstances table */
+  instance_status?: string;
+
+  /** Whether OAuth is required for this server */
+  requires_oauth?: boolean;
+
+  /** Server source (manual, github, official_registry) */
+  source?: string;
+
   /** Programming language (e.g., "typescript", "python", "go") */
   language?: string;
 

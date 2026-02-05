@@ -441,7 +441,11 @@ export async function createServer() {
               env: serverConfig.env || {},
               source: serverConfig.source,  // GitHub deployment detection
               language: serverConfig.language,
-              runtime: serverConfig.runtime
+              runtime: serverConfig.runtime,
+              // GitHub deployment fields for dynamic args reconstruction
+              git_commit_sha: serverConfig.git_commit_sha,
+              repository_url: serverConfig.repository_url,
+              git_branch: serverConfig.git_branch
             };
 
             // Spawn the process with updated configuration
@@ -512,7 +516,11 @@ export async function createServer() {
               env: serverConfig.env || {},
               source: serverConfig.source,  // GitHub deployment detection
               language: serverConfig.language,
-              runtime: serverConfig.runtime
+              runtime: serverConfig.runtime,
+              // GitHub deployment fields for dynamic args reconstruction
+              git_commit_sha: serverConfig.git_commit_sha,
+              repository_url: serverConfig.repository_url,
+              git_branch: serverConfig.git_branch
             };
 
             // Spawn the process
@@ -927,7 +935,9 @@ export async function createServer() {
     satelliteId,
     apiKey,
     backendClient,
-    server.log
+    server.log,
+    runtimeState,
+    toolDiscoveryManager
   );
 
       // Set command processor for process reporting

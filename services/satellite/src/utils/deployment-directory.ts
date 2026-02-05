@@ -43,7 +43,10 @@ export interface DeploymentDirConfig {
  *
  * Handles two modes:
  * - Production (tmpfs): Creates tmpfs-backed directory with kernel-enforced quota
- * - Development (regular fs): Creates /tmp directory with UUID
+ * - Development (regular fs): Creates /tmp directory with installation-based path
+ *
+ * Both modes use the same directory structure: {baseDir}/{teamId}/{installationId}
+ * This ensures consistent behavior and enables proper cleanup on redeploy.
  *
  * @param config - Deployment directory configuration
  * @param tmpfsManager - TmpfsManager instance for tmpfs creation
@@ -92,14 +95,18 @@ export async function createDeploymentDirectory(
       throw new Error(`Failed to create deployment tmpfs: ${errorMessage}`);
     }
   } else {
-    // Development: Use regular /tmp directory
-    const { v4: uuidv4 } = await import('uuid');
-    deploymentDir = `/tmp/mcp-${uuidv4()}`;
+    // Development: Use regular /tmp directory with installation-based path
+    // Mirror production structure: /tmp/deploystack/mcp/{team-id}/{installation-id}
+    // This enables proper cleanup on redeploy and provides deterministic paths
+    const baseDir = '/tmp/deploystack/mcp';
+    deploymentDir = `${baseDir}/${config.teamId}/${config.installationId}`;
 
     logger?.debug?.({
       operation: 'deployment_dir_create_dev',
-      deployment_dir: deploymentDir
-    }, 'Creating deployment directory (development mode, no tmpfs)');
+      deployment_dir: deploymentDir,
+      team_id: config.teamId,
+      installation_id: config.installationId
+    }, 'Creating deployment directory (development mode, installation-based path)');
 
     await mkdir(deploymentDir, { recursive: true });
   }

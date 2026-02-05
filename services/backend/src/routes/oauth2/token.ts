@@ -191,6 +191,7 @@ export default async function tokenRoute(server: FastifyInstance) {
           authCode.teamId,
           authCode.scope,
           client_id,
+          authCode.resource,
           request.log
         );
 

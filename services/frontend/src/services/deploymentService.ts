@@ -252,4 +252,148 @@ export class DeploymentService {
     const data = await response.json()
     return data.deployments || []
   }
+
+  /**
+   * Get branches for a deployed server (alias for getBranches for consistency)
+   */
+  static async getBranchesForServer(
+    teamId: string,
+    owner: string,
+    repo: string
+  ): Promise<BranchesResponse> {
+    return this.getBranches(teamId, owner, repo)
+  }
+
+  /**
+   * Update the branch for a deployed server
+   */
+  static async updateServerBranch(
+    teamId: string,
+    serverId: string,
+    newBranch: string
+  ): Promise<{
+    success: boolean
+    message: string
+    data: {
+      server_id: string
+      previous_branch: string
+      new_branch: string
+      commit_sha: string
+    }
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/deploy/github/servers/${serverId}/branch`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ branch: newBranch })
+      }
+    )
+
+    if (!response.ok) {
+      // Try to parse error message from backend
+      try {
+        const errorData = await response.json()
+        if (errorData.error) {
+          throw new Error(errorData.error)
+        }
+      } catch (parseError) {
+        if (parseError instanceof Error && parseError.message) {
+          throw parseError
+        }
+      }
+      throw new Error('Failed to update branch')
+    }
+
+    return response.json()
+  }
+
+  /**
+   * Check deployment status - compares deployed SHA with latest remote SHA
+   */
+  static async checkDeploymentStatus(
+    teamId: string,
+    serverId: string
+  ): Promise<{
+    success: boolean
+    data: {
+      current_sha: string
+      remote_sha: string
+      has_new_commit: boolean
+      branch: string
+      last_deployed_at: string
+    }
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/deploy/github/servers/${serverId}/status`,
+      {
+        method: 'GET',
+        credentials: 'include'
+      }
+    )
+
+    if (!response.ok) {
+      try {
+        const errorData = await response.json()
+        if (errorData.error) {
+          throw new Error(errorData.error)
+        }
+      } catch (parseError) {
+        if (parseError instanceof Error && parseError.message) {
+          throw parseError
+        }
+      }
+      throw new Error('Failed to check deployment status')
+    }
+
+    return response.json()
+  }
+
+  /**
+   * Trigger redeployment - fetches latest SHA and redeploys all instances
+   */
+  static async triggerRedeploy(
+    teamId: string,
+    serverId: string
+  ): Promise<{
+    success: boolean
+    message: string
+    data: {
+      server_id: string
+      previous_sha: string
+      new_sha: string
+      instances_notified: number
+      branch: string
+    }
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/deploy/github/servers/${serverId}/redeploy`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        }
+      }
+    )
+
+    if (!response.ok) {
+      try {
+        const errorData = await response.json()
+        if (errorData.error) {
+          throw new Error(errorData.error)
+        }
+      } catch (parseError) {
+        if (parseError instanceof Error && parseError.message) {
+          throw parseError
+        }
+      }
+      throw new Error('Failed to trigger redeployment')
+    }
+
+    return response.json()
+  }
 }

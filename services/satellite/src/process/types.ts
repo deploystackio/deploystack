@@ -18,6 +18,10 @@ export interface MCPServerConfig {
   language?: string;            // Programming language (e.g., "typescript", "python", "go")
   runtime?: string;             // Runtime environment (e.g., "node", "python", "docker")
   temp_dir?: string;            // Temporary directory path (for GitHub deployments, cleanup on termination)
+  // GitHub deployment fields for dynamic args reconstruction
+  git_commit_sha?: string;      // Current commit SHA for GitHub deployments (used to reconstruct args with latest SHA)
+  repository_url?: string;      // GitHub repository URL
+  git_branch?: string;          // Git branch name
 }
 
 /**

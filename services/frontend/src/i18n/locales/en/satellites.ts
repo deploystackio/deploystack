@@ -88,12 +88,100 @@ export default {
     confirm: 'Update Status'
   },
 
-  // Pagination
-  pagination: {
-    showing: 'Showing {start} to {end} of {total} satellites',
-    page: 'Page {current} of {total}',
-    previous: 'Previous',
-    next: 'Next'
+  // Satellite Management Detail Pages
+  manage: {
+    title: 'Satellite Details',
+    loading: 'Loading...',
+
+    tabs: {
+      general: 'General',
+      commands: 'Commands',
+      heartbeats: 'Heartbeats'
+    },
+
+    info: {
+      title: 'Satellite Information',
+      name: 'Name',
+      namePlaceholder: 'Enter satellite name',
+      satelliteUrl: 'Satellite URL',
+      satelliteUrlPlaceholder: 'Enter satellite URL (e.g., http://127.0.0.1:3001)',
+      region: 'Region',
+      regionPlaceholder: 'Enter region (e.g., us-east-1, eu-central-1)',
+      save: 'Save Changes',
+      type: 'Type',
+      status: 'Status',
+      createdBy: 'Created By',
+      createdAt: 'Created At',
+      systemInfo: 'System Information',
+      os: 'Operating System',
+      arch: 'Architecture',
+      memory: 'Memory',
+      capabilities: 'Capabilities',
+      teamAssignment: 'Team Assignment',
+      team: 'Team',
+      noCapabilities: 'No capabilities reported',
+      noTeam: 'Not assigned to a team',
+      successTitle: 'Satellite updated',
+      successDescription: 'Satellite information has been updated successfully',
+      errorTitle: 'Update failed',
+      errorDescription: 'Failed to update satellite information',
+      nameErrorEmpty: 'Satellite name cannot be empty',
+      urlErrorEmpty: 'Satellite URL cannot be empty'
+    },
+
+    errors: {
+      fetchFailed: 'Failed to load satellite',
+      notFound: 'Satellite not found',
+      permissionDenied: 'You do not have permission to view this satellite'
+    },
+
+    statusDialog: {
+      title: 'Change Satellite Status',
+      description: 'Update the operational status of this satellite.',
+      statusLabel: 'Status',
+      cancel: 'Cancel',
+      save: 'Save Changes',
+      saving: 'Saving...',
+      successTitle: 'Status updated',
+      successDescription: 'Satellite status has been updated successfully',
+      errorTitle: 'Update failed',
+      errorDescription: 'Failed to update satellite status'
+    },
+
+    actions: {
+      changeStatus: 'Change Status',
+      deleteSatellite: 'Delete Satellite'
+    },
+
+    capabilities: {
+      edit: 'Edit Capabilities',
+      dialogTitle: 'Edit Satellite Capabilities',
+      dialogDescription: 'Select the MCP server transport types that this satellite supports.',
+      cancel: 'Cancel',
+      save: 'Save Changes',
+      successTitle: 'Capabilities updated',
+      successDescription: 'Satellite capabilities have been updated successfully',
+      errorTitle: 'Update failed',
+      errorDescription: 'Failed to update satellite capabilities',
+      descriptions: {
+        stdio: 'Standard input/output transport for local subprocess execution',
+        http: 'HTTP transport for remote MCP server communication',
+        sse: 'Server-Sent Events transport for streaming MCP server communication'
+      }
+    },
+
+    deleteDialog: {
+      title: 'Are you absolutely sure?',
+      description: 'This action cannot be undone. This will permanently delete the satellite "{name}" and remove all its data from the system.',
+      cancel: 'Cancel',
+      delete: 'Delete Satellite',
+      deleting: 'Deleting...',
+      successTitle: 'Satellite deleted',
+      errorTitle: 'Delete failed',
+      errorDescription: 'Failed to delete satellite',
+      notInactiveTitle: 'Cannot delete satellite',
+      notInactiveDescription: 'Satellite must be inactive before deletion. Current status: {status}'
+    }
   },
 
   // Satellite Pairing
@@ -260,6 +348,97 @@ export default {
       createError: {
         title: 'Token creation failed'
       }
+    }
+  },
+
+  // Pagination (shared across commands and heartbeats)
+  pagination: {
+    rowsPerPage: 'Rows per page',
+    pageInfo: 'Page {current} of {total}',
+    firstPage: 'Go to first page',
+    previousPage: 'Go to previous page',
+    nextPage: 'Go to next page',
+    lastPage: 'Go to last page'
+  },
+
+  // Commands Tab
+  commands: {
+    title: 'Command History',
+    loading: 'Loading commands...',
+    of: 'of',
+
+    emptyState: {
+      title: 'No Commands Yet',
+      description: 'This satellite hasn\'t received any commands yet.'
+    },
+
+    table: {
+      columns: {
+        time: 'Time',
+        type: 'Type',
+        priority: 'Priority',
+        status: 'Status',
+        retries: 'Retries'
+      }
+    },
+
+    detail: {
+      title: 'Command Details',
+      description: 'View detailed information about this command execution',
+      commandId: 'Command ID',
+      type: 'Type',
+      status: 'Status',
+      priority: 'Priority',
+      payload: 'Payload',
+      result: 'Result',
+      error: 'Error Message',
+      retryCount: 'Retry Count',
+      maxRetries: 'Max Retries',
+      correlationId: 'Correlation ID',
+      targetTeam: 'Target Team',
+      createdBy: 'Created By',
+      createdAt: 'Created At',
+      updatedAt: 'Updated At'
+    }
+  },
+
+  // Heartbeats Tab
+  heartbeats: {
+    title: 'Heartbeat History',
+    loading: 'Loading heartbeats...',
+    of: 'of',
+
+    emptyState: {
+      title: 'No Heartbeats Yet',
+      description: 'This satellite hasn\'t sent any heartbeats yet. Check back in a few minutes.'
+    },
+
+    table: {
+      columns: {
+        time: 'Time',
+        status: 'Status',
+        processes: 'Processes',
+        cpu: 'CPU',
+        memory: 'Memory',
+        responseTime: 'Response Time',
+        uptime: 'Uptime'
+      }
+    },
+
+    detail: {
+      title: 'Heartbeat Details',
+      description: 'View detailed system metrics and health information',
+      heartbeatId: 'Heartbeat ID',
+      status: 'Status',
+      timestamp: 'Timestamp',
+      processes: 'Process Information',
+      total: 'Total',
+      healthy: 'Healthy',
+      errors: 'Errors',
+      systemMetrics: 'System Metrics',
+      responseTime: 'Response Time',
+      uptime: 'Uptime',
+      version: 'Version'
     }
   }
 }

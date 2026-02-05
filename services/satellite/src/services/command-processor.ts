@@ -7,6 +7,10 @@ import { UnifiedToolDiscoveryManager } from './unified-tool-discovery-manager';
 import { RemoteToolDiscoveryManager } from './remote-tool-discovery-manager';
 import { maskUrlForLogging } from '../utils/log-masker';
 import type { EventBus } from './event-bus';
+import { RedeployHandler } from '../lib/redeploy-handler';
+import { CredentialValidationHandler } from '../lib/credential-validation-handler';
+import { RecoveryHandler } from '../lib/recovery-handler';
+import { HealthCheckHandler } from '../lib/health-check-handler';
 
 export interface ProcessInfo {
   id: string;
@@ -36,9 +40,13 @@ export class CommandProcessor {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private onConfigurationUpdate?: (config: any) => Promise<void>;
   private backendStatusCallback?: (installationId: string, status: string, statusMessage?: string) => void;
+  private redeployHandler: RedeployHandler;
+  private credentialValidationHandler: CredentialValidationHandler;
+  private recoveryHandler: RecoveryHandler;
+  private healthCheckHandler: HealthCheckHandler;
 
   constructor(
-    logger: FastifyBaseLogger, 
+    logger: FastifyBaseLogger,
     configManager: DynamicConfigManager,
     processManager?: ProcessManager,
     runtimeState?: RuntimeState,
@@ -49,6 +57,38 @@ export class CommandProcessor {
     this.processManager = processManager || null;
     this.runtimeState = runtimeState || null;
     this.stdioDiscoveryManager = stdioDiscoveryManager || null;
+    this.redeployHandler = new RedeployHandler({
+      logger: this.logger,
+      configManager: this.configManager,
+      processManager: this.processManager,
+      stdioDiscoveryManager: this.stdioDiscoveryManager,
+      remoteToolDiscoveryManager: this.remoteToolDiscoveryManager,
+      onConfigurationUpdate: () => this.onConfigurationUpdate ? this.onConfigurationUpdate({}) : Promise.resolve()
+    });
+    this.credentialValidationHandler = new CredentialValidationHandler({
+      logger: this.logger,
+      configManager: this.configManager,
+      eventBus: this.eventBus
+    });
+    this.recoveryHandler = new RecoveryHandler({
+      logger: this.logger,
+      configManager: this.configManager,
+      remoteToolDiscoveryManager: this.remoteToolDiscoveryManager,
+      eventBus: this.eventBus
+    });
+    this.healthCheckHandler = new HealthCheckHandler({
+      logger: this.logger,
+      configManager: this.configManager,
+      getProcesses: () => this.processes,
+      updateProcessHealth: (processId: string, healthStatus: 'healthy' | 'unhealthy' | 'unknown') => {
+        const processInfo = this.processes.get(processId);
+        if (processInfo) {
+          processInfo.health_status = healthStatus;
+          this.processes.set(processId, processInfo);
+        }
+      },
+      handleCredentialValidation: (command: SatelliteCommand) => this.handleCredentialValidation(command)
+    });
   }
 
   /**
@@ -71,6 +111,22 @@ export class CommandProcessor {
    */
   setRemoteToolDiscoveryManager(manager: RemoteToolDiscoveryManager): void {
     this.remoteToolDiscoveryManager = manager;
+    // Update redeploy handler dependency
+    this.redeployHandler = new RedeployHandler({
+      logger: this.logger,
+      configManager: this.configManager,
+      processManager: this.processManager,
+      stdioDiscoveryManager: this.stdioDiscoveryManager,
+      remoteToolDiscoveryManager: manager,
+      onConfigurationUpdate: () => this.onConfigurationUpdate ? this.onConfigurationUpdate({}) : Promise.resolve()
+    });
+    // Update recovery handler dependency
+    this.recoveryHandler = new RecoveryHandler({
+      logger: this.logger,
+      configManager: this.configManager,
+      remoteToolDiscoveryManager: manager,
+      eventBus: this.eventBus
+    });
   }
 
   /**
@@ -78,6 +134,19 @@ export class CommandProcessor {
    */
   setEventBus(eventBus: EventBus): void {
     this.eventBus = eventBus;
+    // Update credential validation handler dependency
+    this.credentialValidationHandler = new CredentialValidationHandler({
+      logger: this.logger,
+      configManager: this.configManager,
+      eventBus: eventBus
+    });
+    // Update recovery handler dependency
+    this.recoveryHandler = new RecoveryHandler({
+      logger: this.logger,
+      configManager: this.configManager,
+      remoteToolDiscoveryManager: this.remoteToolDiscoveryManager,
+      eventBus: eventBus
+    });
   }
 
   /**
@@ -272,6 +341,11 @@ export class CommandProcessor {
       return await this.handleMcpRecovery(command);
     }
 
+    // Check if this is an mcp_redeploy event (GitHub deployment redeploy)
+    if (payload.event === 'mcp_redeploy') {
+      return await this.handleMcpRedeploy(command);
+    }
+
     // Default behavior: trigger configuration refresh
     this.logger.info({
       operation: 'command_configure',
@@ -423,184 +497,17 @@ export class CommandProcessor {
    * Called when backend detects an HTTP MCP server has recovered via health check
    */
   private async handleMcpRecovery(command: SatelliteCommand): Promise<CommandResult> {
-    const { installation_id, team_id } = command.payload;
+    return await this.recoveryHandler.handleRecovery(command);
+  }
 
-    this.logger.info({
-      operation: 'mcp_recovery_received',
-      command_id: command.id,
-      installation_id,
-      team_id
-    }, `Processing MCP recovery command for installation ${installation_id}`);
-
-    // Validate required fields
-    if (!installation_id) {
-      const errorMsg = 'Missing installation_id in mcp_recovery payload';
-      this.logger.error({
-        operation: 'mcp_recovery_validation_failed',
-        command_id: command.id
-      }, errorMsg);
-
-      return {
-        command_id: command.id,
-        status: 'failed',
-        error: errorMsg
-      };
-    }
-
-    // Find server config by installation_id
-    const currentConfig = this.configManager.getCurrentConfiguration();
-    let serverName: string | null = null;
-    let serverConfig: typeof currentConfig.servers[string] | null = null;
-
-    for (const [name, config] of Object.entries(currentConfig.servers)) {
-      if (config.installation_id === installation_id) {
-        serverName = name;
-        serverConfig = config;
-        break;
-      }
-    }
-
-    if (!serverName || !serverConfig) {
-      this.logger.warn({
-        operation: 'mcp_recovery_server_not_found',
-        command_id: command.id,
-        installation_id
-      }, `Server config not found for installation ${installation_id} - may not be deployed to this satellite`);
-
-      return {
-        command_id: command.id,
-        status: 'completed',
-        result: {
-          message: 'Server not found on this satellite',
-          installation_id
-        }
-      };
-    }
-
-    // Only handle HTTP/SSE servers (not stdio - they're handled via process lifecycle)
-    if (serverConfig.transport_type === 'stdio') {
-      this.logger.debug({
-        operation: 'mcp_recovery_skipped_stdio',
-        command_id: command.id,
-        installation_id,
-        server_name: serverName
-      }, 'Skipping recovery for stdio server - handled via process lifecycle');
-
-      return {
-        command_id: command.id,
-        status: 'completed',
-        result: {
-          message: 'stdio servers do not require recovery re-discovery',
-          installation_id,
-          server_name: serverName
-        }
-      };
-    }
-
-    // Check if RemoteToolDiscoveryManager is available
-    if (!this.remoteToolDiscoveryManager) {
-      const errorMsg = 'RemoteToolDiscoveryManager not available for recovery handling';
-      this.logger.error({
-        operation: 'mcp_recovery_no_manager',
-        command_id: command.id
-      }, errorMsg);
-
-      return {
-        command_id: command.id,
-        status: 'failed',
-        error: errorMsg
-      };
-    }
-
-    // Emit 'connecting' status to backend
-    const validatedTeamId = team_id || serverConfig.team_id || 'unknown';
-    this.emitStatusChange(
-      installation_id,
-      validatedTeamId,
-      serverConfig.user_id || 'unknown',
-      'connecting',
-      'Server recovered, satellite initiating tool re-discovery'
-    );
-
-    try {
-      // Emit 'discovering_tools' status
-      this.emitStatusChange(
-        installation_id,
-        validatedTeamId,
-        serverConfig.user_id || 'unknown',
-        'discovering_tools',
-        'Re-discovering tools after server recovery'
-      );
-
-      // Trigger tool re-discovery
-      const startTime = Date.now();
-      const tools = await this.remoteToolDiscoveryManager.discoverServerTools(serverName);
-      const discoveryTimeMs = Date.now() - startTime;
-
-      // Emit 'online' status on success
-      this.emitStatusChange(
-        installation_id,
-        validatedTeamId,
-        serverConfig.user_id || 'unknown',
-        'online',
-        `Server recovered with ${tools.length} tools`
-      );
-
-      this.logger.info({
-        operation: 'mcp_recovery_success',
-        command_id: command.id,
-        installation_id,
-        server_name: serverName,
-        tools_discovered: tools.length,
-        discovery_time_ms: discoveryTimeMs
-      }, `MCP recovery successful: ${serverName} with ${tools.length} tools (${discoveryTimeMs}ms)`);
-
-      return {
-        command_id: command.id,
-        status: 'completed',
-        result: {
-          installation_id,
-          server_name: serverName,
-          tools_discovered: tools.length,
-          discovery_time_ms: discoveryTimeMs
-        }
-      };
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      // Determine appropriate error status
-      const { status, message } = RemoteToolDiscoveryManager.getStatusFromError(errorMessage);
-
-      // Emit error status to backend
-      this.emitStatusChange(
-        installation_id,
-        validatedTeamId,
-        serverConfig.user_id || 'unknown',
-        status,
-        message
-      );
-
-      this.logger.error({
-        operation: 'mcp_recovery_failed',
-        command_id: command.id,
-        installation_id,
-        server_name: serverName,
-        error: errorMessage,
-        resulting_status: status
-      }, `MCP recovery failed for ${serverName}: ${errorMessage}`);
-
-      return {
-        command_id: command.id,
-        status: 'failed',
-        error: errorMessage,
-        result: {
-          installation_id,
-          server_name: serverName,
-          resulting_status: status
-        }
-      };
-    }
+  /**
+   * Handle mcp_redeploy event - force restart for GitHub deployment redeploy
+   * Called when user clicks "Redeploy" button on GitHub-deployed MCP servers
+   * Forces restart even if SHA/config is unchanged
+   * Stops ALL user instances for the installation and downloads fresh code
+   */
+  private async handleMcpRedeploy(command: SatelliteCommand): Promise<CommandResult> {
+    return await this.redeployHandler.handleRedeploy(command);
   }
 
   /**
@@ -960,63 +867,7 @@ export class CommandProcessor {
    * 2. Credential validation: Check specific installation's credentials via tools/list
    */
   private async handleHealthCheckCommand(command: SatelliteCommand): Promise<CommandResult> {
-    const payload = command.payload;
-
-    // Check if this is a credential validation request 
-    if (payload.check_type === 'credential_validation' && payload.installation_id) {
-      return await this.handleCredentialValidation(command);
-    }
-
-    // Default: General health check
-    this.logger.debug({
-      operation: 'command_health_check',
-      command_id: command.id
-    }, 'Processing health check command');
-
-    const healthResults: Array<{
-      server_name: string;
-      process_id: string;
-      status: string;
-      health_status: string;
-      response_time_ms?: number;
-      error?: string;
-    }> = [];
-
-    // Check health of all running processes
-    for (const [processId, processInfo] of this.processes.entries()) {
-      if (processInfo.status === 'running') {
-        const healthResult = await this.checkServerHealth(processInfo);
-        healthResults.push({
-          server_name: processInfo.server_name,
-          process_id: processId,
-          status: processInfo.status,
-          health_status: healthResult.health_status,
-          response_time_ms: healthResult.response_time_ms,
-          error: healthResult.error
-        });
-
-        // Update process health status
-        processInfo.health_status = healthResult.health_status;
-        this.processes.set(processId, processInfo);
-      }
-    }
-
-    this.logger.info({
-      operation: 'health_check_completed',
-      command_id: command.id,
-      servers_checked: healthResults.length,
-      healthy_servers: healthResults.filter(r => r.health_status === 'healthy').length
-    }, `Health check completed: ${healthResults.length} servers checked`);
-
-    return {
-      command_id: command.id,
-      status: 'completed',
-      result: {
-        health_check_results: healthResults,
-        total_servers: healthResults.length,
-        healthy_servers: healthResults.filter(r => r.health_status === 'healthy').length
-      }
-    };
+    return await this.healthCheckHandler.handleHealthCheck(command);
   }
 
   /**
@@ -1099,323 +950,19 @@ export class CommandProcessor {
    * Tries to call tools/list with the installation's credentials
    */
   private async handleCredentialValidation(command: SatelliteCommand): Promise<CommandResult> {
-    const { installation_id } = command.payload;
-
-    // Validate installation_id is present
-    if (!installation_id) {
-      this.logger.warn({
-        operation: 'credential_validation_missing_id',
-        command_id: command.id
-      }, 'Credential validation command missing installation_id');
-
-      return {
-        command_id: command.id,
-        status: 'completed',
-        result: {
-          credential_validation: {
-            valid: false,
-            error: 'Missing installation_id in command payload'
-          }
-        }
-      };
-    }
-
-    this.logger.debug({
-      operation: 'credential_validation',
-      command_id: command.id,
-      installation_id
-    }, 'Processing credential validation command');
-
-    // Find server config by installation_id
-    const currentConfig = this.configManager.getCurrentConfiguration();
-    let serverConfig: typeof currentConfig.servers[string] | null = null;
-    let serverName: string | null = null;
-    let teamId: string | null = null;
-
-    for (const [name, config] of Object.entries(currentConfig.servers)) {
-      if (config.installation_id === installation_id) {
-        serverConfig = config;
-        serverName = name;
-        teamId = config.team_id ?? null;
-        break;
-      }
-    }
-
-    if (!serverConfig || !serverName || !teamId) {
-      this.logger.warn({
-        operation: 'credential_validation_config_not_found',
-        command_id: command.id,
-        installation_id
-      }, `Server config not found for installation ${installation_id}`);
-
-      return {
-        command_id: command.id,
-        status: 'completed',
-        result: {
-          credential_validation: {
-            installation_id,
-            valid: false,
-            error: 'Server configuration not found on this satellite'
-          }
-        }
-      };
-    }
-
-    // After validation, these are guaranteed to be non-null
-    const validatedTeamId: string = teamId;
-
-    // Only validate HTTP/SSE servers (stdio uses different patterns)
-    if (serverConfig.transport_type === 'stdio') {
-      this.logger.debug({
-        operation: 'credential_validation_skipped_stdio',
-        command_id: command.id,
-        installation_id,
-        server_name: serverName
-      }, 'Skipping credential validation for stdio server');
-
-      return {
-        command_id: command.id,
-        status: 'completed',
-        result: {
-          credential_validation: {
-            installation_id,
-            valid: true, // stdio servers don't have HTTP credentials to validate
-            skipped: true,
-            reason: 'stdio_transport'
-          }
-        }
-      };
-    }
-
-    // Validate URL exists
-    if (!serverConfig.url) {
-      return {
-        command_id: command.id,
-        status: 'completed',
-        result: {
-          credential_validation: {
-            installation_id,
-            valid: false,
-            error: 'No URL configured for server'
-          }
-        }
-      };
-    }
-
-    const startTime = Date.now();
-
-    try {
-      // Try to call tools/list with credentials
-      const response = await fetch(serverConfig.url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...serverConfig.headers
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 'credential-validation',
-          method: 'tools/list',
-          params: {}
-        }),
-        signal: AbortSignal.timeout(serverConfig.timeout || 15000)
-      });
-
-      const responseTime = Date.now() - startTime;
-
-      if (response.ok) {
-        // Check if response is valid JSON-RPC
-        const responseData = await response.json() as { error?: { message?: string } };
-
-        if (responseData.error) {
-          // JSON-RPC error (could be auth failure)
-          const errorMessage = responseData.error.message ?? 'Unknown error';
-          const isAuthError = errorMessage.toLowerCase().includes('auth') ||
-                              errorMessage.toLowerCase().includes('unauthorized') ||
-                              errorMessage.toLowerCase().includes('forbidden') ||
-                              response.status === 401 ||
-                              response.status === 403;
-
-          this.logger.info({
-            operation: 'credential_validation_failed',
-            command_id: command.id,
-            installation_id,
-            server_name: serverName,
-            error: errorMessage,
-            is_auth_error: isAuthError,
-            response_time_ms: responseTime
-          }, `Credential validation failed for ${serverName}: ${errorMessage}`);
-
-          if (isAuthError) {
-            // Emit requires_reauth status
-            this.emitStatusChange(installation_id, validatedTeamId, serverConfig.user_id || 'unknown', 'requires_reauth', errorMessage);
-          }
-
-          return {
-            command_id: command.id,
-            status: 'completed',
-            result: {
-              credential_validation: {
-                installation_id,
-                valid: false,
-                error: errorMessage,
-                needs_reauth: isAuthError,
-                response_time_ms: responseTime
-              }
-            }
-          };
-        }
-
-        // Success - credentials are valid
-        this.logger.info({
-          operation: 'credential_validation_success',
-          command_id: command.id,
-          installation_id,
-          server_name: serverName,
-          response_time_ms: responseTime
-        }, `Credential validation passed for ${serverName}`);
-
-        return {
-          command_id: command.id,
-          status: 'completed',
-          result: {
-            credential_validation: {
-              installation_id,
-              valid: true,
-              response_time_ms: responseTime
-            }
-          }
-        };
-      } else {
-        // HTTP error
-        const isAuthError = response.status === 401 || response.status === 403;
-        const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-
-        this.logger.info({
-          operation: 'credential_validation_http_error',
-          command_id: command.id,
-          installation_id,
-          server_name: serverName,
-          status_code: response.status,
-          is_auth_error: isAuthError,
-          response_time_ms: responseTime
-        }, `Credential validation HTTP error for ${serverName}: ${errorMessage}`);
-
-        if (isAuthError) {
-          // Emit requires_reauth status
-          this.emitStatusChange(installation_id, validatedTeamId, serverConfig.user_id || 'unknown', 'requires_reauth', errorMessage);
-        }
-
-        return {
-          command_id: command.id,
-          status: 'completed',
-          result: {
-            credential_validation: {
-              installation_id,
-              valid: false,
-              error: errorMessage,
-              needs_reauth: isAuthError,
-              response_time_ms: responseTime
-            }
-          }
-        };
-      }
-    } catch (error) {
-      const responseTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-      this.logger.error({
-        operation: 'credential_validation_error',
-        command_id: command.id,
-        installation_id,
-        server_name: serverName,
-        error: errorMessage,
-        response_time_ms: responseTime
-      }, `Credential validation error for ${serverName}: ${errorMessage}`);
-
-      return {
-        command_id: command.id,
-        status: 'completed',
-        result: {
-          credential_validation: {
-            installation_id,
-            valid: false,
-            error: errorMessage,
-            response_time_ms: responseTime
-          }
-        }
-      };
-    }
+    return await this.credentialValidationHandler.handleValidation(command);
   }
 
   /**
    * Check health of a specific HTTP MCP server
+   * @deprecated Use healthCheckHandler.checkServerHealth() instead
    */
   private async checkServerHealth(processInfo: ProcessInfo): Promise<{
     health_status: 'healthy' | 'unhealthy' | 'unknown';
     response_time_ms?: number;
     error?: string;
   }> {
-    const serverConfig = this.configManager.getMcpServerConfig(processInfo.server_name);
-    if (!serverConfig) {
-      return {
-        health_status: 'unknown',
-        error: 'Server configuration not found'
-      };
-    }
-
-    const startTime = Date.now();
-
-    try {
-      // Validate URL for HTTP/SSE transport
-      if (!serverConfig.url) {
-        return {
-          health_status: 'unknown',
-          error: 'No URL configured for health check'
-        };
-      }
-
-      // Perform a simple health check by sending a tools/list request
-      const response = await fetch(serverConfig.url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...serverConfig.headers
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 'health-check',
-          method: 'tools/list',
-          params: {}
-        }),
-        signal: AbortSignal.timeout(serverConfig.timeout || 10000)
-      });
-
-      const responseTime = Date.now() - startTime;
-
-      if (response.ok) {
-        return {
-          health_status: 'healthy',
-          response_time_ms: responseTime
-        };
-      } else {
-        return {
-          health_status: 'unhealthy',
-          response_time_ms: responseTime,
-          error: `HTTP ${response.status}: ${response.statusText}`
-        };
-      }
-
-    } catch (error) {
-      const responseTime = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-      return {
-        health_status: 'unhealthy',
-        response_time_ms: responseTime,
-        error: errorMessage
-      };
-    }
+    return await this.healthCheckHandler.checkServerHealth(processInfo);
   }
 
   /**

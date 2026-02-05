@@ -55,7 +55,10 @@ const CONFIG_RESPONSE_SCHEMA = {
               env: { type: 'array', items: { type: 'string' }, description: 'Names of environment variables that are secrets (should be masked in logs)' }
             },
             description: 'Metadata about which fields contain secrets and should be masked in satellite logs'
-          }
+          },
+          git_commit_sha: { type: 'string', description: 'Git commit SHA for GitHub deployments (used to reconstruct args dynamically)' },
+          repository_url: { type: 'string', description: 'GitHub repository URL for GitHub deployments' },
+          git_branch: { type: 'string', description: 'Git branch name for GitHub deployments' }
         },
         required: ['installation_id', 'team_id', 'server_name', 'transport_type', 'enabled']
       },
@@ -179,6 +182,10 @@ interface McpServerConfig {
     headers?: string[];
     env?: string[];
   };
+  // GitHub deployment fields - Critical for dynamic args reconstruction
+  git_commit_sha?: string; // Current commit SHA for GitHub deployments
+  repository_url?: string; // GitHub repository URL
+  git_branch?: string; // Git branch name
 }
 
 interface ConfigResponse {
@@ -427,6 +434,10 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
 
         // Process configuration for EACH team member (per-user instances)
         for (const member of teamMembers) {
+          // Declare instance variables before try block so they're accessible in catch block
+          let instanceId: string | undefined;
+          let instanceStatus: string | undefined;
+
           try {
             // Create unique per-user process identifier: {server_slug}-{team_slug}-{user_id}-{installation_id}
             const processId = `${server.slug}-${team_slug}-${member.id}-${installation.id}`;
@@ -692,8 +703,6 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
           }
 
           // Query instance_id and status for this installation + user
-          let instanceId: string | undefined;
-          let instanceStatus: string | undefined;
           try {
             const { mcpServerInstances } = getSchema();
             const instances = await db
@@ -746,16 +755,21 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             // Per-user instance fields
             user_id: member.id,
             user_slug: member.id,
+            instance_status: instanceStatus,
             // OAuth support for HTTP/SSE MCP servers
             requires_oauth: server.requires_oauth || false,
             // Source (for GitHub detection)
             source: server.source as 'manual' | 'github' | 'official_registry' | null,
             // Language and runtime from mcpServers table
             language: server.language || undefined,
-            runtime: server.runtime || undefined
+            runtime: server.runtime || undefined,
+            // GitHub deployment fields for dynamic args reconstruction
+            git_commit_sha: server.git_commit_sha || undefined,
+            repository_url: server.repository_url || undefined,
+            git_branch: server.git_branch || undefined
           };
 
-          // DEBUG: Log source field being sent to satellite
+          // DEBUG: Log source field and GitHub fields being sent to satellite
           request.log.debug({
             operation: 'config_source_field_debug',
             server_id: server.id,
@@ -766,6 +780,23 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             source_type: typeof server.source,
             source_in_config: serverConfig.source
           }, `Backend config: server.source='${server.source}' (type: ${typeof server.source}) -> config.source='${serverConfig.source}'`);
+
+          // DEBUG: Log GitHub deployment fields for dynamic reconstruction
+          request.log.trace({
+            operation: 'config_github_fields_sent',
+            server_id: server.id,
+            server_slug: server.slug,
+            installation_id: installation.id,
+            user_id: member.id,
+            source: server.source,
+            git_commit_sha: server.git_commit_sha,
+            git_commit_sha_type: typeof server.git_commit_sha,
+            repository_url: server.repository_url,
+            git_branch: server.git_branch,
+            final_args: serverConfig.args,
+            serverConfig_git_commit_sha: serverConfig.git_commit_sha,
+            serverConfig_source: serverConfig.source
+          }, `GitHub deployment config: SHA='${server.git_commit_sha}' -> config.SHA='${serverConfig.git_commit_sha}'`);
 
           if (server.transport_type === 'stdio') {
             // For stdio transport, use the processed command and args
@@ -1053,6 +1084,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             const processId = `${server.slug}-${team_slug}-${member.id}-${installation.id}`;
             mcpServerConfigs[processId] = {
               installation_id: installation.id,
+              instance_id: instanceId,
               team_id: installation.team_id,
               team_slug: team_slug,
               server_name: server.name,
@@ -1061,7 +1093,10 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
               transport_type: server.transport_type as 'stdio' | 'http' | 'sse',
               user_id: member.id,
               user_slug: member.id,
+              instance_status: instanceStatus,
               enabled: false, // Disabled due to processing error
+              requires_oauth: server.requires_oauth || false,
+              source: server.source as 'manual' | 'github' | 'official_registry' | null,
               language: server.language || undefined,
               runtime: server.runtime || undefined
             };

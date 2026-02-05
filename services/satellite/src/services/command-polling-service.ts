@@ -68,6 +68,10 @@ export interface McpServerConfig {
   /** OAuth support - Only for HTTP/SSE transport */
   requires_oauth?: boolean;
   user_id?: string; // User who authorized the OAuth connection OR per-user instance owner
+  user_slug?: string; // User slug for identification
+
+  /** Instance status from mcpServerInstances table */
+  instance_status?: string;
 
   /** Installation settings */
   settings?: {
@@ -98,6 +102,11 @@ export interface McpServerConfig {
   github_owner?: string;
   github_repo?: string;
   github_ref?: string;
+
+  /** GitHub deployment fields for dynamic args reconstruction */
+  git_commit_sha?: string; // Current commit SHA from mcpServers table (updated on redeploy)
+  repository_url?: string; // GitHub repository URL
+  git_branch?: string;     // Git branch name
 
   /** Temporary directory path (for cleanup after process termination) */
   temp_dir?: string;

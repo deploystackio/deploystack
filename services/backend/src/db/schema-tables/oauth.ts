@@ -17,6 +17,7 @@ export const oauthAuthorizationCodes = pgTable('oauth_authorization_codes', {
   code_challenge: text('code_challenge').notNull(),
   code_challenge_method: text('code_challenge_method').notNull(),
   code: text('code').notNull().unique(),
+  resource: text('resource'), // RFC 8707 Resource Indicator for audience binding
   used: boolean('used').notNull().default(false),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   expires_at: timestamp('expires_at', { withTimezone: true }).notNull(),

@@ -6,11 +6,14 @@ export interface Satellite {
   satellite_type: 'global' | 'team'
   status: 'active' | 'inactive' | 'maintenance' | 'error'
   capabilities: string[]
+  satellite_url: string
+  region: string | null
   last_heartbeat: string | null
   system_info: {
     os?: string
     arch?: string
-    memory?: string
+    node_version?: string
+    memory_mb?: number
   }
   created_at: string
   updated_at: string
@@ -76,6 +79,80 @@ export interface TeamSatellitesResponse {
   }
 }
 
+// Command types
+export interface SatelliteCommand {
+  id: string
+  satellite_id: string
+  command_type: 'spawn' | 'kill' | 'restart' | 'configure' | 'health_check' | 'invalidate_user_token_cache'
+  priority: 'immediate' | 'high' | 'normal' | 'low'
+  payload: string // JSON string
+  status: 'pending' | 'acknowledged' | 'executing' | 'completed' | 'failed'
+  target_team_id: string | null
+  correlation_id: string | null
+  retry_count: number
+  max_retries: number
+  error_message: string | null
+  result: string | null // JSON string
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CommandsPagination {
+  total: number
+  limit: number
+  offset: number
+  has_more: boolean
+}
+
+export interface ListCommandsResponse {
+  success: boolean
+  data: {
+    commands: SatelliteCommand[]
+    pagination: CommandsPagination
+  }
+}
+
+// Heartbeat types
+export interface SatelliteHeartbeat {
+  id: string
+  satellite_id: string
+  status: 'active' | 'degraded' | 'error'
+  system_metrics: string // JSON string
+  process_count: number
+  healthy_process_count: number
+  error_count: number
+  response_time_ms: number | null
+  uptime_seconds: number | null
+  version: string | null
+  timestamp: string
+}
+
+export interface SystemMetrics {
+  cpu: number
+  memory: number
+  disk: number
+  network?: {
+    rx: number
+    tx: number
+  }
+}
+
+export interface HeartbeatsPagination {
+  total: number
+  limit: number
+  offset: number
+  has_more: boolean
+}
+
+export interface ListHeartbeatsResponse {
+  success: boolean
+  data: {
+    heartbeats: SatelliteHeartbeat[]
+    pagination: HeartbeatsPagination
+  }
+}
+
 export class SatelliteService {
   private static baseUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
   private static cache: Map<string, { data: SatelliteListResponse; timestamp: number }> = new Map()
@@ -87,6 +164,39 @@ export class SatelliteService {
 
   private static isCacheValid(timestamp: number): boolean {
     return Date.now() - timestamp < this.CACHE_DURATION
+  }
+
+  static async getSatelliteById(id: string): Promise<Satellite> {
+    try {
+      const url = `${this.baseUrl}/api/satellites/manage/${id}`
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required')
+        }
+        if (response.status === 403) {
+          throw new Error('Insufficient permissions to view satellite')
+        }
+        if (response.status === 404) {
+          throw new Error('Satellite not found')
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      return result.data
+    } catch (error) {
+      console.error('Failed to fetch satellite:', error)
+      throw error
+    }
   }
 
   static async getSatellites(params: SatelliteListParams = {}, forceRefresh = false): Promise<SatelliteListResponse> {
@@ -186,6 +296,99 @@ export class SatelliteService {
     }
   }
 
+  static async updateSatellite(
+    satelliteId: string,
+    updates: {
+      name?: string
+      status?: Satellite['status']
+      capabilities?: string[]
+      satellite_url?: string
+      region?: string | null
+    }
+  ): Promise<{ success: boolean; data: Satellite }> {
+    try {
+      const url = `${this.baseUrl}/api/satellites/manage/${satelliteId}`
+
+      const response = await fetch(url, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required')
+        }
+        if (response.status === 403) {
+          throw new Error('Insufficient permissions to manage satellites')
+        }
+        if (response.status === 404) {
+          throw new Error('Satellite not found')
+        }
+        if (response.status === 400) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Invalid update data')
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+
+      // Clear cache to ensure fresh data on next fetch
+      this.clearCache()
+
+      return data
+    } catch (error) {
+      console.error('Failed to update satellite:', error)
+      throw error
+    }
+  }
+
+  static async deleteSatellite(satelliteId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const url = `${this.baseUrl}/api/satellites/manage/${satelliteId}`
+
+      const response = await fetch(url, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required')
+        }
+        if (response.status === 403) {
+          throw new Error('Insufficient permissions to delete satellites')
+        }
+        if (response.status === 404) {
+          throw new Error('Satellite not found')
+        }
+        if (response.status === 400) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Satellite must be inactive before deletion')
+        }
+        if (response.status === 409) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Satellite has active MCP installations')
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+
+      // Clear cache to ensure fresh data on next fetch
+      this.clearCache()
+
+      return data
+    } catch (error) {
+      console.error('Failed to delete satellite:', error)
+      throw error
+    }
+  }
+
   static async getTeamSatellites(teamId: string): Promise<TeamSatellitesResponse> {
     try {
       const url = `${this.baseUrl}/api/teams/${teamId}/satellites`
@@ -266,6 +469,104 @@ export class SatelliteService {
         return 'secondary'
       default:
         return 'secondary'
+    }
+  }
+
+  /**
+   * List satellite commands with pagination
+   */
+  static async listCommands(
+    satelliteId: string,
+    options: { limit?: number; offset?: number } = {}
+  ): Promise<ListCommandsResponse> {
+    try {
+      const params = new URLSearchParams()
+
+      if (options.limit !== undefined) {
+        params.append('limit', options.limit.toString())
+      }
+      if (options.offset !== undefined) {
+        params.append('offset', options.offset.toString())
+      }
+
+      const queryString = params.toString()
+      const url = `${this.baseUrl}/api/satellites/manage/${satelliteId}/commands${queryString ? `?${queryString}` : ''}`
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required')
+        }
+        if (response.status === 403) {
+          throw new Error('Insufficient permissions')
+        }
+        if (response.status === 404) {
+          throw new Error('Satellite not found')
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data: ListCommandsResponse = await response.json()
+      return data
+    } catch (error) {
+      console.error('Failed to fetch satellite commands:', error)
+      throw error
+    }
+  }
+
+  /**
+   * List satellite heartbeats with pagination
+   */
+  static async listHeartbeats(
+    satelliteId: string,
+    options: { limit?: number; offset?: number } = {}
+  ): Promise<ListHeartbeatsResponse> {
+    try {
+      const params = new URLSearchParams()
+
+      if (options.limit !== undefined) {
+        params.append('limit', options.limit.toString())
+      }
+      if (options.offset !== undefined) {
+        params.append('offset', options.offset.toString())
+      }
+
+      const queryString = params.toString()
+      const url = `${this.baseUrl}/api/satellites/manage/${satelliteId}/heartbeats${queryString ? `?${queryString}` : ''}`
+
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication required')
+        }
+        if (response.status === 403) {
+          throw new Error('Insufficient permissions')
+        }
+        if (response.status === 404) {
+          throw new Error('Satellite not found')
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const data: ListHeartbeatsResponse = await response.json()
+      return data
+    } catch (error) {
+      console.error('Failed to fetch satellite heartbeats:', error)
+      throw error
     }
   }
 }

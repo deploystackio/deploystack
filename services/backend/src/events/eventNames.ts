@@ -42,6 +42,10 @@ export const EVENT_NAMES = {
   MCP_DEPLOYMENT_SUCCEEDED: 'mcp.deployment_succeeded', // deployment completed successfully
   MCP_DEPLOYMENT_FAILED: 'mcp.deployment_failed',       // deployment failed with error
 
+  // Satellite Events (aligned with satellites.* permissions)
+  SATELLITE_UPDATED: 'satellite.updated',               // matches satellites.manage permission
+  SATELLITE_DELETED: 'satellite.deleted',               // matches satellites.delete permission
+
   // System Events
   SYSTEM_STARTUP: 'system.startup',
   SYSTEM_SHUTDOWN: 'system.shutdown',

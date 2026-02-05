@@ -20,6 +20,7 @@ import type { McpInstallation, InstallationStatusData } from '@/types/mcp-instal
 interface Props {
   installation: McpInstallation
   statusData: InstallationStatusData | null
+  userTeamRole: 'team_admin' | 'team_user' | null
 }
 
 const props = defineProps<Props>()
@@ -357,7 +358,7 @@ onUnmounted(() => {
     </DsCard>
 
     <!-- Deployment Info (GitHub only) -->
-    <DeploymentInfoCard :installation="installation" />
+    <DeploymentInfoCard :installation="installation" :user-team-role="userTeamRole" @refresh="emit('refresh')" />
 
     <!-- Installation Details Card -->
     <DsCard title="Details">

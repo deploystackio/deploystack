@@ -26,22 +26,42 @@ export default async function oauthDiscoveryRoutes(server: FastifyInstance) {
             authorization_servers: {
               type: 'array',
               items: { type: 'string' }
-            }
+            },
+            scopes_supported: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            bearer_methods_supported: {
+              type: 'array',
+              items: { type: 'string' }
+            },
+            resource_documentation: { type: 'string' }
           }
         }
       }
     }
   }, async (request, reply) => {
+    // Append /mcp to resource URL for RFC 8707 audience binding
+    // This fixes Gemini CLI audience mismatch (expects https://satellite.deploystack.io/mcp)
+    const resourceUrl = `${satelliteUrl}/mcp`;
+
+    // Resource documentation URL from environment, defaults to DeployStack docs
+    const resourceDocumentation = process.env.DEPLOYSTACK_RESOURCE_DOCUMENTATION || 'https://docs.deploystack.io/';
+
     const metadata = {
-      resource: satelliteUrl,
-      authorization_servers: [backendPublicUrl]
+      resource: resourceUrl,
+      authorization_servers: [backendPublicUrl],
+      scopes_supported: ['mcp:read', 'mcp:tools:execute'],
+      bearer_methods_supported: ['header'],
+      resource_documentation: resourceDocumentation
     };
 
     server.log.debug({
       operation: 'oauth_protected_resource_metadata',
       resource: metadata.resource,
-      authorization_servers: metadata.authorization_servers
-    }, 'Serving OAuth 2.0 Protected Resource Metadata');
+      authorization_servers: metadata.authorization_servers,
+      scopes_supported: metadata.scopes_supported
+    }, 'Serving RFC 9728 Protected Resource Metadata');
 
     const jsonString = JSON.stringify(metadata);
     return reply.status(200).type('application/json').send(jsonString);

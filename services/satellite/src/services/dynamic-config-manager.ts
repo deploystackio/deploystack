@@ -67,6 +67,19 @@ export class DynamicConfigManager {
       // Process MCP server configurations (silently build new config)
       if (configUpdate.mcp_servers) {
         for (const [serverName, serverConfig] of Object.entries(configUpdate.mcp_servers)) {
+          // DEBUG: Log GitHub fields received from backend
+          if (serverConfig.source === 'github') {
+            this.logger.trace({
+              operation: 'config_github_fields_received',
+              server_name: serverName,
+              source: serverConfig.source,
+              git_commit_sha: serverConfig.git_commit_sha,
+              repository_url: serverConfig.repository_url,
+              git_branch: serverConfig.git_branch,
+              args: serverConfig.args
+            }, `Satellite received GitHub config with SHA: ${serverConfig.git_commit_sha}`);
+          }
+
           // Validate server configuration
           if (this.validateServerConfig(serverName, serverConfig)) {
             newConfig.servers[serverName] = {
@@ -334,6 +347,17 @@ export class DynamicConfigManager {
     for (const serverName of newServerNames) {
       const oldServer = oldConfig.servers[serverName];
       const newServer = newConfig.servers[serverName];
+
+      // Explicit status-based restart detection
+      if (newServer.instance_status === 'restarting') {
+        this.logger.info({
+          operation: 'config_force_restart',
+          server_name: serverName,
+          instance_status: newServer.instance_status,
+          old_status: oldServer?.instance_status
+        }, 'Force restart: instance status is restarting');
+        return true;
+      }
 
       if (JSON.stringify(oldServer) !== JSON.stringify(newServer)) {
         return true;

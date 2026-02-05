@@ -135,7 +135,7 @@ function getPackageManagerConfig(
   runtime: Runtime,
   owner: string,
   repo: string,
-  commitSha: string
+  commitSha: string // Still needed for packages.transport.args (legacy)
 ): {
   command: string;
   args: string[];
@@ -145,18 +145,22 @@ function getPackageManagerConfig(
     case 'node':
       return {
         command: 'npx',
-        args: ['-y', `github:${owner}/${repo}#${commitSha}`],
+        args: ['-y', `github:${owner}/${repo}#${commitSha}`], // Legacy packages field
         templateArgs: [
           { value: '-y', locked: true, description: 'Auto-confirm npx', order: 0 },
-          { value: `github:${owner}/${repo}#${commitSha}`, locked: true, description: 'GitHub package reference', order: 1 }
+          // CRITICAL FIX: Store owner/repo WITHOUT commitSha
+          // Satellite will reconstruct full ref from git_commit_sha field
+          { value: `github:${owner}/${repo}`, locked: true, description: 'GitHub repository reference (SHA added dynamically)', order: 1 }
         ]
       };
     case 'python':
       return {
         command: 'uvx',
-        args: [`git+https://github.com/${owner}/${repo}.git@${commitSha}`],
+        args: [`git+https://github.com/${owner}/${repo}.git@${commitSha}`], // Legacy packages field
         templateArgs: [
-          { value: `git+https://github.com/${owner}/${repo}.git@${commitSha}`, locked: true, description: 'GitHub package reference', order: 0 }
+          // CRITICAL FIX: Store owner/repo WITHOUT commitSha
+          // Satellite will reconstruct full ref from git_commit_sha field
+          { value: `git+https://github.com/${owner}/${repo}.git`, locked: true, description: 'GitHub repository reference (SHA added dynamically)', order: 0 }
         ]
       };
     case 'go':

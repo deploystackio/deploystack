@@ -131,7 +131,7 @@ describe('Request Logger Hooks', () => {
 
       onRequestHook(mockRequest, mockReply, done)
 
-      expect(mockRequest.log!.info).toHaveBeenCalledWith(
+      expect(mockRequest.log!.trace).toHaveBeenCalledWith(
         {
           url: '/api/test',
           method: 'GET',
@@ -159,7 +159,7 @@ describe('Request Logger Hooks', () => {
 
       onResponseHook(mockRequest, mockReply, done)
 
-      expect(mockRequest.log!.info).toHaveBeenCalledWith(
+      expect(mockRequest.log!.trace).toHaveBeenCalledWith(
         expect.objectContaining({
           durationMs: 500
         }),
@@ -177,7 +177,7 @@ describe('Request Logger Hooks', () => {
 
       onResponseHook(mockRequest, mockReply, done)
 
-      expect(mockRequest.log!.info).toHaveBeenCalledWith(
+      expect(mockRequest.log!.trace).toHaveBeenCalledWith(
         {
           url: '/api/test',
           method: 'GET',
@@ -197,7 +197,7 @@ describe('Request Logger Hooks', () => {
 
       onResponseHook(mockRequest, mockReply, done)
 
-      expect(mockRequest.log!.info).toHaveBeenCalledWith(
+      expect(mockRequest.log!.trace).toHaveBeenCalledWith(
         expect.objectContaining({
           durationMs: expect.any(Number)
         }),
@@ -232,7 +232,7 @@ describe('Request Logger Hooks', () => {
       onResponseHook(mockRequest, mockReply, responseDone)
       
       // Verify response logging
-      expect(mockRequest.log!.info).toHaveBeenCalledWith(
+      expect(mockRequest.log!.trace).toHaveBeenCalledWith(
         {
           url: '/api/test',
           method: 'GET',

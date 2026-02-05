@@ -4,6 +4,7 @@ import { DeploymentGitHubService } from '../../../services/deploymentGitHubServi
 import { DeploymentCredentialService } from '../../../services/deploymentCredentialService';
 import { getDb } from '../../../db';
 import { GlobalSettings } from '../../../global-settings/helpers';
+import { fetchRepositoryBranches } from '../../../lib/deployment/github-branch-fetcher';
 
 // Reusable schema constants
 const CONNECTION_STATUS_RESPONSE_SCHEMA = {
@@ -556,39 +557,17 @@ export default async function deployGitHubRoutes(server: FastifyInstance) {
         return reply.status(400).type('application/json').send(jsonString);
       }
 
-      // Generate ephemeral installation token
-      const accessToken = await githubService.createInstallationAccessToken(installation.installationId);
-      const { Octokit } = await import('@octokit/rest');
-      const octokit = new Octokit({ auth: accessToken });
-
-      // Get repository details for default branch
-      const { data: repoData } = await octokit.repos.get({ owner, repo });
-
-      // Check if repository is empty (only check for default branch, not size)
-      // Note: GitHub's size field is in KB and can be 0 for very small repos
-      if (!repoData.default_branch) {
-        const errorResponse: ErrorResponse = {
-          success: false,
-          error: `Repository ${owner}/${repo} is empty. Please push code to the repository before deploying.`
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
-
-      // List branches
-      const { data: branches } = await octokit.repos.listBranches({
+      // Use shared utility to fetch branches
+      const branchesResult = await fetchRepositoryBranches(
         owner,
         repo,
-        per_page: 100
-      });
+        installation.installationId,
+        githubService
+      );
 
       const response: BranchesResponse = {
-        branches: branches.map(branch => ({
-          name: branch.name,
-          commit_sha: branch.commit.sha,
-          protected: branch.protected
-        })),
-        default_branch: repoData.default_branch
+        branches: branchesResult.branches,
+        default_branch: branchesResult.default_branch
       };
 
       const jsonString = JSON.stringify(response);

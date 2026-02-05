@@ -78,7 +78,7 @@ export class IntrospectionService {
         client_id: tokenPayload.clientId,
         username: tokenPayload.user.username,
         sub: tokenPayload.user.id,
-        aud: [`deploystack:team:${tokenPayload.team_id}`], // Generic team audience for round-robin satellites
+        aud: tokenPayload.aud || [`deploystack:team:${tokenPayload.team_id}`], // RFC 8707 audience or fallback to generic team
         iss: backendUrl, // Dynamic backend URL
         exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
         iat: Math.floor(Date.now() / 1000),

@@ -434,6 +434,27 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/admin/satellites/pairing/index.vue'),
       },
       {
+        path: 'satellites/:id',
+        redirect: (to) => `/admin/satellites/${to.params.id}/general`,
+        children: [
+          {
+            path: 'general',
+            name: 'AdminSatelliteGeneral',
+            component: () => import('../views/admin/satellites/[id]/general.vue'),
+          },
+          {
+            path: 'commands',
+            name: 'AdminSatelliteCommands',
+            component: () => import('../views/admin/satellites/[id]/commands.vue'),
+          },
+          {
+            path: 'heartbeats',
+            name: 'AdminSatelliteHeartbeats',
+            component: () => import('../views/admin/satellites/[id]/heartbeats.vue'),
+          },
+        ],
+      },
+      {
         path: 'jobs',
         name: 'AdminJobs',
         component: () => import('../views/admin/jobs/index.vue'),
