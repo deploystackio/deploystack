@@ -42,6 +42,12 @@ export const CLIENT_TYPES: readonly ClientInfo[] = [
     iconPath: '/images/provider/cursor.svg',
     description: 'Configure MCP client settings and parameters'
   },
+  {
+    id: 'gemini-cli',
+    name: 'Gemini CLI',
+    iconPath: '/images/provider/gemini.svg',
+    description: 'Configure MCP client settings and parameters'
+  },
 ] as const;
 
 // Extract client IDs for validation

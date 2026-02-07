@@ -72,6 +72,7 @@ export async function generateClientConfig(
   const claudeMdContent = fs.readFileSync(path.join(aiInstructionsDir, 'CLAUDE.md'), 'utf-8');
   const copilotContent = fs.readFileSync(path.join(aiInstructionsDir, 'copilot-instructions.md'), 'utf-8');
   const cursorRulesContent = fs.readFileSync(path.join(aiInstructionsDir, 'cursorrules.md'), 'utf-8');
+  const geminiMdContent = fs.readFileSync(path.join(aiInstructionsDir, 'GEMINI.md'), 'utf-8');
 
   // Base configuration for different action types
   let jsonConfig: JsonAction;
@@ -217,6 +218,51 @@ export async function generateClientConfig(
         title: '.cursorrules - Cursor AI Rules',
         description: 'Add this file to .cursor/rules/deploystack.md to configure Cursor AI for your DeployStack project',
         content: cursorRulesContent
+      };
+      actions.push(textConfig);
+      break;
+
+    case 'gemini-cli':
+      // Step 1: Initial setup command
+      commandConfig = {
+        type: 'command',
+        category: 'connection',
+        command: `gemini mcp add --transport http deploystack ${satelliteUrl}/mcp`,
+        title: 'Step 1: Add DeployStack MCP Server',
+        description: 'Run this command to register DeployStack with Gemini CLI',
+        inputType: 'input'
+      };
+      actions.push(commandConfig);
+
+      // Step 2: Open Gemini
+      commandConfig = {
+        type: 'command',
+        category: 'connection',
+        command: 'gemini',
+        title: 'Step 2: Open Gemini CLI',
+        description: 'Run this command to launch Gemini CLI',
+        inputType: 'input'
+      };
+      actions.push(commandConfig);
+
+      // Step 3: Authenticate inside Gemini
+      commandConfig = {
+        type: 'command',
+        category: 'connection',
+        command: '/mcp auth deploystack',
+        title: 'Step 3: Authenticate (Inside Gemini)',
+        description: 'Run this command inside Gemini CLI to complete authentication',
+        inputType: 'input'
+      };
+      actions.push(commandConfig);
+
+      // AI Instructions file
+      textConfig = {
+        type: 'text',
+        category: 'ai-instructions',
+        title: 'GEMINI.md - Project Instructions',
+        description: 'Add this file to your project root as GEMINI.md to provide persistent context to Gemini CLI',
+        content: geminiMdContent
       };
       actions.push(textConfig);
       break;
