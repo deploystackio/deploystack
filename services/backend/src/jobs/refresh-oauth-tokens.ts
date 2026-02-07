@@ -161,11 +161,22 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 				// Determine client ID: use stored DCR client ID or fall back to 'deploystack'
 				const clientId = installation.oauth_client_id || 'deploystack';
 
+				// Decrypt client secret if stored (from DCR or pre-registered provider)
+				const clientSecret = installation.oauth_client_secret
+					? decrypt(installation.oauth_client_secret, logger)
+					: null;
+
+				// Use stored token endpoint (from installation) with fallback to discovery
+				const tokenEndpoint = installation.oauth_token_endpoint || discovery.metadata.token_endpoint;
+				const tokenEndpointAuthMethod = installation.oauth_token_endpoint_auth_method || 'none';
+
 				// Refresh access token
 				const newTokens = await tokenService.refreshToken({
 					refreshToken: decryptedRefreshToken,
 					clientId,
-					tokenEndpoint: discovery.metadata.token_endpoint,
+					tokenEndpoint,
+					clientSecret,
+					tokenEndpointAuthMethod: tokenEndpointAuthMethod as 'client_secret_post' | 'client_secret_basic' | 'none',
 				});
 
 				// Update encrypted tokens in database
