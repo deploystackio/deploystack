@@ -374,6 +374,10 @@ export const OAUTH_AUTHORIZE_REQUEST_SCHEMA = {
       enum: ['global', 'team'],
       description: 'Installation type - required for OAuth installations'
     },
+    satellite_id: {
+      type: 'string',
+      description: 'Satellite ID to install on (optional, auto-selected if not provided)'
+    },
     team_config: {
       type: 'object',
       additionalProperties: true,
@@ -1077,6 +1081,7 @@ export interface OAuthAuthorizeRequest {
   server_id: string;
   installation_name?: string;
   installation_type: 'global' | 'team';
+  satellite_id?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   team_config?: Record<string, any>;
 }

@@ -1,0 +1,2 @@
+ALTER TABLE "oauthPendingFlows" ADD COLUMN "satellite_id" text;--> statement-breakpoint
+ALTER TABLE "oauthPendingFlows" ADD CONSTRAINT "oauthPendingFlows_satellite_id_satellites_id_fk" FOREIGN KEY ("satellite_id") REFERENCES "public"."satellites"("id") ON DELETE set null ON UPDATE no action;

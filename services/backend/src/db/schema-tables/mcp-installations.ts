@@ -71,6 +71,9 @@ export const oauthPendingFlows = pgTable('oauthPendingFlows', {
   oauth_token_endpoint: text('oauth_token_endpoint').notNull(), // Token endpoint for callback
   oauth_token_endpoint_auth_method: text('oauth_token_endpoint_auth_method').notNull(), // Auth method
 
+  // Satellite tracking (carries satellite_id through the OAuth redirect flow)
+  satellite_id: text('satellite_id').references(() => satellites.id, { onDelete: 'set null' }),
+
   // Installation Data (stored temporarily until flow completes)
   installation_name: text('installation_name').notNull(),
   installation_type: text('installation_type').notNull().default('global'), // 'global' or 'team'

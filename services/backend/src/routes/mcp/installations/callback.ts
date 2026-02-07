@@ -456,6 +456,7 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 					created_by: flow.created_by,
 					installation_name: flow.installation_name,
 					installation_type: flow.installation_type,
+					satellite_id: flow.satellite_id || null,
 					team_args: teamConfig.team_args ? JSON.stringify(teamConfig.team_args) : null,
 					team_env: teamConfig.team_env ? JSON.stringify(teamConfig.team_env) : null,
 					team_headers: teamConfig.team_headers ? JSON.stringify(teamConfig.team_headers) : null,
@@ -492,6 +493,83 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 
 				// DELETE the flow (critical - prevents reuse and cleans up temporary data)
 				await db.delete(oauthPendingFlows).where(eq(oauthPendingFlows.id, flow.id));
+
+				// Create instance for installing user (OAuth already completed, ready to connect)
+				try {
+					const { McpInstanceService } = await import('../../../services/mcpInstanceService');
+					const instanceService = new McpInstanceService(db, request.log);
+
+					await instanceService.createInstance(
+						installationId,
+						flow.created_by,
+						'connecting'
+					);
+
+					request.log.info({
+						operation: 'oauth_callback_create_instance',
+						installationId,
+						userId: flow.created_by,
+						status: 'connecting'
+					}, 'Created instance for installing user');
+				} catch (instanceError) {
+					request.log.error({
+						operation: 'oauth_callback_create_instance',
+						installationId,
+						userId: flow.created_by,
+						error: instanceError instanceof Error ? instanceError.message : 'Unknown'
+					}, 'Failed to create instance for installing user');
+				}
+
+				// Create instances for all other team members (they need their own OAuth authorization)
+				try {
+					const { TeamService } = await import('../../../services/teamService');
+					const { McpInstanceService } = await import('../../../services/mcpInstanceService');
+
+					const instanceService = new McpInstanceService(db, request.log);
+
+					const allMembers = await TeamService.getTeamMembers(flow.team_id);
+					const otherMembers = allMembers.filter(member => member.user_id !== flow.created_by);
+
+					request.log.info({
+						operation: 'oauth_callback_provision_instances',
+						installationId,
+						teamId: flow.team_id,
+						otherMemberCount: otherMembers.length,
+						totalMembers: allMembers.length
+					}, `Provisioning instances for ${otherMembers.length} other team members`);
+
+					for (const member of otherMembers) {
+						try {
+							await instanceService.createInstance(
+								installationId,
+								member.user_id,
+								'awaiting_user_config',
+								'OAuth authorization required. Please authenticate with your own account.'
+							);
+
+							request.log.debug({
+								operation: 'oauth_callback_provision_instance',
+								installationId,
+								userId: member.user_id,
+								status: 'awaiting_user_config'
+							}, 'Instance provisioned for team member');
+						} catch (memberError) {
+							request.log.error({
+								operation: 'oauth_callback_provision_instance',
+								installationId,
+								userId: member.user_id,
+								error: memberError instanceof Error ? memberError.message : 'Unknown'
+							}, 'Failed to provision instance for team member');
+						}
+					}
+				} catch (teamError) {
+					request.log.error({
+						operation: 'oauth_callback_provision_instances',
+						installationId,
+						teamId: flow.team_id,
+						error: teamError instanceof Error ? teamError.message : 'Unknown'
+					}, 'Failed to provision instances for other team members');
+				}
 
 				// Create satellite commands for immediate notification
 				try {

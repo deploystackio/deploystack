@@ -3,6 +3,7 @@ import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { OAuthDiscoveryService } from '../../../services/OAuthDiscoveryService';
 import { OAuthClientRegistrationService } from '../../../services/OAuthClientRegistrationService';
+import { SatelliteValidationService } from '../../../services/satelliteValidationService';
 import { encrypt } from '../../../utils/encryption';
 import { generatePKCEPair, generateState, generateResourceParameter } from '../../../utils/pkce';
 import { getDb, getSchema } from '../../../db';
@@ -103,6 +104,27 @@ export default async function authorizeRoute(server: FastifyInstance) {
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(400).type('application/json').send(jsonString);
       }
+
+      // Validate satellite using shared validation service
+      const satelliteValidationService = new SatelliteValidationService(db, request.log);
+
+      const satelliteValidationResult = await satelliteValidationService.validateSatellite({
+        satelliteId: body.satellite_id,
+        teamId,
+        autoSelect: true
+      });
+
+      if (!satelliteValidationResult.valid) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: satelliteValidationResult.error!
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        const statusCode = satelliteValidationResult.httpStatus === 403 ? 403 : 400;
+        return reply.status(statusCode).type('application/json').send(jsonString);
+      }
+
+      const validatedSatelliteId = satelliteValidationResult.satelliteId || null;
 
       // Get server URL from packages or remotes
       let serverUrl: string | null = null;
@@ -314,6 +336,7 @@ export default async function authorizeRoute(server: FastifyInstance) {
         team_id: teamId,
         server_id: mcpServer.id,
         created_by: userId,
+        satellite_id: validatedSatelliteId,
         oauth_state: state,
         oauth_code_verifier: pkce.code_verifier,
         oauth_client_id: clientId,
