@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,7 @@ import {
 import { Hash, Server, Cpu, HardDrive } from 'lucide-vue-next'
 import { SatelliteService, type Satellite } from '@/services/satelliteService'
 import { DsCard } from '@/components/ui/ds-card'
+import { Progress } from '@/components/ui/progress'
 import { toast } from 'vue-sonner'
 
 const { t } = useI18n()
@@ -31,6 +32,26 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'satellite-updated': [satellite: Satellite]
 }>()
+
+// Memory usage from latest heartbeat
+const memoryUsageMb = ref<number | null>(null)
+const memoryUsagePercent = computed(() => {
+  if (memoryUsageMb.value === null || !props.satellite.system_info?.memory_mb) return null
+  return Math.round((memoryUsageMb.value / props.satellite.system_info.memory_mb) * 100)
+})
+
+async function loadLatestHeartbeat() {
+  try {
+    const response = await SatelliteService.listHeartbeats(props.satellite.id, { limit: 1, offset: 0 })
+    const heartbeat = response.data.heartbeats[0]
+    if (heartbeat) {
+      const metrics = JSON.parse(heartbeat.system_metrics)
+      memoryUsageMb.value = metrics.memory_usage_mb ?? null
+    }
+  } catch {
+    // Silent fail — progress bar just won't show
+  }
+}
 
 // Available capabilities (MCP server types)
 const availableCapabilities = [
@@ -169,6 +190,10 @@ const hasCapabilities = computed(() => {
 
 const hasTeam = computed(() => {
   return props.satellite.team !== null && props.satellite.team !== undefined
+})
+
+onMounted(() => {
+  loadLatestHeartbeat()
 })
 </script>
 
@@ -309,8 +334,13 @@ const hasTeam = computed(() => {
             <HardDrive class="h-4 w-4 text-muted-foreground" />
             {{ t('satellites.manage.info.memory') }}
           </dt>
-          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-            {{ satellite.system_info.memory_mb }} MB
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0 space-y-2">
+            <div class="flex items-center justify-between">
+              <span v-if="memoryUsageMb !== null">{{ memoryUsageMb }} MB / {{ satellite.system_info.memory_mb }} MB</span>
+              <span v-else>{{ satellite.system_info.memory_mb }} MB</span>
+              <span v-if="memoryUsagePercent !== null" class="text-sm text-muted-foreground">{{ memoryUsagePercent }}%</span>
+            </div>
+            <Progress v-if="memoryUsagePercent !== null" :model-value="memoryUsagePercent" class="w-full" />
           </dd>
         </div>
       </dl>

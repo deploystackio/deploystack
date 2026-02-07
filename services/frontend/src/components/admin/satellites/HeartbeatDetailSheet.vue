@@ -31,9 +31,10 @@ const parsedMetrics = computed<SystemMetrics | null>(() => {
   try {
     const parsed = JSON.parse(props.heartbeat.system_metrics)
     return {
-      cpu: parsed.cpu ?? 0,
-      memory: parsed.memory ?? 0,
-      disk: parsed.disk ?? 0,
+      cpu: parsed.cpu_usage_percent ?? 0,
+      memory: parsed.memory_usage_mb ?? 0,
+      disk: parsed.disk_usage_percent ?? 0,
+      uptime_seconds: parsed.uptime_seconds ?? 0,
       network: parsed.network
     }
   } catch {
@@ -181,18 +182,7 @@ function formatBytes(bytes: number): string {
                   <HardDrive class="h-3 w-3" />
                   Memory
                 </span>
-                <span class="text-sm font-medium">{{ (parsedMetrics.memory ?? 0).toFixed(1) }}%</span>
-              </div>
-              <div class="w-full bg-muted rounded-full h-2">
-                <div
-                  class="h-2 rounded-full transition-all"
-                  :class="{
-                    'bg-green-600': (parsedMetrics.memory ?? 0) < 70,
-                    'bg-yellow-600': (parsedMetrics.memory ?? 0) >= 70 && (parsedMetrics.memory ?? 0) < 90,
-                    'bg-red-600': (parsedMetrics.memory ?? 0) >= 90
-                  }"
-                  :style="{ width: `${Math.min(parsedMetrics.memory ?? 0, 100)}%` }"
-                ></div>
+                <span class="text-sm font-medium">{{ parsedMetrics.memory }} MB</span>
               </div>
             </div>
 

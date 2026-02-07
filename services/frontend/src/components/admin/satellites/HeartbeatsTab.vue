@@ -64,13 +64,14 @@ function parseMetrics(metricsJson: string): SystemMetrics {
   try {
     const parsed = JSON.parse(metricsJson)
     return {
-      cpu: parsed.cpu ?? 0,
-      memory: parsed.memory ?? 0,
-      disk: parsed.disk ?? 0,
+      cpu: parsed.cpu_usage_percent ?? 0,
+      memory: parsed.memory_usage_mb ?? 0,
+      disk: parsed.disk_usage_percent ?? 0,
+      uptime_seconds: parsed.uptime_seconds ?? 0,
       network: parsed.network
     }
   } catch {
-    return { cpu: 0, memory: 0, disk: 0 }
+    return { cpu: 0, memory: 0, disk: 0, uptime_seconds: 0 }
   }
 }
 
@@ -263,7 +264,7 @@ onMounted(() => {
                 {{ (parseMetrics(heartbeat.system_metrics).cpu ?? 0).toFixed(1) }}%
               </TableCell>
               <TableCell class="text-sm text-right tabular-nums">
-                {{ (parseMetrics(heartbeat.system_metrics).memory ?? 0).toFixed(1) }}%
+                {{ parseMetrics(heartbeat.system_metrics).memory }} MB
               </TableCell>
               <TableCell class="text-sm text-right tabular-nums">
                 <span v-if="heartbeat.response_time_ms">{{ heartbeat.response_time_ms }}ms</span>

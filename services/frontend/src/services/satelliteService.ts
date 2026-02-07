@@ -129,9 +129,10 @@ export interface SatelliteHeartbeat {
 }
 
 export interface SystemMetrics {
-  cpu: number
-  memory: number
-  disk: number
+  cpu: number              // cpu_usage_percent (0-100)
+  memory: number           // memory_usage_mb (absolute MB)
+  disk: number             // disk_usage_percent (0-100)
+  uptime_seconds: number   // process uptime
   network?: {
     rx: number
     tx: number
