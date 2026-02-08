@@ -63,6 +63,10 @@ export class McpActivityReportJob extends BaseJob {
           user_id: activity.userId,
           team_id: activity.teamId,
           oauth_client_id: activity.oauthClientId,
+          auth_type: activity.authType,
+          auth_identifier: activity.authType === 'instance_token'
+            ? `instance:${activity.oauthClientId}`
+            : undefined,
           client_name: activity.clientName,
           user_agent: activity.userAgent,
           ip_address: activity.ipAddress,

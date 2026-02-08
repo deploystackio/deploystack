@@ -57,6 +57,8 @@ export interface EventDataMap {
     user_id: string;
     team_id: string;
     oauth_client_id: string;
+    auth_type?: 'oauth' | 'instance_token';
+    auth_identifier?: string;
     client_name: string;
     user_agent: string;
     ip_address: string;

@@ -19,10 +19,19 @@ export const SCHEMA = {
       minLength: 1,
       description: 'Team ID in which the requests were made'
     },
-    oauth_client_id: { 
-      type: 'string', 
+    oauth_client_id: {
+      type: 'string',
       minLength: 1,
-      description: 'OAuth client ID of the MCP client'
+      description: 'OAuth client ID or installation ID of the MCP client'
+    },
+    auth_type: {
+      type: 'string',
+      enum: ['oauth', 'instance_token'],
+      description: 'Authentication method used by the MCP client'
+    },
+    auth_identifier: {
+      type: 'string',
+      description: 'Pre-computed auth identifier (e.g. instance:{installation_id})'
     },
     client_name: { 
       type: 'string',
@@ -57,11 +66,10 @@ export const SCHEMA = {
     }
   },
   required: [
-    'user_id', 
-    'team_id', 
-    'oauth_client_id', 
-    'request_count', 
-    'tool_call_count', 
+    'user_id',
+    'team_id',
+    'request_count',
+    'tool_call_count',
     'last_activity_at'
   ],
   additionalProperties: true
@@ -70,7 +78,9 @@ export const SCHEMA = {
 interface McpClientActivityData {
   user_id: string;
   team_id: string;
-  oauth_client_id: string;
+  oauth_client_id?: string;
+  auth_type?: 'oauth' | 'instance_token';
+  auth_identifier?: string;
   client_name?: string;
   user_agent?: string;
   ip_address?: string;
@@ -96,6 +106,7 @@ async function updateCumulativeActivity(
   satelliteId: string,
   data: McpClientActivityData,
   authIdentifier: string,
+  authType: 'oauth' | 'api_key' | 'instance_token',
   activityTimestamp: Date,
   eventTimestamp: Date
 ): Promise<void> {
@@ -127,8 +138,8 @@ async function updateCumulativeActivity(
       user_id: data.user_id,
       team_id: data.team_id,
       satellite_id: satelliteId,
-      auth_type: 'oauth',
-      oauth_client_id: data.oauth_client_id,
+      auth_type: authType,
+      oauth_client_id: data.oauth_client_id || null,
       api_key_id: null,
       auth_identifier: authIdentifier,
       client_name: data.client_name || null,
@@ -197,7 +208,8 @@ export async function handle(
   logger: FastifyBaseLogger
 ): Promise<void> {
   const data = eventData as unknown as McpClientActivityData;
-  const authIdentifier = `oauth:${data.oauth_client_id}`;
+  const authType = data.auth_type || 'oauth';
+  const authIdentifier = data.auth_identifier || `oauth:${data.oauth_client_id}`;
   const activityTimestamp = new Date(data.last_activity_at);
 
   await updateCumulativeActivity(
@@ -205,6 +217,7 @@ export async function handle(
     satelliteId,
     data,
     authIdentifier,
+    authType,
     activityTimestamp,
     eventTimestamp
   );

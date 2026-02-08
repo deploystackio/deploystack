@@ -11,6 +11,8 @@ import { McpToolExecutor } from '../lib/mcp-tool-executor';
 import { McpSessionManager } from '../lib/mcp-session-manager';
 import { UnifiedToolDiscoveryManager } from '../services/unified-tool-discovery-manager';
 import { DynamicConfigManager } from '../services/dynamic-config-manager';
+import { McpActivityTracker } from '../services/mcp-activity-tracker';
+import { trackMcpActivity } from '../services/activity-tracking-helper';
 import { ProcessManager } from '../process';
 import { McpServerConfig } from '../services/command-polling-service';
 
@@ -40,6 +42,7 @@ export class InstanceRouter {
   private configManager: DynamicConfigManager;
   private toolDiscoveryManager: UnifiedToolDiscoveryManager;
   private processManager: ProcessManager;
+  private activityTracker?: McpActivityTracker;
 
   constructor(deps: {
     logger: FastifyBaseLogger;
@@ -48,6 +51,7 @@ export class InstanceRouter {
     configManager: DynamicConfigManager;
     toolDiscoveryManager: UnifiedToolDiscoveryManager;
     processManager: ProcessManager;
+    activityTracker?: McpActivityTracker;
   }) {
     this.logger = deps.logger.child({ component: 'InstanceRouter' });
     this.toolExecutor = deps.toolExecutor;
@@ -55,6 +59,7 @@ export class InstanceRouter {
     this.configManager = deps.configManager;
     this.toolDiscoveryManager = deps.toolDiscoveryManager;
     this.processManager = deps.processManager;
+    this.activityTracker = deps.activityTracker;
   }
 
   /**
@@ -88,6 +93,10 @@ export class InstanceRouter {
     // Register tools/call handler - execute on THIS instance
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name: toolName, arguments: toolArgs } = request.params;
+      const startTime = Date.now();
+      let result: any;
+      let success = true;
+      let errorMessage: string | undefined;
 
       // Look up the tool in the discovery cache to get its correct namespacedName.
       // processId is the installation name (e.g., "duckduckgo-mcp-server-john-plhdo1j4kuit0et-..."),
@@ -117,13 +126,40 @@ export class InstanceRouter {
         namespaced_name: matchedTool.namespacedName
       }, `Executing tool ${toolName} on instance ${processId}`);
 
-      const result = await this.toolExecutor.executeToolCall(
-        matchedTool.namespacedName, // e.g., "duckduckgo-mcp-server:search"
-        toolArgs || {},
-        processId // Force routing to this specific process
-      );
+      try {
+        result = await this.toolExecutor.executeToolCall(
+          matchedTool.namespacedName, // e.g., "duckduckgo-mcp-server:search"
+          toolArgs || {},
+          processId // Force routing to this specific process
+        );
 
-      return result;
+        return result;
+      } catch (error) {
+        success = false;
+        errorMessage = error instanceof Error ? error.message : String(error);
+        throw error;
+      } finally {
+        const responseTimeMs = Date.now() - startTime;
+
+        // Buffer request log (mirrors mcp-server-wrapper.ts finally block)
+        const serverConfig = this.configManager.getMcpServerConfig(processId);
+        const loggingEnabled = serverConfig?.settings?.request_logging_enabled !== false;
+
+        if (serverConfig?.installation_id && serverConfig?.team_id && loggingEnabled) {
+          this.toolExecutor.bufferRequestLogEntry({
+            installation_id: serverConfig.installation_id,
+            team_id: serverConfig.team_id,
+            user_id: serverConfig.user_id,
+            tool_name: toolName,
+            tool_params: toolArgs || {},
+            tool_response: result,
+            response_time_ms: responseTimeMs,
+            success,
+            error_message: errorMessage,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
     });
 
     this.logger.info({
@@ -259,6 +295,16 @@ export class InstanceRouter {
         instance_path: instancePath,
         process_id: instanceConfig.processId
       }, 'Instance authentication successful');
+
+      // Track activity for personal dashboard (same pipeline as OAuth auth)
+      if (this.activityTracker && instanceConfig.config.user_id && instanceConfig.config.team_id) {
+        trackMcpActivity(this.activityTracker, request, {
+          userId: instanceConfig.config.user_id,
+          teamId: instanceConfig.config.team_id,
+          authIdentifier: instanceConfig.config.installation_id || instanceConfig.processId,
+          authType: 'instance_token',
+        }, this.logger);
+      }
     };
 
     // POST /i/:instancePath/mcp - Client-to-server MCP messages

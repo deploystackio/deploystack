@@ -16,7 +16,7 @@ export const mcpClientActivity = pgTable('mcpClientActivity', {
   satellite_id: text('satellite_id').notNull().references(() => satellites.id, { onDelete: 'cascade' }),
 
   // Authentication (extensible for future)
-  auth_type: text('auth_type', { enum: ['oauth', 'api_key'] }).notNull(),
+  auth_type: text('auth_type', { enum: ['oauth', 'api_key', 'instance_token'] }).notNull(),
   oauth_client_id: text('oauth_client_id'), // References dynamicOauthClients.client_id
   api_key_id: text('api_key_id'), // Future: references to API key table
   auth_identifier: text('auth_identifier').notNull(), // Computed: 'oauth:{client_id}' or 'apikey:{key_id}'

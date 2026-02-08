@@ -17,6 +17,7 @@ export interface ActivityRecord {
   requestCount: number;
   toolCallCount: number;
   lastActivityAt: Date;
+  authType: 'oauth' | 'instance_token';
 }
 
 /**
@@ -51,6 +52,7 @@ export class McpActivityTracker {
    * @param ipAddress - IP address of the request
    * @param sessionId - Optional Mcp-Session-Id header (for debugging)
    * @param isToolCall - True if this request is a tool execution
+   * @param authType - Authentication method: 'oauth' or 'instance_token'
    */
   trackRequest(
     userId: string,
@@ -60,7 +62,8 @@ export class McpActivityTracker {
     userAgent: string,
     ipAddress: string,
     sessionId: string | undefined,
-    isToolCall: boolean
+    isToolCall: boolean,
+    authType: 'oauth' | 'instance_token' = 'oauth'
   ): void {
     const key = `${userId}:${teamId}:${oauthClientId}`;
     const existing = this.activities.get(key);
@@ -97,7 +100,8 @@ export class McpActivityTracker {
         sessionId,
         requestCount: 1,
         toolCallCount: isToolCall ? 1 : 0,
-        lastActivityAt: new Date()
+        lastActivityAt: new Date(),
+        authType
       };
       
       this.activities.set(key, newRecord);

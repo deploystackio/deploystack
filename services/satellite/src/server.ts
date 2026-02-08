@@ -1267,7 +1267,8 @@ export async function createServer() {
     sessionManager: instanceSessionManager, // Separate session manager
     configManager: dynamicConfigManager,
     toolDiscoveryManager,
-    processManager
+    processManager,
+    activityTracker,
   });
 
   // Setup instance router routes
