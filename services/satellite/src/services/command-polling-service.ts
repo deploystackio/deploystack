@@ -73,6 +73,12 @@ export interface McpServerConfig {
   /** Instance status from mcpServerInstances table */
   instance_status?: string;
 
+  /** Path-based routing identifier */
+  instance_path?: string;
+
+  /** Hash of instance token (not raw token) */
+  instance_token_hash?: string;
+
   /** Installation settings */
   settings?: {
     request_logging_enabled?: boolean;

@@ -70,6 +70,12 @@ export interface McpServerConfig {
   /** Instance status from mcpServerInstances table */
   instance_status?: string;
 
+  /** Path-based routing identifier */
+  instance_path?: string;
+
+  /** Hash of instance token (not raw token) */
+  instance_token_hash?: string;
+
   /** Whether OAuth is required for this server */
   requires_oauth?: boolean;
 

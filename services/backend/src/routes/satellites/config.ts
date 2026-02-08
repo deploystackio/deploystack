@@ -58,7 +58,9 @@ const CONFIG_RESPONSE_SCHEMA = {
           },
           git_commit_sha: { type: 'string', description: 'Git commit SHA for GitHub deployments (used to reconstruct args dynamically)' },
           repository_url: { type: 'string', description: 'GitHub repository URL for GitHub deployments' },
-          git_branch: { type: 'string', description: 'Git branch name for GitHub deployments' }
+          git_branch: { type: 'string', description: 'Git branch name for GitHub deployments' },
+          instance_path: { type: 'string', description: 'Memorable path slug for direct instance access (e.g., bold-penguin-42a3)' },
+          instance_token_hash: { type: 'string', description: 'Argon2 hash of the instance access token for token verification' }
         },
         required: ['installation_id', 'team_id', 'server_name', 'transport_type', 'enabled']
       },
@@ -167,6 +169,8 @@ interface McpServerConfig {
   user_id: string;
   user_slug: string;
   instance_status?: string; // Instance status from mcpServerInstances
+  instance_path?: string; // Path-based routing identifier
+  instance_token_hash?: string; // Hash of instance token (not raw token)
   // OAuth support for HTTP/SSE MCP servers
   requires_oauth?: boolean;
   // Server source (for GitHub detection)
@@ -437,6 +441,8 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
           // Declare instance variables before try block so they're accessible in catch block
           let instanceId: string | undefined;
           let instanceStatus: string | undefined;
+          let instancePath: string | undefined;
+          let instanceTokenHash: string | undefined;
 
           try {
             // Create unique per-user process identifier: {server_slug}-{team_slug}-{user_id}-{installation_id}
@@ -708,7 +714,9 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             const instances = await db
               .select({
                 id: mcpServerInstances.id,
-                status: mcpServerInstances.status
+                status: mcpServerInstances.status,
+                instance_path: mcpServerInstances.instance_path,
+                instance_token: mcpServerInstances.instance_token
               })
               .from(mcpServerInstances)
               .where(
@@ -721,6 +729,8 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
 
             instanceId = instances[0]?.id;
             instanceStatus = instances[0]?.status;
+            instancePath = instances[0]?.instance_path || undefined;
+            instanceTokenHash = instances[0]?.instance_token || undefined;
           } catch (error) {
             request.log.warn({
               serverId: server.id,
@@ -756,6 +766,8 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             user_id: member.id,
             user_slug: member.id,
             instance_status: instanceStatus,
+            instance_path: instancePath,
+            instance_token_hash: instanceTokenHash,
             // OAuth support for HTTP/SSE MCP servers
             requires_oauth: server.requires_oauth || false,
             // Source (for GitHub detection)
@@ -1094,6 +1106,8 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
               user_id: member.id,
               user_slug: member.id,
               instance_status: instanceStatus,
+              instance_path: instancePath,
+              instance_token_hash: instanceTokenHash,
               enabled: false, // Disabled due to processing error
               requires_oauth: server.requires_oauth || false,
               source: server.source as 'manual' | 'github' | 'official_registry' | null,
