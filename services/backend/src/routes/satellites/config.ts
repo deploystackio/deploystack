@@ -1,9 +1,11 @@
 import { type FastifyInstance } from 'fastify';
+import { createHash } from 'crypto';
 import { getDb, getSchema } from '../../db';
 import { eq, and, or, isNull } from 'drizzle-orm';
 import { requireSatelliteAuth } from '../../middleware/satelliteAuthMiddleware';
 import { McpArgsStorage } from '../../utils/mcpArgsStorage';
 import { McpEnvStorage } from '../../utils/mcpEnvStorage';
+import { decryptInstanceToken } from '../../utils/instancePathGenerator';
 
 // Reusable Schema Constants
 const SATELLITE_ID_PARAM_SCHEMA = {
@@ -730,7 +732,15 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             instanceId = instances[0]?.id;
             instanceStatus = instances[0]?.status;
             instancePath = instances[0]?.instance_path || undefined;
-            instanceTokenHash = instances[0]?.instance_token || undefined;
+
+            // Decrypt the AES-256-GCM encrypted token and compute SHA-256 hash
+            // The satellite validates tokens via SHA-256 comparison
+            if (instances[0]?.instance_token) {
+              const plaintext = decryptInstanceToken(instances[0].instance_token, request.log);
+              if (plaintext) {
+                instanceTokenHash = createHash('sha256').update(plaintext).digest('hex');
+              }
+            }
           } catch (error) {
             request.log.warn({
               serverId: server.id,

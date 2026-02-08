@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { DsCard } from '@/components/ui/ds-card'
-import { ExternalLink, Calendar, Tag, RefreshCw, Github } from 'lucide-vue-next'
+import { Input } from '@/components/ui/input'
+import { ExternalLink, Calendar, Tag, RefreshCw, Github, Copy, Check } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import InstallationStatusBadge from './InstallationStatusBadge.vue'
 import GeneralMetricsPanel from './GeneralMetricsPanel.vue'
@@ -42,6 +43,33 @@ const lastRequestAt = ref<string | null>(null)
 // Re-authentication state
 const isReAuthenticating = ref(false)
 const oauthPopup = ref<Window | null>(null)
+
+// Connection URL
+const justCopied = ref(false)
+
+const currentUserInstance = computed(() => {
+  return props.installation?.instances?.find(i => i.instance_token)
+})
+
+const connectionUrl = computed(() => {
+  const inst = currentUserInstance.value
+  const satUrl = props.installation?.satellite_url
+  if (!inst?.instance_path || !inst?.instance_token || !satUrl) return null
+  const baseUrl = satUrl.replace(/\/$/, '')
+  return `${baseUrl}/i/${inst.instance_path}/mcp?token=${inst.instance_token}`
+})
+
+const copyConnectionUrl = async () => {
+  if (!connectionUrl.value) return
+  try {
+    await navigator.clipboard.writeText(connectionUrl.value)
+    justCopied.value = true
+    toast.success(t('mcpInstallations.connectionUrl.copied'))
+    setTimeout(() => { justCopied.value = false }, 2000)
+  } catch {
+    toast.error(t('mcpInstallations.connectionUrl.copyFailed'))
+  }
+}
 
 // Computed properties for display (using installation.server data)
 const server = computed(() => props.installation?.server || null)
@@ -352,6 +380,25 @@ onUnmounted(() => {
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             <span v-if="lastRequestTime">{{ lastRequestTime }}</span>
             <span v-else class="text-muted-foreground">No recent requests found</span>
+          </dd>
+        </div>
+
+        <!-- Connection URL -->
+        <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpInstallations.connectionUrl.label') }}</dt>
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+            <div v-if="connectionUrl" class="flex items-center gap-2">
+              <Input
+                :model-value="connectionUrl"
+                readonly
+                class="font-mono text-xs"
+              />
+              <Button variant="outline" size="icon" class="shrink-0" @click="copyConnectionUrl">
+                <Check v-if="justCopied" class="h-4 w-4 text-green-600" />
+                <Copy v-else class="h-4 w-4" />
+              </Button>
+            </div>
+            <span v-else class="text-muted-foreground">{{ t('mcpInstallations.connectionUrl.notAvailable') }}</span>
           </dd>
         </div>
       </dl>

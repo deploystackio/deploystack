@@ -564,6 +564,16 @@ export const INSTANCE_SCHEMA = {
       format: 'email',
       description: 'User email address'
     },
+    instance_path: {
+      type: 'string',
+      nullable: true,
+      description: 'Path slug for direct instance access'
+    },
+    instance_token: {
+      type: 'string',
+      nullable: true,
+      description: 'Instance access token (only included for current user)'
+    },
     status: {
       type: 'string',
       description: 'Current instance status'
@@ -690,6 +700,16 @@ export const INSTALLATION_ENTITY_SCHEMA = {
       format: 'date-time',
       nullable: true,
       description: 'Last usage timestamp'
+    },
+    satellite_id: {
+      type: 'string',
+      nullable: true,
+      description: 'Satellite ID assigned to this installation'
+    },
+    satellite_url: {
+      type: 'string',
+      nullable: true,
+      description: 'Public URL of the assigned satellite'
     },
     server: {
       ...SERVER_DETAILS_SCHEMA,
@@ -941,6 +961,8 @@ export interface InstanceData {
   user_id: string;
   user_slug: string;
   user_email: string;
+  instance_path: string | null;
+  instance_token: string | null;
   status: string;
   status_message: string | null;
   status_updated_at: Date | null;
@@ -954,6 +976,8 @@ export interface InstanceResponse {
   user_id: string;
   user_slug: string;
   user_email: string;
+  instance_path: string | null;
+  instance_token?: string | null;
   status: string;
   status_message: string | null;
   status_updated_at: string;
@@ -1002,6 +1026,8 @@ export interface InstallationResponse {
   created_at: string;
   updated_at: string;
   last_used_at: string | null;
+  satellite_id?: string | null;
+  satellite_url?: string | null;
   server?: ServerDetails;
   instances?: InstanceResponse[];
 }
@@ -1182,6 +1208,7 @@ export function formatInstancesResponse(instances: InstanceData[]): InstanceResp
     user_id: inst.user_id,
     user_slug: inst.user_slug,
     user_email: inst.user_email,
+    instance_path: inst.instance_path,
     status: inst.status,
     status_message: inst.status_message,
     status_updated_at: inst.status_updated_at?.toISOString() || new Date().toISOString(),

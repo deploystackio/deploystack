@@ -4324,7 +4324,8 @@
                 "claude-desktop",
                 "vscode",
                 "claude-code",
-                "cursor"
+                "cursor",
+                "gemini-cli"
               ]
             },
             "in": "path",
@@ -4663,7 +4664,8 @@
                 "claude-desktop",
                 "vscode",
                 "claude-code",
-                "cursor"
+                "cursor",
+                "gemini-cli"
               ]
             },
             "in": "path",
@@ -25416,6 +25418,16 @@
                           "nullable": true,
                           "description": "Last usage timestamp"
                         },
+                        "satellite_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Satellite ID assigned to this installation"
+                        },
+                        "satellite_url": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Public URL of the assigned satellite"
+                        },
                         "server": {
                           "type": "object",
                           "properties": {
@@ -25580,6 +25592,16 @@
                                 "type": "string",
                                 "format": "email",
                                 "description": "User email address"
+                              },
+                              "instance_path": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Path slug for direct instance access"
+                              },
+                              "instance_token": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Instance access token (only included for current user)"
                               },
                               "status": {
                                 "type": "string",
@@ -25962,6 +25984,16 @@
                             "nullable": true,
                             "description": "Last usage timestamp"
                           },
+                          "satellite_id": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Satellite ID assigned to this installation"
+                          },
+                          "satellite_url": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Public URL of the assigned satellite"
+                          },
                           "server": {
                             "type": "object",
                             "properties": {
@@ -26126,6 +26158,16 @@
                                   "type": "string",
                                   "format": "email",
                                   "description": "User email address"
+                                },
+                                "instance_path": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "Path slug for direct instance access"
+                                },
+                                "instance_token": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "Instance access token (only included for current user)"
                                 },
                                 "status": {
                                   "type": "string",
@@ -26518,6 +26560,16 @@
                           "nullable": true,
                           "description": "Last usage timestamp"
                         },
+                        "satellite_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Satellite ID assigned to this installation"
+                        },
+                        "satellite_url": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Public URL of the assigned satellite"
+                        },
                         "server": {
                           "type": "object",
                           "properties": {
@@ -26682,6 +26734,16 @@
                                 "type": "string",
                                 "format": "email",
                                 "description": "User email address"
+                              },
+                              "instance_path": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Path slug for direct instance access"
+                              },
+                              "instance_token": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Instance access token (only included for current user)"
                               },
                               "status": {
                                 "type": "string",
@@ -27077,6 +27139,16 @@
                           "nullable": true,
                           "description": "Last usage timestamp"
                         },
+                        "satellite_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Satellite ID assigned to this installation"
+                        },
+                        "satellite_url": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Public URL of the assigned satellite"
+                        },
                         "server": {
                           "type": "object",
                           "properties": {
@@ -27241,6 +27313,16 @@
                                 "type": "string",
                                 "format": "email",
                                 "description": "User email address"
+                              },
+                              "instance_path": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Path slug for direct instance access"
+                              },
+                              "instance_token": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Instance access token (only included for current user)"
                               },
                               "status": {
                                 "type": "string",
@@ -27838,6 +27920,16 @@
                           "nullable": true,
                           "description": "Last usage timestamp"
                         },
+                        "satellite_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Satellite ID assigned to this installation"
+                        },
+                        "satellite_url": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Public URL of the assigned satellite"
+                        },
                         "server": {
                           "type": "object",
                           "properties": {
@@ -28002,6 +28094,16 @@
                                 "type": "string",
                                 "format": "email",
                                 "description": "User email address"
+                              },
+                              "instance_path": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Path slug for direct instance access"
+                              },
+                              "instance_token": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Instance access token (only included for current user)"
                               },
                               "status": {
                                 "type": "string",
@@ -28392,6 +28494,16 @@
                           "nullable": true,
                           "description": "Last usage timestamp"
                         },
+                        "satellite_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Satellite ID assigned to this installation"
+                        },
+                        "satellite_url": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Public URL of the assigned satellite"
+                        },
                         "server": {
                           "type": "object",
                           "properties": {
@@ -28556,6 +28668,16 @@
                                 "type": "string",
                                 "format": "email",
                                 "description": "User email address"
+                              },
+                              "instance_path": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Path slug for direct instance access"
+                              },
+                              "instance_token": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Instance access token (only included for current user)"
                               },
                               "status": {
                                 "type": "string",
@@ -28946,6 +29068,16 @@
                           "nullable": true,
                           "description": "Last usage timestamp"
                         },
+                        "satellite_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Satellite ID assigned to this installation"
+                        },
+                        "satellite_url": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Public URL of the assigned satellite"
+                        },
                         "server": {
                           "type": "object",
                           "properties": {
@@ -29110,6 +29242,16 @@
                                 "type": "string",
                                 "format": "email",
                                 "description": "User email address"
+                              },
+                              "instance_path": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Path slug for direct instance access"
+                              },
+                              "instance_token": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Instance access token (only included for current user)"
                               },
                               "status": {
                                 "type": "string",
@@ -29497,6 +29639,16 @@
                           "nullable": true,
                           "description": "Last usage timestamp"
                         },
+                        "satellite_id": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Satellite ID assigned to this installation"
+                        },
+                        "satellite_url": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Public URL of the assigned satellite"
+                        },
                         "server": {
                           "type": "object",
                           "properties": {
@@ -29661,6 +29813,16 @@
                                 "type": "string",
                                 "format": "email",
                                 "description": "User email address"
+                              },
+                              "instance_path": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Path slug for direct instance access"
+                              },
+                              "instance_token": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Instance access token (only included for current user)"
                               },
                               "status": {
                                 "type": "string",
@@ -30140,6 +30302,10 @@
                       "team"
                     ],
                     "description": "Installation type - required for OAuth installations"
+                  },
+                  "satellite_id": {
+                    "type": "string",
+                    "description": "Satellite ID to install on (optional, auto-selected if not provided)"
                   },
                   "team_config": {
                     "type": "object",
@@ -43180,6 +43346,14 @@
                           "git_branch": {
                             "type": "string",
                             "description": "Git branch name for GitHub deployments"
+                          },
+                          "instance_path": {
+                            "type": "string",
+                            "description": "Memorable path slug for direct instance access (e.g., bold-penguin-42a3)"
+                          },
+                          "instance_token_hash": {
+                            "type": "string",
+                            "description": "Argon2 hash of the instance access token for token verification"
                           }
                         },
                         "required": [

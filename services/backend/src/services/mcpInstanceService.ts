@@ -15,6 +15,7 @@ export interface InstanceWithUser {
   user_slug: string;
   user_email: string;
   instance_path: string | null;
+  instance_token: string | null;
   status: string;
   status_message: string | null;
   status_updated_at: Date | null;
@@ -60,13 +61,13 @@ export class McpInstanceService {
     const MAX_PATH_RETRIES = 5;
     let instancePath = '';
     let instanceToken: string;
-    let instanceTokenHash: string;
+    let instanceTokenEncrypted: string;
     let inserted = false;
 
     // Generate token once (outside retry loop)
-    const tokenResult = await generateInstanceToken();
+    const tokenResult = await generateInstanceToken(this.logger);
     instanceToken = tokenResult.plaintext;
-    instanceTokenHash = tokenResult.hash;
+    instanceTokenEncrypted = tokenResult.encrypted;
 
     for (let attempt = 0; attempt < MAX_PATH_RETRIES; attempt++) {
       instancePath = generateInstancePath();
@@ -77,7 +78,7 @@ export class McpInstanceService {
           installation_id: installationId,
           user_id: userId,
           instance_path: instancePath,
-          instance_token: instanceTokenHash, // Store hash, not plaintext
+          instance_token: instanceTokenEncrypted, // Store AES-256-GCM encrypted token
           status,
           status_message: statusMessage,
           status_updated_at: new Date(),
@@ -293,6 +294,7 @@ export class McpInstanceService {
         user_slug: authUser.username,
         user_email: authUser.email,
         instance_path: mcpServerInstances.instance_path,
+        instance_token: mcpServerInstances.instance_token,
         status: mcpServerInstances.status,
         status_message: mcpServerInstances.status_message,
         status_updated_at: mcpServerInstances.status_updated_at,

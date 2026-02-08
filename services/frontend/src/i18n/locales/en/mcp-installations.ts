@@ -219,6 +219,13 @@ export default {
     uninstallSuccess: 'MCP server uninstalled successfully'
   },
 
+  connectionUrl: {
+    label: 'Connection URL',
+    copied: 'Connection URL copied to clipboard',
+    copyFailed: 'Failed to copy URL to clipboard',
+    notAvailable: 'Not available'
+  },
+
   reauth: {
     button: 'Re-authenticate',
     popup_title: 'Re-authenticating',

@@ -75,6 +75,21 @@ export interface InstallationStatusData {
   last_health_check_at: string | null
 }
 
+export interface McpInstallationInstance {
+  id: string
+  user_id: string
+  user_slug: string
+  user_email: string
+  instance_path?: string | null
+  instance_token?: string | null
+  status: string
+  status_message: string | null
+  status_updated_at: string
+  last_health_check_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface McpInstallation {
   // Fields always present (list view)
   id: string
@@ -88,6 +103,8 @@ export interface McpInstallation {
 
   // Fields only present in detail view (optional)
   server_id?: string
+  satellite_id?: string
+  satellite_url?: string | null
   user_environment_variables?: Record<string, string>
   team_args?: string[]
   team_env?: Record<string, string>
@@ -101,6 +118,7 @@ export interface McpInstallation {
   status_message?: string | null
   status_updated_at?: string
   last_health_check_at?: string | null
+  instances?: McpInstallationInstance[]
 }
 
 export interface InstallServerRequest {

@@ -1,9 +1,11 @@
 import { type FastifyInstance } from 'fastify';
+import { eq } from 'drizzle-orm';
 import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { McpInstallationService } from '../../../services/mcpInstallationService';
 import { McpInstanceService } from '../../../services/mcpInstanceService';
 import { getDb } from '../../../db';
+import { decryptInstanceToken } from '../../../utils/instancePathGenerator';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
   INSTALLATION_SUCCESS_RESPONSE_SCHEMA,
@@ -89,6 +91,40 @@ export default async function getInstallationRoute(server: FastifyInstance) {
       // Fetch per-user instances with user information
       const instances = await instanceService.getInstancesWithUsersByInstallation(installationId, teamId);
 
+      // Resolve satellite URL from satellite_id
+      let satelliteUrl: string | null = null;
+      const installationAny = installation as InstallationData & { satellite_id?: string };
+      if (installationAny.satellite_id) {
+        try {
+          const schema = await import('../../../db/schema');
+          const { satellites } = schema;
+          const sat = await db
+            .select({ satellite_url: satellites.satellite_url })
+            .from(satellites)
+            .where(eq(satellites.id, installationAny.satellite_id))
+            .limit(1);
+          satelliteUrl = sat[0]?.satellite_url || null;
+        } catch (error) {
+          request.log.warn({
+            satelliteId: installationAny.satellite_id,
+            error: error instanceof Error ? error.message : String(error)
+          }, 'Failed to resolve satellite URL');
+        }
+      }
+
+      // Format instances and enrich current user's instance with decrypted token
+      const formattedInstances = formatInstancesResponse(instances);
+      for (const inst of formattedInstances) {
+        if (inst.user_id === userId) {
+          const rawInstance = instances.find(i => i.id === inst.id);
+          if (rawInstance?.instance_token) {
+            const plaintext = decryptInstanceToken(rawInstance.instance_token, request.log);
+            inst.instance_token = plaintext;
+          }
+        }
+        // Other users' tokens are never exposed
+      }
+
       request.log.info({
         operation: 'get_mcp_installation',
         teamId,
@@ -102,7 +138,9 @@ export default async function getInstallationRoute(server: FastifyInstance) {
         success: true,
         data: {
           ...formatInstallationResponse(installation),
-          instances: formatInstancesResponse(instances)
+          satellite_id: installationAny.satellite_id || null,
+          satellite_url: satelliteUrl,
+          instances: formattedInstances
         }
       };
       const jsonString = JSON.stringify(response);

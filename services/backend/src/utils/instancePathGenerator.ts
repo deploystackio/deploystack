@@ -1,5 +1,6 @@
 import crypto from 'crypto';
-import { hash, verify } from '@node-rs/argon2';
+import { encrypt, decrypt } from './encryption';
+import type { FastifyBaseLogger } from 'fastify';
 
 /**
  * Instance Path and Token Generator
@@ -47,45 +48,40 @@ export function generateInstancePath(): string {
 }
 
 /**
- * Generate a secure instance access token with hash
+ * Generate a secure instance access token with AES-256-GCM encryption
  *
  * Format: ds_inst_{64_hex_chars} (72 chars total)
  * Example: "ds_inst_a1b2c3d4e5f6..."
  *
- * Uses argon2 for hashing (matches SatelliteTokenService pattern)
- * Only the hash should be stored in the database
- * The plaintext token is returned to the user ONCE and never stored
+ * Uses AES-256-GCM encryption (reversible) so the backend can:
+ * 1. Decrypt and show the token to users in the UI
+ * 2. Compute SHA-256 hash from decrypted token for satellite validation
  *
- * @returns Object with plaintext token and argon2 hash
+ * @param logger - Optional logger for encryption debug output
+ * @returns Object with plaintext token and encrypted string
  */
-export async function generateInstanceToken(): Promise<{ plaintext: string; hash: string }> {
+export async function generateInstanceToken(logger?: FastifyBaseLogger): Promise<{ plaintext: string; encrypted: string }> {
   // Generate 32 random bytes → 64 hex chars
   const randomHex = crypto.randomBytes(32).toString('hex');
   const plaintext = `ds_inst_${randomHex}`;
 
-  // Hash with argon2 (matches SatelliteTokenService pattern)
-  const tokenHash = await hash(plaintext);
+  // Encrypt with AES-256-GCM (reversible, same as OAuth token storage)
+  const encrypted = encrypt(plaintext, logger);
 
-  return { plaintext, hash: tokenHash };
+  return { plaintext, encrypted };
 }
 
 /**
- * Verify an instance token against its stored hash
+ * Decrypt a stored instance token
  *
- * Used by satellite to validate incoming tokens from query params
- *
- * @param plaintextToken - The token from the request query param
- * @param storedHash - The argon2 hash stored in the database
- * @returns True if token matches hash, false otherwise
+ * @param encryptedToken - The AES-256-GCM encrypted token from the database
+ * @param logger - Optional logger for decryption debug output
+ * @returns The plaintext token, or null if decryption fails
  */
-export async function verifyInstanceToken(
-  plaintextToken: string,
-  storedHash: string
-): Promise<boolean> {
+export function decryptInstanceToken(encryptedToken: string, logger?: FastifyBaseLogger): string | null {
   try {
-    return await verify(storedHash, plaintextToken);
-  } catch (error) {
-    // Invalid hash format or verification error
-    return false;
+    return decrypt(encryptedToken, logger);
+  } catch {
+    return null;
   }
 }
