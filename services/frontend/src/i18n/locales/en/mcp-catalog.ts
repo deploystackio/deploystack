@@ -870,6 +870,17 @@ export default {
     rowsSelected: '{selected} of {total} row(s) selected.'
   },
 
+  source: {
+    catalog: 'Catalog',
+    github: 'GitHub',
+    remote: 'Remote',
+    label: 'Source'
+  },
+
+  repository: {
+    label: 'Repository'
+  },
+
   filters: {
     button: 'Filters',
     clear: 'Clear Filters',

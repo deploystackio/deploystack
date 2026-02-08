@@ -105,6 +105,29 @@ const formatDate = (dateString: string) => {
   })
 }
 
+// Helper to determine server source type
+const getServerSourceType = (installation: McpInstallation): 'github' | 'remote' | 'catalog' => {
+  if (installation.server?.source === 'github') return 'github'
+  if (installation.server?.runtime === 'http' || installation.server?.runtime === 'sse') return 'remote'
+  return 'catalog'
+}
+
+// Helper to get source label
+const getSourceLabel = (installation: McpInstallation): string => {
+  const type = getServerSourceType(installation)
+  if (type === 'github') return t('mcpCatalog.source.github')
+  if (type === 'remote') return t('mcpCatalog.source.remote')
+  return t('mcpCatalog.source.catalog')
+}
+
+// Helper to extract GitHub repo name from URL
+const getGitHubRepoName = (repositoryUrl: string | null | undefined): string | null => {
+  if (!repositoryUrl) return null
+  // Extract "owner/repo" from "https://github.com/owner/repo.git"
+  const match = repositoryUrl.match(/github\.com\/([^\/]+\/[^\/\.]+)/)
+  return match?.[1] ?? null
+}
+
 const handleViewInstallation = (installationId: string) => {
   router.push(`/mcp-server/installation/${installationId}`)
 }
@@ -246,14 +269,19 @@ onUnmounted(() => {
                 class="shrink-0 hidden sm:flex"
               />
 
-              <dl class="flex-1 grid grid-cols-2 gap-x-8 gap-y-1 text-xs/5 text-gray-500 sm:grid-cols-3">
-                <div>
-                  <dt class="font-medium text-gray-700">Satellite</dt>
-                  <dd>{{ installation.installation_type }}</dd>
+              <dl class="flex-1 grid grid-cols-2 gap-x-8 gap-y-1 text-xs/5 text-gray-500 sm:grid-cols-3 items-start">
+                <div class="flex flex-col">
+                  <dt class="font-medium text-gray-700 leading-5">{{ t('mcpCatalog.source.label') }}</dt>
+                  <dd class="leading-5">{{ getSourceLabel(installation) }}</dd>
                 </div>
-                <div>
-                  <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.category') }}</dt>
-                  <dd>
+                <div class="flex flex-col">
+                  <dt class="font-medium text-gray-700 leading-5">
+                    {{ getServerSourceType(installation) === 'github' ? t('mcpCatalog.repository.label') : t('mcpInstallations.table.columns.category') }}
+                  </dt>
+                  <dd v-if="getServerSourceType(installation) === 'github'" class="leading-5">
+                    {{ getGitHubRepoName(installation.server?.repository_url) || 'N/A' }}
+                  </dd>
+                  <dd v-else class="leading-5">
                     <CategoryDisplay
                       :category-id="installation.server?.category_id"
                       :show-not-provided="true"
@@ -262,9 +290,9 @@ onUnmounted(() => {
                     />
                   </dd>
                 </div>
-                <div>
-                  <dt class="font-medium text-gray-700">{{ t('mcpInstallations.table.columns.runtime') }}</dt>
-                  <dd>{{ installation.server?.runtime }}</dd>
+                <div class="flex flex-col">
+                  <dt class="font-medium text-gray-700 leading-5">{{ t('mcpInstallations.table.columns.runtime') }}</dt>
+                  <dd class="leading-5">{{ installation.server?.runtime }}</dd>
                 </div>
               </dl>
             </div>
@@ -273,7 +301,7 @@ onUnmounted(() => {
           <div
             class="flex shrink-0 items-center gap-x-4"
           >
-            <div class="hidden sm:flex sm:flex-col sm:items-end">
+            <div class="hidden sm:flex sm:flex-col sm:items-end sm:min-w-[140px]">
               <InstallationStatusBadge
                 :status-data="installation.status ? {
                   installation_id: installation.id,
