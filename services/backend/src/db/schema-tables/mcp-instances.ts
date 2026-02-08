@@ -11,6 +11,10 @@ export const mcpServerInstances = pgTable('mcpServerInstances', {
   installation_id: text('installation_id').notNull().references(() => mcpServerInstallations.id, { onDelete: 'cascade' }),
   user_id: text('user_id').notNull().references(() => authUser.id, { onDelete: 'cascade' }),
 
+  // Path-based instance routing (direct MCP endpoint per instance)
+  instance_path: text('instance_path'), // Unique memorable slug (e.g., "bold-penguin-42a3")
+  instance_token: text('instance_token'), // Argon2 hash of access token
+
   // Status tracking (per-user instance status)
   status: text('status').notNull().default('provisioning'), // 'provisioning' | 'command_received' | 'connecting' | 'discovering_tools' | 'syncing_tools' | 'online' | 'restarting' | 'offline' | 'error' | 'requires_reauth' | 'permanently_failed' | 'awaiting_user_config'
   status_message: text('status_message'), // Human-readable status message or error details
@@ -24,4 +28,5 @@ export const mcpServerInstances = pgTable('mcpServerInstances', {
   installationUserIdx: uniqueIndex('mcp_instances_installation_user_idx').on(table.installation_id, table.user_id), // Ensures one instance per user per installation
   userIdx: index('mcp_instances_user_idx').on(table.user_id),
   statusIdx: index('mcp_instances_status_idx').on(table.status),
+  instancePathIdx: uniqueIndex('mcp_instances_instance_path_idx').on(table.instance_path), // Unique path for direct instance routing
 }));
