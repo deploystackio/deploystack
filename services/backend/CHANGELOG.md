@@ -1,5 +1,60 @@
 # Changelog
 
+# [0.60.0](https://github.com/deploystackio/deploystack/compare/backend-v0.59.0...backend-v0.60.0) (2026-02-08)
+
+
+### chore
+
+* **all:** bump @modelcontextprotocol/sdk from 1.25.3 to 1.26.0 ([](https://github.com/deploystackio/deploystack/commit/cb1e232a5232ea511d74698fdb25526715fdb589))
+* **all:** bump @typescript-eslint/eslint-plugin from 8.53.0 to 8.53.1 ([](https://github.com/deploystackio/deploystack/commit/12c5365ec1a87f7daac6b36b848d9763c448f63a))
+* **all:** bump @typescript-eslint/parser from 8.53.0 to 8.53.1 ([](https://github.com/deploystackio/deploystack/commit/def5f359dd16d068956ba38fcc78a749190ba6f7))
+
+
+### docs
+
+* **all:** improve formatting and clarity in README.md ([](https://github.com/deploystackio/deploystack/commit/0da73351350726907c060504f7f7d9ec175956bb))
+* **all:** update README with new features and deployment instructions ([](https://github.com/deploystackio/deploystack/commit/a29ef45f846c104f1fb2096c8a75c862a7b7e3c1))
+
+
+### feat
+
+* **all:** add deployments tab with team info and refactor catalog tables ([](https://github.com/deploystackio/deploystack/commit/fd916671eb3e0d37e33e3cbfd73d1964a698e0a6))
+* **all:** add language and runtime fields to MCP server metadata ([](https://github.com/deploystackio/deploystack/commit/f374f35375abce5af8a9417ff2d1b4a65212cf62))
+* **all:** add satellite management UI and GitHub deployment lifecycle features ([](https://github.com/deploystackio/deploystack/commit/882c338a006db6cae28fb851428283354f091e28))
+* **all:** add team limits and GitHub deployment features with email notifications ([](https://github.com/deploystackio/deploystack/commit/1295569d4449406e545b256ef50b662f3d76b8f9))
+* **all:** implement comprehensive security validation for MCP installations ([](https://github.com/deploystackio/deploystack/commit/9081438d4e658b75e90ba52856271ba656aeeb52))
+* **all:** implement GitHub deployment validation and enhanced wizard flow ([](https://github.com/deploystackio/deploystack/commit/0989f29c86a1ff672cd90e299af826480a4c2146))
+* **all:** implement GitHub-based MCP server deployment with Octokit ([](https://github.com/deploystackio/deploystack/commit/ed01167e0388b9874e542fbb1f39db2f4ecca473)), closes [user/repo#sha](https://github.com/user/repo/issues/sha)
+* **backend:** add FastMCP framework support and handle missing package metadata ([](https://github.com/deploystackio/deploystack/commit/187493dead6b75c8f8b41aaeeb48e208e89b6c34))
+* **backend:** add Gemini CLI integration and instructions ([](https://github.com/deploystackio/deploystack/commit/80f0b3014ef153b778cea4cb4ae8d5b996c2cf8d))
+* **backend:** add instance path and token generation utilities ([](https://github.com/deploystackio/deploystack/commit/1a5759e8ae7a9d106e46ac194032aff04c6f848a))
+* **backend:** add reset token endpoint for MCP installations ([](https://github.com/deploystackio/deploystack/commit/b1750ac8d6b5afe10255a6fe2c718a89e7159896))
+* **backend:** add satellite ID and URL to installation responses ([](https://github.com/deploystackio/deploystack/commit/ed756ea4d09145015811888ceebe2d0c5a2fcf1f))
+* **backend:** emit MCP_DEPLOYMENT_CREATED event on deployment success ([](https://github.com/deploystackio/deploystack/commit/b6a49ca06343d47e241584b357ac91f367875f04))
+* **backend:** enhance GitHub installation verification and auto-linking ([](https://github.com/deploystackio/deploystack/commit/a13882a68942dad062a163ea85baebaec9831131))
+* **backend:** enhance OAuth2 authorization with default scopes and resource ([](https://github.com/deploystackio/deploystack/commit/a711fc3a716e36cc9cd21d28ebfe033407f6b50a))
+* **backend:** enhance Python runtime detection with pyproject.toml support ([](https://github.com/deploystackio/deploystack/commit/2b273e416ee09186d9a14eb400b8db6be012d879))
+* **backend:** implement instance path and token generation in createInstance ([](https://github.com/deploystackio/deploystack/commit/c755887cffb9618c1e6d095ecc046724f7f6f324))
+* **backend:** notify satellite of token reset during instance token regeneration ([](https://github.com/deploystackio/deploystack/commit/f9f80960b84f5abc2cde0b69a0ac27d631a4b9c5))
+* **backend:** update redirect to frontend deployment wizard ([](https://github.com/deploystackio/deploystack/commit/ff212f5c8e17de817b8740feb7d858617c6de5d4))
+
+
+### fix
+
+* **backend:** adjust repository empty check to only verify default branch ([](https://github.com/deploystackio/deploystack/commit/326cdb5e665000320f7b8ce090b8db62eae375fa))
+* **backend:** create instances and assign satellite for OAuth MCP server installations ([](https://github.com/deploystackio/deploystack/commit/898a98a9bcd58986e634648dca6ad850b9817dd5))
+* **backend:** enhance credential validation request handling for satellite ([](https://github.com/deploystackio/deploystack/commit/f6fa17f3948830771020f67d77ccc3fe00e34c4f))
+* **backend:** update OAuth client details in installation callback ([](https://github.com/deploystackio/deploystack/commit/39b4c09a6f8b6dcdba61d5f71d396a06eef989c9))
+* **backend:** use nullish coalescing for repository info defaults ([](https://github.com/deploystackio/deploystack/commit/0978dc6554498a0910bd98136d2f60abc4d4b4e7))
+
+
+### refactor
+
+* **backend:** change debug logs to trace for detailed logging ([](https://github.com/deploystackio/deploystack/commit/0f1fce5312e1d4077e74106a2ac37f63b8de08ce))
+* **backend:** change logger level from debug to trace for detailed logging ([](https://github.com/deploystackio/deploystack/commit/9342f30480aed5322832f65e9c84e62c5deb4a82))
+* **backend:** change logger level from info to trace for detailed logging ([](https://github.com/deploystackio/deploystack/commit/7110aee015304a9f3dde9fb80f90e4ad71c03d27))
+* **backend:** remove duplicate installation name checks ([](https://github.com/deploystackio/deploystack/commit/1a8574178b7d2842752b5d1c810c4c1c43d500da))
+
 ## 0.59.0 (2026-01-17)
 
 * chore(all): bump @types/nodemailer from 7.0.4 to 7.0.5 ([2027efc3fd22d0815dd4556c6d65c831f424fdf2](https://github.com/deploystackio/deploystack/commit/2027efc3fd22d0815dd4556c6d65c831f424fdf2))
