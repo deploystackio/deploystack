@@ -6,6 +6,17 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { DsCard } from '@/components/ui/ds-card'
 import { Input } from '@/components/ui/input'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { ExternalLink, Calendar, Tag, RefreshCw, Github, Copy, Check } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import InstallationStatusBadge from './InstallationStatusBadge.vue'
@@ -46,6 +57,8 @@ const oauthPopup = ref<Window | null>(null)
 
 // Connection URL
 const justCopied = ref(false)
+const isResettingToken = ref(false)
+const resetTokenDialogOpen = ref(false)
 
 const currentUserInstance = computed(() => {
   return props.installation?.instances?.find(i => i.instance_token)
@@ -68,6 +81,32 @@ const copyConnectionUrl = async () => {
     setTimeout(() => { justCopied.value = false }, 2000)
   } catch {
     toast.error(t('mcpInstallations.connectionUrl.copyFailed'))
+  }
+}
+
+const handleResetToken = async () => {
+  try {
+    isResettingToken.value = true
+    const result = await McpInstallationService.resetToken(
+      props.installation.team_id,
+      props.installation.id
+    )
+    // Update the instance token in place so connectionUrl recomputes immediately
+    const instance = props.installation.instances?.find(i => i.instance_token)
+    if (instance) {
+      instance.instance_token = result.instance_token
+    }
+    toast.success(t('mcpInstallations.resetToken.success'), {
+      description: t('mcpInstallations.resetToken.successDescription')
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    toast.error(t('mcpInstallations.resetToken.error'), {
+      description: errorMessage
+    })
+  } finally {
+    isResettingToken.value = false
+    resetTokenDialogOpen.value = false
   }
 }
 
@@ -397,6 +436,28 @@ onUnmounted(() => {
                 <Check v-if="justCopied" class="h-4 w-4 text-green-600" />
                 <Copy v-else class="h-4 w-4" />
               </Button>
+              <AlertDialog v-model:open="resetTokenDialogOpen">
+                <AlertDialogTrigger as-child>
+                  <Button variant="default" size="icon" class="shrink-0">
+                    <RefreshCw class="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{{ t('mcpInstallations.resetToken.title') }}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {{ t('mcpInstallations.resetToken.description') }}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{{ t('mcpInstallations.resetToken.cancel') }}</AlertDialogCancel>
+                    <AlertDialogAction :disabled="isResettingToken" @click.prevent="handleResetToken">
+                      <Spinner v-if="isResettingToken" class="mr-2 h-4 w-4" />
+                      {{ t('mcpInstallations.resetToken.confirm') }}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
             <span v-else class="text-muted-foreground">{{ t('mcpInstallations.connectionUrl.notAvailable') }}</span>
           </dd>

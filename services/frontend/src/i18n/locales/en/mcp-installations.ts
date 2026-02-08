@@ -226,6 +226,16 @@ export default {
     notAvailable: 'Not available'
   },
 
+  resetToken: {
+    title: 'Reset Connection Token?',
+    description: 'This will invalidate the current connection URL. Any MCP clients using the current token will need to be updated with the new URL.',
+    cancel: 'Cancel',
+    confirm: 'Reset Token',
+    success: 'Connection token has been reset',
+    successDescription: 'The connection URL has been updated with a new token.',
+    error: 'Failed to reset token'
+  },
+
   reauth: {
     button: 'Re-authenticate',
     popup_title: 'Re-authenticating',

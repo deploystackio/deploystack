@@ -833,6 +833,27 @@ export const CLIENT_CONFIG_SUCCESS_RESPONSE_SCHEMA = {
   required: ['success', 'data']
 } as const;
 
+export const RESET_TOKEN_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: {
+      type: 'boolean',
+      description: 'Indicates if the token was reset successfully'
+    },
+    data: {
+      type: 'object',
+      properties: {
+        instance_token: {
+          type: 'string',
+          description: 'New plaintext instance token'
+        }
+      },
+      required: ['instance_token']
+    }
+  },
+  required: ['success', 'data']
+} as const;
+
 export const OAUTH_AUTHORIZE_SUCCESS_RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
@@ -1101,6 +1122,13 @@ export interface InstallationDeleteSuccessResponse {
 export interface ClientConfigSuccessResponse {
   success: boolean;
   data: object;
+}
+
+export interface ResetTokenSuccessResponse {
+  success: boolean;
+  data: {
+    instance_token: string;
+  };
 }
 
 export interface OAuthAuthorizeRequest {

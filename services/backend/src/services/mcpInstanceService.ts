@@ -254,6 +254,63 @@ export class McpInstanceService {
   }
 
   /**
+   * Reset the instance token for a specific user's instance
+   *
+   * Generates a new token, encrypts it, and updates the database.
+   * Only the instance belonging to the specified user is affected.
+   *
+   * @param installationId - Installation ID
+   * @param userId - User ID (only this user's instance is updated)
+   * @returns Object with instanceId and new plaintext token, or null if no matching instance
+   */
+  async resetInstanceToken(
+    installationId: string,
+    userId: string
+  ): Promise<{ instanceId: string; instanceToken: string } | null> {
+    const schema = await import('../db/schema');
+    const { mcpServerInstances } = schema;
+
+    // Generate new token
+    const tokenResult = await generateInstanceToken(this.logger);
+
+    // Update the instance token for this user's instance
+    const result = await this.db
+      .update(mcpServerInstances)
+      .set({
+        instance_token: tokenResult.encrypted,
+        updated_at: new Date(),
+      })
+      .where(
+        and(
+          eq(mcpServerInstances.installation_id, installationId),
+          eq(mcpServerInstances.user_id, userId)
+        )
+      )
+      .returning({ id: mcpServerInstances.id });
+
+    if (!result || result.length === 0) {
+      this.logger.warn({
+        operation: 'reset_instance_token',
+        installationId,
+        userId
+      }, 'No instance found for token reset');
+      return null;
+    }
+
+    this.logger.info({
+      operation: 'reset_instance_token',
+      instanceId: result[0].id,
+      installationId,
+      userId
+    }, 'Instance token reset successfully');
+
+    return {
+      instanceId: result[0].id,
+      instanceToken: tokenResult.plaintext
+    };
+  }
+
+  /**
    * Get all instances for an installation
    *
    * @param installationId - Installation ID

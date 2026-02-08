@@ -21834,6 +21834,144 @@ paths:
                   - success
                   - error
                 description: Internal Server Error
+  /api/teams/{teamId}/mcp/installations/{installationId}/reset-token:
+    post:
+      summary: Reset instance connection token
+      tags:
+        - MCP Installations
+      description: Regenerates the connection token for the current user's instance.
+        The old token is immediately invalidated.
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID that owns the installation
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+          description: Installation ID
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Token reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Indicates if the token was reset successfully
+                  data:
+                    type: object
+                    properties:
+                      instance_token:
+                        type: string
+                        description: New plaintext instance token
+                    required:
+                      - instance_token
+                required:
+                  - success
+                  - data
+                description: Token reset successfully
+        "400":
+          description: Bad Request - Invalid input or validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid input or validation error
+        "401":
+          description: Unauthorized - Authentication required or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required or invalid token
+        "403":
+          description: Forbidden - Insufficient permissions or scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions or scope
+        "404":
+          description: No instance found for this user and installation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: No instance found for this user and installation
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/teams/{teamId}/mcp/oauth/callback/{flowId}:
     get:
       tags:

@@ -285,6 +285,30 @@ export class McpInstallationService {
     return data.data || data
   }
 
+  /**
+   * Reset the connection token for the current user's instance
+   */
+  static async resetToken(
+    teamId: string,
+    installationId: string
+  ): Promise<{ instance_token: string }> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/reset-token`,
+      {
+        method: 'POST',
+        credentials: 'include',
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to reset token: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
+  }
+
   // ==============================
   // USER CONFIGURATION METHODS
   // ==============================
