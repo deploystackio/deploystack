@@ -3,6 +3,7 @@ import { eq, and, inArray } from 'drizzle-orm';
 import type { AnyDatabase } from '../db';
 import type { FastifyBaseLogger } from 'fastify';
 import { nanoid } from 'nanoid';
+import { generateInstancePath, generateInstanceToken } from '../utils/instancePathGenerator';
 
 /**
  * Instance with user information (includes user_slug and user_email from authUser table)
@@ -13,6 +14,7 @@ export interface InstanceWithUser {
   user_id: string;
   user_slug: string;
   user_email: string;
+  instance_path: string | null;
   status: string;
   status_message: string | null;
   status_updated_at: Date | null;
@@ -42,37 +44,77 @@ export class McpInstanceService {
    * @param installationId - Installation ID
    * @param userId - User ID
    * @param status - Initial status (default: 'provisioning')
+   * @returns Object with instanceId, instancePath, and instanceToken (plaintext)
    */
   async createInstance(
     installationId: string,
     userId: string,
     status: string = 'provisioning',
     statusMessage?: string
-  ): Promise<void> {
+  ): Promise<{ instanceId: string; instancePath: string; instanceToken: string }> {
     const schema = await import('../db/schema');
     const { mcpServerInstances } = schema;
 
     const instanceId = `inst_${nanoid()}`;
 
-    await this.db.insert(mcpServerInstances).values({
-      id: instanceId,
-      installation_id: installationId,
-      user_id: userId,
-      status,
-      status_message: statusMessage,
-      status_updated_at: new Date(),
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
+    const MAX_PATH_RETRIES = 5;
+    let instancePath = '';
+    let instanceToken: string;
+    let instanceTokenHash: string;
+    let inserted = false;
+
+    // Generate token once (outside retry loop)
+    const tokenResult = await generateInstanceToken();
+    instanceToken = tokenResult.plaintext;
+    instanceTokenHash = tokenResult.hash;
+
+    for (let attempt = 0; attempt < MAX_PATH_RETRIES; attempt++) {
+      instancePath = generateInstancePath();
+
+      try {
+        await this.db.insert(mcpServerInstances).values({
+          id: instanceId,
+          installation_id: installationId,
+          user_id: userId,
+          instance_path: instancePath,
+          instance_token: instanceTokenHash, // Store hash, not plaintext
+          status,
+          status_message: statusMessage,
+          status_updated_at: new Date(),
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+        inserted = true;
+        break;
+      } catch (error: any) {
+        // Check if it's a unique constraint violation on instance_path
+        if (error.code === '23505' && error.constraint?.includes('instance_path')) {
+          this.logger.warn({
+            attempt: attempt + 1,
+            instancePath
+          }, 'Instance path collision detected, retrying with new path');
+          continue;
+        }
+        // Re-throw non-uniqueness errors
+        throw error;
+      }
+    }
+
+    if (!inserted) {
+      throw new Error(`Failed to generate unique instance path after ${MAX_PATH_RETRIES} retries`);
+    }
 
     this.logger.info({
       operation: 'create_instance',
       instanceId,
       installationId,
       userId,
+      instancePath,
       status,
       statusMessage
-    }, 'Created MCP server instance');
+    }, 'Created MCP server instance with path-based access');
+
+    return { instanceId, instancePath, instanceToken };
   }
 
   /**
@@ -250,6 +292,7 @@ export class McpInstanceService {
         user_id: mcpServerInstances.user_id,
         user_slug: authUser.username,
         user_email: authUser.email,
+        instance_path: mcpServerInstances.instance_path,
         status: mcpServerInstances.status,
         status_message: mcpServerInstances.status_message,
         status_updated_at: mcpServerInstances.status_updated_at,
