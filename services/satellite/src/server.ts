@@ -5,6 +5,8 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import { loggerConfig } from './fastify/config/logger';
 import { registerRoutes } from './routes';
 import { McpServerWrapper } from './core/mcp-server-wrapper';
+import { InstanceRouter } from './core/instance-router';
+import { McpSessionManager } from './lib/mcp-session-manager';
 import { BackendClient } from './services/backend-client';
 import { HeartbeatService } from './services/heartbeat-service';
 import { HttpProxyManager } from './services/http-proxy-manager';
@@ -1257,6 +1259,28 @@ export async function createServer() {
     satellite_id: satelliteId
   }, 'MCP SDK routes setup - official MCP transport now active');
 
+  // Initialize Instance Router for path-based MCP access
+  const instanceSessionManager = new McpSessionManager(server.log);
+  const instanceRouter = new InstanceRouter({
+    logger: server.log,
+    toolExecutor: (mcpServerWrapper as any).toolExecutor, // Reuse shared tool executor
+    sessionManager: instanceSessionManager, // Separate session manager
+    configManager: dynamicConfigManager,
+    toolDiscoveryManager,
+    processManager
+  });
+
+  // Setup instance router routes
+  instanceRouter.setupRoutes(server);
+
+  server.log.info({
+    operation: 'instance_router_setup',
+    satellite_id: satelliteId
+  }, 'Instance router setup complete - path-based MCP access enabled at /i/:instancePath/mcp');
+
+  // Store instance session manager for cleanup
+  server.decorate('instanceSessionManager', instanceSessionManager);
+
   // Register all other routes
   registerRoutes(server);
 
@@ -1296,6 +1320,19 @@ export async function createServer() {
       if (commandPollingService) {
         server.log.info({ operation: 'shutdown_polling' }, 'Stopping command polling service...');
         commandPollingService.stop();
+      }
+
+      // Cleanup MCP session managers
+      const mcpServerWrapper = (server as any).mcpServerWrapper as McpServerWrapper | undefined;
+      if (mcpServerWrapper) {
+        server.log.info({ operation: 'shutdown_mcp_wrapper' }, 'Cleaning up hierarchical MCP router...');
+        await mcpServerWrapper.cleanup();
+      }
+
+      const instanceSessionManager = (server as any).instanceSessionManager as McpSessionManager | undefined;
+      if (instanceSessionManager) {
+        server.log.info({ operation: 'shutdown_instance_sessions' }, 'Cleaning up instance router sessions...');
+        await instanceSessionManager.cleanup();
       }
 
       // Close server
