@@ -89,18 +89,36 @@ export class InstanceRouter {
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name: toolName, arguments: toolArgs } = request.params;
 
+      // Look up the tool in the discovery cache to get its correct namespacedName.
+      // processId is the installation name (e.g., "duckduckgo-mcp-server-john-plhdo1j4kuit0et-..."),
+      // but the executor expects namespacedName using serverSlug (e.g., "duckduckgo-mcp-server:search").
+      const allTools = this.toolDiscoveryManager.getAllTools();
+      const matchedTool = allTools.find(
+        tool => tool.serverName === processId && tool.originalName === toolName
+      );
+
+      if (!matchedTool) {
+        this.logger.error({
+          operation: 'instance_tool_not_found',
+          process_id: processId,
+          tool_name: toolName,
+          available_tools: allTools
+            .filter(t => t.serverName === processId)
+            .map(t => t.originalName)
+        }, `Tool not found: ${toolName} on instance ${processId}`);
+
+        throw new Error(`Tool not found: ${toolName} on instance ${processId}`);
+      }
+
       this.logger.info({
         operation: 'instance_tool_call',
         process_id: processId,
-        tool_name: toolName
+        tool_name: toolName,
+        namespaced_name: matchedTool.namespacedName
       }, `Executing tool ${toolName} on instance ${processId}`);
 
-      // Execute tool on this specific instance
-      // Need to convert tool name to namespaced format for executor
-      const namespacedToolName = `${processId}:${toolName}`;
-
       const result = await this.toolExecutor.executeToolCall(
-        namespacedToolName,
+        matchedTool.namespacedName, // e.g., "duckduckgo-mcp-server:search"
         toolArgs || {},
         processId // Force routing to this specific process
       );
