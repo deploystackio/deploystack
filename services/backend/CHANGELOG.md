@@ -1,5 +1,7 @@
 # Changelog
 
+# [0.60.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.20.0...backend-v0.59.0) (2026-02-08)
+
 # [0.60.0](https://github.com/deploystackio/deploystack/compare/backend-v0.59.0...backend-v0.60.0) (2026-02-08)
 
 
