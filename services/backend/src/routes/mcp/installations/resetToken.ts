@@ -3,6 +3,7 @@ import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { getDb } from '../../../db';
 import { McpInstanceService } from '../../../services/mcpInstanceService';
+import { SatelliteCommandService } from '../../../services/satelliteCommandService';
 import {
   TEAM_AND_INSTALLATION_PARAMS_SCHEMA,
   RESET_TOKEN_SUCCESS_RESPONSE_SCHEMA,
@@ -38,7 +39,7 @@ export default async function resetTokenRoute(server: FastifyInstance) {
       }
     }
   }, async (request, reply) => {
-    const { installationId } = request.params as TeamAndInstallationParams;
+    const { teamId, installationId } = request.params as TeamAndInstallationParams;
     const userId = request.user!.id;
 
     request.log.info({
@@ -60,6 +61,19 @@ export default async function resetTokenRoute(server: FastifyInstance) {
         };
         const jsonString = JSON.stringify(errorResponse);
         return reply.status(404).type('application/json').send(jsonString);
+      }
+
+      // Notify satellite to refresh config and pick up new token hash
+      try {
+        const satelliteCommandService = new SatelliteCommandService(db, request.log);
+        await satelliteCommandService.notifyMcpUpdate(installationId, teamId, userId);
+      } catch (commandError) {
+        request.log.warn({
+          operation: 'reset_instance_token_satellite_notify',
+          installationId,
+          error: commandError instanceof Error ? commandError.message : 'Unknown error'
+        }, 'Failed to notify satellite of token reset');
+        // Non-fatal: token is already reset in DB, satellite will pick it up on next config refresh
       }
 
       const successResponse: ResetTokenSuccessResponse = {
