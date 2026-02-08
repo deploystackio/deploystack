@@ -590,6 +590,7 @@ export class McpHealthCheckService {
   /**
    * Request satellite to validate API key credentials for an installation
    * Creates a health_check command with credential_validation type
+   * Sends to the installation's assigned satellite, or broadcasts to all global satellites if no specific satellite
    */
   async requestCredentialValidation(installationId: string, teamId: string): Promise<void> {
     if (!this.satelliteCommandService) {
@@ -601,22 +602,58 @@ export class McpHealthCheckService {
       return;
     }
 
-    await this.satelliteCommandService.createCommandForAllGlobalSatellites({
-      commandType: 'health_check',
-      priority: 'normal',
+    // Query the installation to get its satellite_id
+    const installation = await this.db
+      .select({
+        satellite_id: this.mcpServerInstallations.satellite_id
+      })
+      .from(this.mcpServerInstallations)
+      .where(eq(this.mcpServerInstallations.id, installationId))
+      .limit(1);
+
+    if (!installation || installation.length === 0) {
+      this.logger.warn({
+        operation: 'credential_validation_request_skipped',
+        installationId,
+        reason: 'installation_not_found'
+      }, `Cannot request credential validation - installation ${installationId} not found`);
+      return;
+    }
+
+    const satelliteId = installation[0].satellite_id;
+
+    const commandOptions = {
+      commandType: 'health_check' as const,
+      priority: 'normal' as const,
       payload: {
         check_type: 'credential_validation',
         installation_id: installationId
       },
       targetTeamId: teamId,
       expiresInMinutes: 5
-    });
+    };
 
-    this.logger.debug({
-      operation: 'credential_validation_requested',
-      installationId,
-      teamId
-    }, `Credential validation requested for installation ${installationId}`);
+    if (satelliteId) {
+      await this.satelliteCommandService.createCommandForSpecificSatellite(
+        satelliteId,
+        commandOptions
+      );
+
+      this.logger.debug({
+        operation: 'credential_validation_requested',
+        installationId,
+        teamId,
+        satelliteId
+      }, `Credential validation requested for installation ${installationId} on satellite ${satelliteId}`);
+    } else {
+      await this.satelliteCommandService.createCommandForAllGlobalSatellites(commandOptions);
+
+      this.logger.debug({
+        operation: 'credential_validation_requested',
+        installationId,
+        teamId
+      }, `Credential validation requested for installation ${installationId} (broadcast to all global satellites)`);
+    }
   }
 
   /**
