@@ -1,5 +1,23 @@
 # Changelog
 
+# [0.56.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.19.0...frontend-v0.55.0) (2026-02-08)
+
+
+### chore
+
+* **all:** bump @modelcontextprotocol/sdk from 1.25.3 to 1.26.0 ([](https://github.com/deploystackio/deploystack/commit/cb1e232a5232ea511d74698fdb25526715fdb589))
+
+
+### feat
+
+* **all:** add satellite management UI and GitHub deployment lifecycle features ([](https://github.com/deploystackio/deploystack/commit/882c338a006db6cae28fb851428283354f091e28))
+* **frontend:** add source type and label helpers for MCP installations ([](https://github.com/deploystackio/deploystack/commit/0607e39ea9d864d32f7552c77dd04a9cfdf56766))
+
+
+### fix
+
+* **frontend:** update system metrics parsing and display in satellite components ([](https://github.com/deploystackio/deploystack/commit/1138bd5e12b84e748ed2f22d37a9f1b9b97791da))
+
 # [0.56.0](https://github.com/deploystackio/deploystack/compare/frontend-v0.55.0...frontend-v0.56.0) (2026-02-08)
 
 
