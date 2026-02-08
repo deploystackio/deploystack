@@ -1,5 +1,22 @@
 # Changelog
 
+# [0.20.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.19.0...satellite-v0.20.0) (2026-02-08)
+
+
+### chore
+
+* **all:** bump @modelcontextprotocol/sdk from 1.25.3 to 1.26.0 ([](https://github.com/deploystackio/deploystack/commit/cb1e232a5232ea511d74698fdb25526715fdb589))
+
+
+### feat
+
+* **all:** add satellite management UI and GitHub deployment lifecycle features ([](https://github.com/deploystackio/deploystack/commit/882c338a006db6cae28fb851428283354f091e28))
+* **satellite:** add instance path and token hash to MCP server config ([](https://github.com/deploystackio/deploystack/commit/79b90cec58dfabf818a702105ded50d463ec7d48))
+* **satellite:** enhance MCP activity tracking with instance token support ([](https://github.com/deploystackio/deploystack/commit/5793cfef6ad12bb41883887c44b85eb63ebf17fe))
+* **satellite:** enhance tool discovery and execution logging ([](https://github.com/deploystackio/deploystack/commit/6dfd20e2f41b05f8366d4c92b2ba34cb9520313c))
+* **satellite:** implement instance router for path-based MCP access ([](https://github.com/deploystackio/deploystack/commit/d6eafc968001ebe94e8163b61dec6e910510ac39))
+* **satellite:** implement MCP session manager for transport lifecycle ([](https://github.com/deploystackio/deploystack/commit/50f4a62045b87c3152b6bc5ba0a7e20d5d94dc1f))
+
 ## 0.19.0 (2026-02-01)
 
 * docs(all): improve formatting and clarity in README.md ([0da73351350726907c060504f7f7d9ec175956bb](https://github.com/deploystackio/deploystack/commit/0da73351350726907c060504f7f7d9ec175956bb))
