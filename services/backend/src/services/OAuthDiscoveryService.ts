@@ -165,7 +165,7 @@ export class OAuthDiscoveryService {
       // Try POST with MCP protocol request (handles Harmonic-style servers)
       this.logger.debug(
         { url, method: 'POST' },
-        'Server returned non-401 on GET, trying POST with MCP protocol request'
+        'Server returned non-401/403 on GET, trying POST with MCP protocol request'
       );
       const postResult = await this.tryOAuthDetection(url, 'POST', {
         jsonrpc: '2.0',
@@ -178,7 +178,7 @@ export class OAuthDiscoveryService {
         return postResult;
       }
 
-      this.logger.debug({ url }, 'No OAuth requirement detected (both GET and POST returned non-401)');
+      this.logger.debug({ url }, 'No OAuth requirement detected (both GET and POST returned non-401/403)');
       return { requiresOauth: false };
     } catch (error) {
       this.logger.warn(
@@ -191,6 +191,10 @@ export class OAuthDiscoveryService {
 
   /**
    * Attempts OAuth detection with specified HTTP method
+   *
+   * Accepts both 401 Unauthorized and 403 Forbidden as potential OAuth challenges.
+   * Per RFC 9728, the WWW-Authenticate: Bearer header can appear on either status.
+   * Some servers (e.g., BigData) return 403 instead of 401 for unauthenticated requests.
    *
    * @param url - MCP server URL
    * @param method - HTTP method (GET or POST)
@@ -222,11 +226,12 @@ export class OAuthDiscoveryService {
       signal: AbortSignal.timeout(10000) // 10 second timeout
     });
 
-    // Check for 401 Unauthorized
-    if (response.status !== 401) {
+    // Check for 401 Unauthorized or 403 Forbidden (some servers like BigData return 403)
+    const isAuthChallenge = response.status === 401 || response.status === 403;
+    if (!isAuthChallenge) {
       this.logger.debug(
         { url, method, status: response.status },
-        'Server returned non-401 status'
+        'Server returned non-401/403 status'
       );
       return { requiresOauth: false };
     }
@@ -253,8 +258,8 @@ export class OAuthDiscoveryService {
     const resourceMetadataUrl = resourceMetadataMatch ? resourceMetadataMatch[1] : undefined;
 
     this.logger.info(
-      { url, method, wwwAuthenticate, discoveryUrl, resourceMetadataUrl },
-      'OAuth requirement detected (401 + WWW-Authenticate: Bearer)'
+      { url, method, status: response.status, wwwAuthenticate, discoveryUrl, resourceMetadataUrl },
+      `OAuth requirement detected (${response.status} + WWW-Authenticate: Bearer)`
     );
 
     return {
