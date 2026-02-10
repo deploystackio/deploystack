@@ -1,5 +1,65 @@
 # Changelog
 
+# [0.56.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.19.0...frontend-v0.55.0) (2026-02-08)
+
+
+### chore
+
+* **all:** bump @modelcontextprotocol/sdk from 1.25.3 to 1.26.0 ([](https://github.com/deploystackio/deploystack/commit/cb1e232a5232ea511d74698fdb25526715fdb589))
+
+
+### feat
+
+* **all:** add satellite management UI and GitHub deployment lifecycle features ([](https://github.com/deploystackio/deploystack/commit/882c338a006db6cae28fb851428283354f091e28))
+* **frontend:** add source type and label helpers for MCP installations ([](https://github.com/deploystackio/deploystack/commit/0607e39ea9d864d32f7552c77dd04a9cfdf56766))
+
+
+### fix
+
+* **frontend:** update system metrics parsing and display in satellite components ([](https://github.com/deploystackio/deploystack/commit/1138bd5e12b84e748ed2f22d37a9f1b9b97791da))
+
+# [0.56.0](https://github.com/deploystackio/deploystack/compare/frontend-v0.55.0...frontend-v0.56.0) (2026-02-08)
+
+
+### chore
+
+* **all:** bump @modelcontextprotocol/sdk from 1.25.3 to 1.26.0 ([](https://github.com/deploystackio/deploystack/commit/cb1e232a5232ea511d74698fdb25526715fdb589))
+* **all:** bump @typescript-eslint/eslint-plugin from 8.53.0 to 8.53.1 ([](https://github.com/deploystackio/deploystack/commit/12c5365ec1a87f7daac6b36b848d9763c448f63a))
+* **all:** bump @typescript-eslint/parser from 8.53.0 to 8.53.1 ([](https://github.com/deploystackio/deploystack/commit/def5f359dd16d068956ba38fcc78a749190ba6f7))
+
+
+### docs
+
+* **all:** improve formatting and clarity in README.md ([](https://github.com/deploystackio/deploystack/commit/0da73351350726907c060504f7f7d9ec175956bb))
+* **all:** update README with new features and deployment instructions ([](https://github.com/deploystackio/deploystack/commit/a29ef45f846c104f1fb2096c8a75c862a7b7e3c1))
+
+
+### feat
+
+* **all:** add deployments tab with team info and refactor catalog tables ([](https://github.com/deploystackio/deploystack/commit/fd916671eb3e0d37e33e3cbfd73d1964a698e0a6))
+* **all:** add language and runtime fields to MCP server metadata ([](https://github.com/deploystackio/deploystack/commit/f374f35375abce5af8a9417ff2d1b4a65212cf62))
+* **all:** add satellite management UI and GitHub deployment lifecycle features ([](https://github.com/deploystackio/deploystack/commit/882c338a006db6cae28fb851428283354f091e28))
+* **all:** add team limits and GitHub deployment features with email notifications ([](https://github.com/deploystackio/deploystack/commit/1295569d4449406e545b256ef50b662f3d76b8f9))
+* **all:** implement comprehensive security validation for MCP installations ([](https://github.com/deploystackio/deploystack/commit/9081438d4e658b75e90ba52856271ba656aeeb52))
+* **all:** implement GitHub deployment validation and enhanced wizard flow ([](https://github.com/deploystackio/deploystack/commit/0989f29c86a1ff672cd90e299af826480a4c2146))
+* **all:** implement GitHub-based MCP server deployment with Octokit ([](https://github.com/deploystackio/deploystack/commit/ed01167e0388b9874e542fbb1f39db2f4ecca473)), closes [user/repo#sha](https://github.com/user/repo/issues/sha)
+* **frontend:** add Deploy MCP button and update reka-ui to 2.8.0 ([](https://github.com/deploystackio/deploystack/commit/9e094915c3a8fe4439bba2853c81c572278f50b8))
+* **frontend:** add language and runtime detection for MCP server forms ([](https://github.com/deploystackio/deploystack/commit/aa343342124d4a145396187b66c72c00696d2311))
+* **frontend:** add source type and label helpers for MCP installations ([](https://github.com/deploystackio/deploystack/commit/0607e39ea9d864d32f7552c77dd04a9cfdf56766))
+* **frontend:** implement optimistic deletion for MCP servers ([](https://github.com/deploystackio/deploystack/commit/b1115bffe4e691986dcca6ad0d5545de2bd85246))
+
+
+### fix
+
+* **frontend:** add boolean select dropdown to configuration edit modals ([](https://github.com/deploystackio/deploystack/commit/15c3d45db71aac02d0a894b65fa3e6aa60771bdf))
+* **frontend:** prevent value loss when changing argument category to template ([](https://github.com/deploystackio/deploystack/commit/4fe6ad3343750d7071316c55dcb6303f2b9357e9))
+* **frontend:** update system metrics parsing and display in satellite components ([](https://github.com/deploystackio/deploystack/commit/1138bd5e12b84e748ed2f22d37a9f1b9b97791da))
+
+
+### refactor
+
+* **frontend:** reset state and emit empty model on repo change ([](https://github.com/deploystackio/deploystack/commit/2a0d5890bd14d6e22ae196709386b5a6286e66ce))
+
 ## 0.55.0 (2026-01-17)
 
 * chore(all): bump @types/nodemailer from 7.0.4 to 7.0.5 ([2027efc3fd22d0815dd4556c6d65c831f424fdf2](https://github.com/deploystackio/deploystack/commit/2027efc3fd22d0815dd4556c6d65c831f424fdf2))

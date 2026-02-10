@@ -56,10 +56,21 @@ export class OAuthDiscoveryService {
         issuer = `${issuerUrl.protocol}//${issuerUrl.host}`;
       }
 
+      if (detectionResult.resourceMetadataUrl) {
+        this.logger.info(
+          { url, resourceMetadataUrl: detectionResult.resourceMetadataUrl },
+          'RFC 9728 resource_metadata URL found in WWW-Authenticate header'
+        );
+      }
+
       this.logger.info({ url, issuer }, 'OAuth required, starting discovery');
 
       // Step 3: Discover OAuth metadata
-      const metadata = await this.discoverOAuthMetadata(issuer, detectionResult.discoveryUrl);
+      const metadata = await this.discoverOAuthMetadata(
+        issuer,
+        detectionResult.discoveryUrl,
+        detectionResult.resourceMetadataUrl
+      );
 
       this.logger.info(
         {
@@ -140,6 +151,7 @@ export class OAuthDiscoveryService {
   private async checkOAuthRequirement(url: string): Promise<{
     requiresOauth: boolean;
     discoveryUrl?: string;
+    resourceMetadataUrl?: string;
   }> {
     try {
       // Try GET first (fast path for most servers)
@@ -192,6 +204,7 @@ export class OAuthDiscoveryService {
   ): Promise<{
     requiresOauth: boolean;
     discoveryUrl?: string;
+    resourceMetadataUrl?: string;
   }> {
     const headers: Record<string, string> = {
       Accept: 'application/json',
@@ -233,33 +246,60 @@ export class OAuthDiscoveryService {
     const match = wwwAuthenticate.match(/oauth_authorization_server="([^"]+)"/);
     const discoveryUrl = match ? match[1] : undefined;
 
+    // Extract optional RFC 9728 resource metadata URL from WWW-Authenticate header
+    // Format: resource_metadata="https://..." (quoted) or resource_metadata=https://... (unquoted)
+    // PlanetScale does NOT quote the URL, Neon DOES quote it — handle both
+    const resourceMetadataMatch = wwwAuthenticate.match(/resource_metadata="?([^",\s]+)"?/);
+    const resourceMetadataUrl = resourceMetadataMatch ? resourceMetadataMatch[1] : undefined;
+
     this.logger.info(
-      { url, method, wwwAuthenticate, discoveryUrl },
+      { url, method, wwwAuthenticate, discoveryUrl, resourceMetadataUrl },
       'OAuth requirement detected (401 + WWW-Authenticate: Bearer)'
     );
 
     return {
       requiresOauth: true,
-      discoveryUrl
+      discoveryUrl,
+      resourceMetadataUrl
     };
   }
 
   /**
-   * Discovers OAuth server metadata using RFC 8414/9728 well-known endpoints
+   * Discovers OAuth server metadata using multiple discovery strategies
+   *
+   * Priority order:
+   * 1. RFC 9728 resource_metadata → two-hop discovery (protected resource metadata)
+   * 2. Direct oauth_authorization_server URL from WWW-Authenticate header
+   * 3. RFC 8414 at root /.well-known/oauth-authorization-server
+   * 4. OpenID Connect /.well-known/openid-configuration
    *
    * @param issuer - OAuth issuer URL (e.g., "https://api.box.com")
-   * @param discoveryUrl - Optional discovery URL from WWW-Authenticate header
+   * @param discoveryUrl - Optional direct discovery URL from WWW-Authenticate header
+   * @param resourceMetadataUrl - Optional RFC 9728 resource metadata URL
    * @returns OAuth server metadata
    * @throws Error if discovery fails
    */
   private async discoverOAuthMetadata(
     issuer: string,
-    discoveryUrl?: string
+    discoveryUrl?: string,
+    resourceMetadataUrl?: string
   ): Promise<OAuthServerMetadata> {
     // Normalize issuer URL (remove trailing slash)
     const normalizedIssuer = issuer.replace(/\/$/, '');
 
-    // If discovery URL provided in WWW-Authenticate header, try it first
+    // Priority 1: RFC 9728 protected resource metadata (two-hop discovery)
+    if (resourceMetadataUrl) {
+      this.logger.debug(
+        { issuer: normalizedIssuer, resourceMetadataUrl },
+        'Trying RFC 9728 protected resource metadata discovery'
+      );
+      const resourceMetadata = await this.discoverViaProtectedResourceMetadata(resourceMetadataUrl);
+      if (resourceMetadata) {
+        return resourceMetadata;
+      }
+    }
+
+    // Priority 2: Direct discovery URL from WWW-Authenticate header
     if (discoveryUrl) {
       this.logger.debug(
         { issuer: normalizedIssuer, discoveryUrl },
@@ -275,7 +315,7 @@ export class OAuthDiscoveryService {
       }
     }
 
-    // Try RFC 8414 first
+    // Priority 3: RFC 8414 at root
     this.logger.debug({ issuer: normalizedIssuer }, 'Trying RFC 8414 discovery');
     const rfc8414Url = `${normalizedIssuer}/.well-known/oauth-authorization-server`;
     const rfc8414Metadata = await this.fetchMetadata(rfc8414Url);
@@ -287,7 +327,7 @@ export class OAuthDiscoveryService {
       return rfc8414Metadata;
     }
 
-    // Try OpenID Connect discovery as fallback
+    // Priority 4: OpenID Connect discovery as fallback
     this.logger.debug({ issuer: normalizedIssuer }, 'Trying OpenID Connect discovery');
     const oidcUrl = `${normalizedIssuer}/.well-known/openid-configuration`;
     const oidcMetadata = await this.fetchMetadata(oidcUrl);
@@ -301,12 +341,99 @@ export class OAuthDiscoveryService {
 
     // All failed
     this.logger.error(
-      { issuer: normalizedIssuer, discoveryUrl, rfc8414Url, oidcUrl },
+      { issuer: normalizedIssuer, resourceMetadataUrl, discoveryUrl, rfc8414Url, oidcUrl },
       'OAuth discovery failed on all endpoints'
     );
     throw new Error(
-      `OAuth discovery failed for ${normalizedIssuer}. Tried ${discoveryUrl ? 'WWW-Authenticate header, ' : ''}RFC 8414 and OpenID Connect endpoints.`
+      `OAuth discovery failed for ${normalizedIssuer}. Tried ${resourceMetadataUrl ? 'RFC 9728 resource metadata, ' : ''}${discoveryUrl ? 'WWW-Authenticate header, ' : ''}RFC 8414 and OpenID Connect endpoints.`
     );
+  }
+
+  /**
+   * Discovers OAuth metadata via RFC 9728 Protected Resource Metadata (two-hop discovery)
+   *
+   * 1. Fetches the resource metadata URL → gets { resource, authorization_servers: [...] }
+   * 2. Takes first authorization server URL
+   * 3. Constructs path-aware well-known URL for that authorization server
+   * 4. Fetches OAuth authorization server metadata
+   *
+   * @param resourceMetadataUrl - URL from WWW-Authenticate resource_metadata parameter
+   * @returns OAuth server metadata or null if discovery fails
+   */
+  private async discoverViaProtectedResourceMetadata(
+    resourceMetadataUrl: string
+  ): Promise<OAuthServerMetadata | null> {
+    try {
+      this.logger.debug(
+        { resourceMetadataUrl },
+        'Fetching RFC 9728 protected resource metadata'
+      );
+
+      const response = await fetch(resourceMetadataUrl, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'DeployStack/1.0'
+        },
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (!response.ok) {
+        this.logger.debug(
+          { resourceMetadataUrl, status: response.status },
+          'Protected resource metadata fetch failed'
+        );
+        return null;
+      }
+
+      const resourceMetadata = (await response.json()) as {
+        resource?: string;
+        authorization_servers?: string[];
+      };
+
+      const authorizationServers = resourceMetadata.authorization_servers;
+      if (!authorizationServers || authorizationServers.length === 0) {
+        this.logger.warn(
+          { resourceMetadataUrl, resourceMetadata },
+          'Protected resource metadata missing authorization_servers'
+        );
+        return null;
+      }
+
+      const authServerUrl = authorizationServers[0];
+      this.logger.debug(
+        { resourceMetadataUrl, authServerUrl },
+        'Found authorization server from protected resource metadata'
+      );
+
+      // Construct path-aware well-known URL per RFC 8414
+      // If auth server has a path (e.g., https://host/mcp/planetscale),
+      // the well-known URL is https://host/.well-known/oauth-authorization-server/mcp/planetscale
+      const parsedAuthServer = new URL(authServerUrl);
+      const authServerPath = parsedAuthServer.pathname === '/' ? '' : parsedAuthServer.pathname;
+      const wellKnownUrl = `${parsedAuthServer.protocol}//${parsedAuthServer.host}/.well-known/oauth-authorization-server${authServerPath}`;
+
+      this.logger.debug(
+        { authServerUrl, wellKnownUrl },
+        'Constructed path-aware well-known URL for authorization server'
+      );
+
+      const metadata = await this.fetchMetadata(wellKnownUrl);
+      if (metadata) {
+        this.logger.info(
+          { resourceMetadataUrl, wellKnownUrl },
+          'Successfully discovered OAuth metadata via RFC 9728 protected resource metadata'
+        );
+      }
+
+      return metadata;
+    } catch (error) {
+      this.logger.debug(
+        { resourceMetadataUrl, error: error instanceof Error ? error.message : 'Unknown error' },
+        'RFC 9728 protected resource metadata discovery failed'
+      );
+      return null;
+    }
   }
 
   /**

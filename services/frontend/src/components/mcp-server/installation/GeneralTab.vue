@@ -72,6 +72,14 @@ const connectionUrl = computed(() => {
   return `${baseUrl}/i/${inst.instance_path}/mcp?token=${inst.instance_token}`
 })
 
+// Compute hierarchical router tool path prefix
+const routerPath = computed(() => {
+  if (!props.installation?.team_slug || !props.installation?.server?.slug) {
+    return null
+  }
+  return `${props.installation.team_slug}-${props.installation.server.slug}:*`
+})
+
 const copyConnectionUrl = async () => {
   if (!connectionUrl.value) return
   try {
@@ -460,6 +468,14 @@ onUnmounted(() => {
               </AlertDialog>
             </div>
             <span v-else class="text-muted-foreground">{{ t('mcpInstallations.connectionUrl.notAvailable') }}</span>
+          </dd>
+        </div>
+
+        <!-- Hierarchical Router Path -->
+        <div v-if="routerPath" class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm/6 font-medium text-gray-900">Hierarchical Router Path</dt>
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+            <code class="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{{ routerPath }}</code>
           </dd>
         </div>
       </dl>

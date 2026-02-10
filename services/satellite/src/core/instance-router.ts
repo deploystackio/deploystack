@@ -74,15 +74,40 @@ export class InstanceRouter {
       // Filter to only tools from THIS instance's process
       const instanceTools = allTools.filter(tool => tool.serverName === processId);
 
+      // Filter out disabled tools
+      const serverConfig = this.configManager.getMcpServerConfig(processId);
+      let visibleTools = instanceTools;
+
+      if (serverConfig?.installation_id) {
+        visibleTools = instanceTools.filter(tool => {
+          return !this.toolDiscoveryManager.isToolDisabled(
+            serverConfig.installation_id!,
+            tool.originalName
+          );
+        });
+
+        const filteredCount = instanceTools.length - visibleTools.length;
+        if (filteredCount > 0) {
+          this.logger.info({
+            operation: 'instance_tools_list_filtered_disabled',
+            process_id: processId,
+            installation_id: serverConfig.installation_id,
+            total_tools: instanceTools.length,
+            filtered_count: filteredCount,
+            visible_count: visibleTools.length
+          }, `Filtered ${filteredCount} disabled tools from instance ${processId}`);
+        }
+      }
+
       this.logger.info({
         operation: 'instance_tools_list',
         process_id: processId,
-        tool_count: instanceTools.length
-      }, `Listing ${instanceTools.length} tools for instance ${processId}`);
+        tool_count: visibleTools.length
+      }, `Listing ${visibleTools.length} tools for instance ${processId}`);
 
       // Return actual tool definitions (NOT meta-tools, NO namespacing)
       return {
-        tools: instanceTools.map(tool => ({
+        tools: visibleTools.map(tool => ({
           name: tool.originalName, // Original tool name (NOT namespaced)
           description: tool.description,
           inputSchema: tool.inputSchema,
@@ -117,6 +142,41 @@ export class InstanceRouter {
         }, `Tool not found: ${toolName} on instance ${processId}`);
 
         throw new Error(`Tool not found: ${toolName} on instance ${processId}`);
+      }
+
+      // Check if tool is disabled
+      const serverConfig = this.configManager.getMcpServerConfig(processId);
+      if (serverConfig?.installation_id) {
+        const isDisabled = this.toolDiscoveryManager.isToolDisabled(
+          serverConfig.installation_id,
+          matchedTool.originalName
+        );
+
+        if (isDisabled) {
+          this.logger.warn({
+            operation: 'instance_tool_call_disabled',
+            process_id: processId,
+            tool_name: toolName,
+            installation_id: serverConfig.installation_id
+          }, `Tool execution blocked - tool is disabled: ${toolName}`);
+
+          return {
+            content: [{
+              type: 'text',
+              text: [
+                `Tool '${toolName}' has been disabled by the team administrator.`,
+                '',
+                'This tool is currently unavailable and cannot be executed.',
+                '',
+                'Recommended actions:',
+                '1. Contact your team administrator if you need this tool enabled',
+                '',
+                `Disabled tool: ${toolName}`
+              ].join('\n')
+            }],
+            isError: true
+          };
+        }
       }
 
       this.logger.info({

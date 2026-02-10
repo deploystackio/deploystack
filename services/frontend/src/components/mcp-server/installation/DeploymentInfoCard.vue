@@ -56,14 +56,6 @@ const githubInfo = computed(() => {
   }
 })
 
-// Compute hierarchical router tool path prefix
-const routerPath = computed(() => {
-  if (!props.installation?.team_slug || !props.installation?.server?.slug) {
-    return null
-  }
-  return `${props.installation.team_slug}-${props.installation.server.slug}:*`
-})
-
 // Modal state
 const isChangeBranchModalOpen = ref(false)
 const isRedeployModalOpen = ref(false)
@@ -207,14 +199,6 @@ const canRedeploy = computed(() => {
             <GitCommit class="h-4 w-4" />
             {{ currentShortSha }}
           </span>
-        </dd>
-      </div>
-
-      <!-- Hierarchical Router Path -->
-      <div v-if="routerPath" class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
-        <dt class="text-sm/6 font-medium text-gray-900">Hierarchical Router Path</dt>
-        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
-          <code class="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{{ routerPath }}</code>
         </dd>
       </div>
     </dl>

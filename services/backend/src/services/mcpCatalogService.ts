@@ -176,6 +176,7 @@ export interface UpdateMcpServerRequest {
   status?: 'active' | 'deprecated' | 'maintenance' | 'disabled';
   featured?: boolean;
   auto_install_new_default_team?: boolean;
+  requires_oauth?: boolean;
 }
 
 export interface McpServerFilters {
@@ -626,7 +627,9 @@ export class McpCatalogService {
     if (data.auto_install_new_default_team !== undefined && userRole === 'global_admin') {
       updateData.auto_install_new_default_team = data.auto_install_new_default_team;
     }
-    
+
+    if (data.requires_oauth !== undefined) updateData.requires_oauth = data.requires_oauth;
+
     await this.db.update(this.mcpServers).set(updateData).where(eq(this.mcpServers.id, serverId));
     
     this.logger.info({

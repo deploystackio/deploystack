@@ -1,5 +1,86 @@
 # Changelog
 
+# [0.20.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.18.0...satellite-v0.19.0) (2026-02-08)
+
+
+### chore
+
+* **all:** bump @modelcontextprotocol/sdk from 1.25.3 to 1.26.0 ([](https://github.com/deploystackio/deploystack/commit/cb1e232a5232ea511d74698fdb25526715fdb589))
+* **all:** bump @typescript-eslint/eslint-plugin from 8.53.0 to 8.53.1 ([](https://github.com/deploystackio/deploystack/commit/12c5365ec1a87f7daac6b36b848d9763c448f63a))
+* **all:** bump @typescript-eslint/parser from 8.53.0 to 8.53.1 ([](https://github.com/deploystackio/deploystack/commit/def5f359dd16d068956ba38fcc78a749190ba6f7))
+
+
+### docs
+
+* **all:** improve formatting and clarity in README.md ([](https://github.com/deploystackio/deploystack/commit/0da73351350726907c060504f7f7d9ec175956bb))
+* **all:** update README with new features and deployment instructions ([](https://github.com/deploystackio/deploystack/commit/a29ef45f846c104f1fb2096c8a75c862a7b7e3c1))
+
+
+### feat
+
+* **all:** add deployments tab with team info and refactor catalog tables ([](https://github.com/deploystackio/deploystack/commit/fd916671eb3e0d37e33e3cbfd73d1964a698e0a6))
+* **all:** add language and runtime fields to MCP server metadata ([](https://github.com/deploystackio/deploystack/commit/f374f35375abce5af8a9417ff2d1b4a65212cf62))
+* **all:** add satellite management UI and GitHub deployment lifecycle features ([](https://github.com/deploystackio/deploystack/commit/882c338a006db6cae28fb851428283354f091e28))
+* **all:** add team limits and GitHub deployment features with email notifications ([](https://github.com/deploystackio/deploystack/commit/1295569d4449406e545b256ef50b662f3d76b8f9))
+* **all:** implement comprehensive security validation for MCP installations ([](https://github.com/deploystackio/deploystack/commit/9081438d4e658b75e90ba52856271ba656aeeb52))
+* **all:** implement GitHub deployment validation and enhanced wizard flow ([](https://github.com/deploystackio/deploystack/commit/0989f29c86a1ff672cd90e299af826480a4c2146))
+* **all:** implement GitHub-based MCP server deployment with Octokit ([](https://github.com/deploystackio/deploystack/commit/ed01167e0388b9874e542fbb1f39db2f4ecca473)), closes [user/repo#sha](https://github.com/user/repo/issues/sha)
+* **satellite:** add instance path and token hash to MCP server config ([](https://github.com/deploystackio/deploystack/commit/79b90cec58dfabf818a702105ded50d463ec7d48))
+* **satellite:** add Python version discovery and selection logic ([](https://github.com/deploystackio/deploystack/commit/067313fdbaa0e457deb7311b57f0d7d1f33698f4))
+* **satellite:** add runtime validation for Node.js and Python dependencies ([](https://github.com/deploystackio/deploystack/commit/6ab033b29fc4a56ecb82fb74c028ffb27a3de9a8))
+* **satellite:** add tmpfs management for GitHub deployments ([](https://github.com/deploystackio/deploystack/commit/5a0c5db63cc7f08b600d45fe326945ca7088e111))
+* **satellite:** enhance installation process with user-specific logging ([](https://github.com/deploystackio/deploystack/commit/715e9b51fe24ba958bd6a0e743b8144fb7a47fab))
+* **satellite:** enhance MCP activity tracking with instance token support ([](https://github.com/deploystackio/deploystack/commit/5793cfef6ad12bb41883887c44b85eb63ebf17fe))
+* **satellite:** enhance PATH for runtime checks in command execution ([](https://github.com/deploystackio/deploystack/commit/28263a208d13c32a37c1447f2bd325812e22b83c))
+* **satellite:** enhance tool discovery and execution logging ([](https://github.com/deploystackio/deploystack/commit/6dfd20e2f41b05f8366d4c92b2ba34cb9520313c))
+* **satellite:** implement instance router for path-based MCP access ([](https://github.com/deploystackio/deploystack/commit/d6eafc968001ebe94e8163b61dec6e910510ac39))
+* **satellite:** implement MCP session manager for transport lifecycle ([](https://github.com/deploystackio/deploystack/commit/50f4a62045b87c3152b6bc5ba0a7e20d5d94dc1f))
+* **satellite:** install TypeScript globally for deployment builds ([](https://github.com/deploystackio/deploystack/commit/3b0416e3185d19b8d65364c5aae21fa7303104c8))
+* **satellite:** log cgroup version and update limits for cgroup v2 ([](https://github.com/deploystackio/deploystack/commit/e550905b79b167bc4c8bdf92d00d38577ea8bbbc))
+* **satellite:** validate GitHub deployment base directory permissions ([](https://github.com/deploystackio/deploystack/commit/03b77049024dc9a92c3cab1dfa00de1907b70611))
+
+
+### fix
+
+* **satellite:** correct import path for runtime validator module ([](https://github.com/deploystackio/deploystack/commit/a6aea6ef9539ee72b92167e39e1d59fe5f76c1bf))
+
+
+### refactor
+
+* **satellite:** add user-local Python tools to nsjail read-only mounts ([](https://github.com/deploystackio/deploystack/commit/b32f79ab96b89f80485c6e631f5b6270e30b86de))
+* **satellite:** enhance command path logging for cache misses ([](https://github.com/deploystackio/deploystack/commit/6d19952444aab2da1690dab4cd33e9eb18b9d333))
+* **satellite:** extract build logging and directory utilities ([](https://github.com/deploystackio/deploystack/commit/302276475d6a2f2e381dc381d15448f7c8a18b78))
+* **satellite:** extract GitHub deployment utilities for maintainability ([](https://github.com/deploystackio/deploystack/commit/7e6a43752bc5658a3513fdd8043ef16c6768721b))
+* **satellite:** extract ProcessManager into composed handler classes ([](https://github.com/deploystackio/deploystack/commit/96bd80a34d5bb14541dea521cc68586ccc8a3c57))
+* **satellite:** extract Python utilities for deployment handling ([](https://github.com/deploystackio/deploystack/commit/92278a2e2f4c339532cb3ca5bcff281f560ccd02))
+* **satellite:** extract tarball operations for improved maintainability ([](https://github.com/deploystackio/deploystack/commit/3b9776d09e82f587caeb04157d42c79873829f7f))
+* **satellite:** improve nsjail configuration comments and structure ([](https://github.com/deploystackio/deploystack/commit/619b967513c5c82d89eb1cbbd88fd5a9ef325cb5))
+* **satellite:** improve nsjail configuration comments and structure ([](https://github.com/deploystackio/deploystack/commit/eb44031e969644cf9d4a0e2fd58413b98440f715))
+* **satellite:** remove NODE_ENV to allow devDependencies installation ([](https://github.com/deploystackio/deploystack/commit/d8e2a369b832290a30aa89b4f4b5e963dc194e72))
+* **satellite:** remove shell option from command execution ([](https://github.com/deploystackio/deploystack/commit/b6ffe907a4cee3e444f4386fde8ae2a6680b1da7))
+* **satellite:** simplify npm install command by removing --omit=dev ([](https://github.com/deploystackio/deploystack/commit/c5a8adaed3f6f858e5308af8208c47f26efefbd8))
+* **satellite:** simplify Python entry point resolution logic ([](https://github.com/deploystackio/deploystack/commit/708764720bb406ccae561f5ee413bb431d97100e))
+* **satellite:** update cgroup logging and disable cgroup limits ([](https://github.com/deploystackio/deploystack/commit/5957e5b1acf2a028a0a2fc7e89e696a5bc81664f))
+* **satellite:** update command path handling for dynamic resolution ([](https://github.com/deploystackio/deploystack/commit/03cdc449eb0ad14c631a166c92414c69b238fbb4))
+* **satellite:** update Python environment variable handling for venv ([](https://github.com/deploystackio/deploystack/commit/3de872a92dcec617f27d7d2bb07cca9c13eac78f))
+
+# [0.20.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.19.0...satellite-v0.20.0) (2026-02-08)
+
+
+### chore
+
+* **all:** bump @modelcontextprotocol/sdk from 1.25.3 to 1.26.0 ([](https://github.com/deploystackio/deploystack/commit/cb1e232a5232ea511d74698fdb25526715fdb589))
+
+
+### feat
+
+* **all:** add satellite management UI and GitHub deployment lifecycle features ([](https://github.com/deploystackio/deploystack/commit/882c338a006db6cae28fb851428283354f091e28))
+* **satellite:** add instance path and token hash to MCP server config ([](https://github.com/deploystackio/deploystack/commit/79b90cec58dfabf818a702105ded50d463ec7d48))
+* **satellite:** enhance MCP activity tracking with instance token support ([](https://github.com/deploystackio/deploystack/commit/5793cfef6ad12bb41883887c44b85eb63ebf17fe))
+* **satellite:** enhance tool discovery and execution logging ([](https://github.com/deploystackio/deploystack/commit/6dfd20e2f41b05f8366d4c92b2ba34cb9520313c))
+* **satellite:** implement instance router for path-based MCP access ([](https://github.com/deploystackio/deploystack/commit/d6eafc968001ebe94e8163b61dec6e910510ac39))
+* **satellite:** implement MCP session manager for transport lifecycle ([](https://github.com/deploystackio/deploystack/commit/50f4a62045b87c3152b6bc5ba0a7e20d5d94dc1f))
+
 ## 0.19.0 (2026-02-01)
 
 * docs(all): improve formatting and clarity in README.md ([0da73351350726907c060504f7f7d9ec175956bb](https://github.com/deploystackio/deploystack/commit/0da73351350726907c060504f7f7d9ec175956bb))
