@@ -73,7 +73,7 @@ export class OAuthClientRegistrationService {
 				headers: {
 					'Content-Type': 'application/json',
 					Accept: 'application/json',
-					'User-Agent': 'DeployStack/1.0',
+					'User-Agent': 'Mozilla/5.0 (compatible; DeployStack/1.0; +https://deploystack.io)',
 				},
 				body: JSON.stringify(registrationBody),
 				signal: AbortSignal.timeout(10000), // 10 second timeout

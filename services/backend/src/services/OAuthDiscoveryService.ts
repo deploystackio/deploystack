@@ -23,6 +23,8 @@ export interface OAuthDetectionResult {
 }
 
 export class OAuthDiscoveryService {
+  private static readonly USER_AGENT = 'Mozilla/5.0 (compatible; DeployStack/1.0; +https://deploystack.io)';
+
   constructor(private logger: FastifyBaseLogger) {}
 
   /**
@@ -212,7 +214,7 @@ export class OAuthDiscoveryService {
   }> {
     const headers: Record<string, string> = {
       Accept: 'application/json',
-      'User-Agent': 'DeployStack/1.0'
+      'User-Agent': OAuthDiscoveryService.USER_AGENT
     };
 
     if (method === 'POST') {
@@ -378,7 +380,7 @@ export class OAuthDiscoveryService {
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          'User-Agent': 'DeployStack/1.0'
+          'User-Agent': OAuthDiscoveryService.USER_AGENT
         },
         signal: AbortSignal.timeout(10000)
       });
@@ -455,7 +457,7 @@ export class OAuthDiscoveryService {
         method: 'GET',
         headers: {
           Accept: 'application/json',
-          'User-Agent': 'DeployStack/1.0'
+          'User-Agent': OAuthDiscoveryService.USER_AGENT
         },
         signal: AbortSignal.timeout(10000) // 10 second timeout
       });

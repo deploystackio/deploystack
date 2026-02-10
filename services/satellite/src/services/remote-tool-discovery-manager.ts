@@ -378,6 +378,9 @@ export class RemoteToolDiscoveryManager {
     // OAuth: OAuth token injection for tool discovery
     let headers: Record<string, string> = {};
 
+    // Always set WAF-friendly User-Agent for remote HTTP/SSE servers
+    headers['User-Agent'] = 'Mozilla/5.0 (compatible; DeployStack-Satellite/1.0; +https://deploystack.io)';
+
     // Add regular headers from config (API keys, custom headers, etc.)
     if (config.headers) {
       Object.assign(headers, config.headers);

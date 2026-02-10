@@ -79,7 +79,7 @@ export class OAuthTokenService {
 			const headers: Record<string, string> = {
 				'Content-Type': 'application/x-www-form-urlencoded',
 				Accept: 'application/json',
-				'User-Agent': 'DeployStack/1.0',
+				'User-Agent': 'Mozilla/5.0 (compatible; DeployStack/1.0; +https://deploystack.io)',
 			};
 
 			// Handle authentication based on method
@@ -194,7 +194,7 @@ export class OAuthTokenService {
 			const headers: Record<string, string> = {
 				'Content-Type': 'application/x-www-form-urlencoded',
 				Accept: 'application/json',
-				'User-Agent': 'DeployStack/1.0',
+				'User-Agent': 'Mozilla/5.0 (compatible; DeployStack/1.0; +https://deploystack.io)',
 			};
 
 			// Handle authentication based on method

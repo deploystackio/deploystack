@@ -9,7 +9,7 @@ export const mcpServersConfig: McpServersConfig = {
   defaultTimeout: 30000, // 30 seconds
   defaultHeaders: {
     'Content-Type': 'application/json',
-    'User-Agent': 'DeployStack-Satellite/0.1.0'
+    'User-Agent': 'Mozilla/5.0 (compatible; DeployStack-Satellite/1.0; +https://deploystack.io)'
   },
 
   // External MCP servers configuration

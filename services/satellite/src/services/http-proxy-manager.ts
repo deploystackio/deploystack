@@ -116,7 +116,7 @@ export class HttpProxyManager {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Accept': 'application/json, text/event-stream',
-        'User-Agent': 'DeployStack-Satellite/0.1.0',
+        'User-Agent': 'Mozilla/5.0 (compatible; DeployStack-Satellite/1.0; +https://deploystack.io)',
         'MCP-Protocol-Version': '2025-03-26',
         'X-Forwarded-By': 'deploystack-satellite',
         'X-Proxy-Server': serverName
