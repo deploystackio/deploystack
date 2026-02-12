@@ -432,7 +432,7 @@ export class McpHealthCheckService {
    * Handle recovered installations by triggering satellite rediscovery
    * Called when template health check detects server is back online
    */
-  private async handleRecovery(
+  async handleRecovery(
     recoveredInstallations: Array<{ id: string; team_id: string }>
   ): Promise<void> {
     if (!this.satelliteCommandService) {

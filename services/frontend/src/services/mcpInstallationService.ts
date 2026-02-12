@@ -309,6 +309,34 @@ export class McpInstallationService {
     return data.data
   }
 
+  /**
+   * Trigger reconnection for an offline/error HTTP/SSE MCP server
+   */
+  static async reconnect(
+    teamId: string,
+    installationId: string
+  ): Promise<{
+    status: 'recovering' | 'still_offline'
+    message: string
+    health_check?: { error?: string; responseTimeMs?: number }
+  }> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/reconnect`,
+      {
+        method: 'POST',
+        credentials: 'include',
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `Failed to reconnect: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data
+  }
+
   // ==============================
   // USER CONFIGURATION METHODS
   // ==============================

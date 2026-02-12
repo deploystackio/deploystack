@@ -55,6 +55,9 @@ const lastRequestAt = ref<string | null>(null)
 const isReAuthenticating = ref(false)
 const oauthPopup = ref<Window | null>(null)
 
+// Reconnect state
+const isReconnecting = ref(false)
+
 // Connection URL
 const justCopied = ref(false)
 const isResettingToken = ref(false)
@@ -127,6 +130,43 @@ const showReAuthButton = computed(() => {
   return props.statusData?.status === 'requires_reauth' &&
          server.value?.requires_oauth === true
 })
+
+// Show reconnect button for offline/error HTTP/SSE servers
+const showReconnectButton = computed(() => {
+  const status = props.statusData?.status
+  const transportType = server.value?.transport_type
+  return (status === 'offline' || status === 'error') &&
+         (transportType === 'http' || transportType === 'sse')
+})
+
+const handleReconnect = async () => {
+  try {
+    isReconnecting.value = true
+
+    const result = await McpInstallationService.reconnect(
+      props.installation.team_id,
+      props.installation.id
+    )
+
+    if (result.status === 'recovering') {
+      toast.success(t('mcpInstallations.reconnect.success'), {
+        description: t('mcpInstallations.reconnect.successDescription')
+      })
+      emit('refresh')
+    } else {
+      toast.warning(t('mcpInstallations.reconnect.stillOffline'), {
+        description: t('mcpInstallations.reconnect.stillOfflineDescription')
+      })
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    toast.error(t('mcpInstallations.reconnect.error'), {
+      description: errorMessage
+    })
+  } finally {
+    isReconnecting.value = false
+  }
+}
 
 const displayTags = computed(() => {
   if (!server.value?.tags || server.value.tags.length === 0) return []
@@ -417,6 +457,23 @@ onUnmounted(() => {
               <Spinner v-if="isReAuthenticating" class="mr-2 h-4 w-4" />
               <RefreshCw v-else class="mr-2 h-4 w-4" />
               {{ $t('mcpInstallations.reauth.button') }}
+            </Button>
+          </dd>
+        </div>
+
+        <!-- Reconnect Button (offline/error HTTP/SSE servers) -->
+        <div v-if="showReconnectButton" class="py-4 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm/6 font-medium text-gray-900">{{ $t('mcpInstallations.reconnect.label') }}</dt>
+          <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+            <Button
+              @click="handleReconnect"
+              :disabled="isReconnecting"
+              variant="default"
+              size="default"
+            >
+              <Spinner v-if="isReconnecting" class="mr-2 h-4 w-4" />
+              <RefreshCw v-else class="mr-2 h-4 w-4" />
+              {{ $t('mcpInstallations.reconnect.button') }}
             </Button>
           </dd>
         </div>

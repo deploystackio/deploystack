@@ -236,6 +236,16 @@ export default {
     error: 'Failed to reset token'
   },
 
+  reconnect: {
+    label: 'Server Offline',
+    button: 'Reconnect',
+    success: 'Reconnection initiated',
+    successDescription: 'The server is reachable and reconnection is in progress',
+    stillOffline: 'Server still unreachable',
+    stillOfflineDescription: 'The remote server is still not responding. Try again later.',
+    error: 'Reconnection failed',
+  },
+
   reauth: {
     button: 'Re-authenticate',
     popup_title: 'Re-authenticating',

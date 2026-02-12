@@ -12,6 +12,7 @@ import getRequestByIdRoute from './request-by-id';
 import updateInstallationSettingsRoute from './settings';
 import getInstallationLogsStreamRoute from './logs-stream';
 import getInstallationRequestsStreamRoute from './requests-stream';
+import reconnectInstallationRoute from './reconnect';
 
 export default async function mcpInstallationsRoutes(fastify: FastifyInstance) {
   await fastify.register(getInstallationToolsRoute);
@@ -27,4 +28,5 @@ export default async function mcpInstallationsRoutes(fastify: FastifyInstance) {
   await fastify.register(updateInstallationSettingsRoute);
   await fastify.register(getInstallationLogsStreamRoute);
   await fastify.register(getInstallationRequestsStreamRoute);
+  await fastify.register(reconnectInstallationRoute);
 }
