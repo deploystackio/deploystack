@@ -219,6 +219,16 @@ export default async function reconnectInstallationRoute(server: FastifyInstance
 				return reply.status(400).type('application/json').send(JSON.stringify(errorResponse));
 			}
 
+			// Immediately update instance status so frontend reflects the change via SSE
+			await db
+				.update(mcpServerInstances)
+				.set({
+					status: 'connecting',
+					status_message: 'Reconnection in progress',
+					status_updated_at: new Date(),
+				})
+				.where(eq(mcpServerInstances.id, instance.id));
+
 			// Perform health check on the template
 			const healthCheckService = new McpHealthCheckService(db, request.log);
 			const healthResult = await healthCheckService.checkTemplateHealth(serverTemplate.id);
@@ -254,7 +264,16 @@ export default async function reconnectInstallationRoute(server: FastifyInstance
 				};
 				return reply.status(200).type('application/json').send(JSON.stringify(successResponse));
 			} else {
-				// Server is still offline
+				// Server is still offline — revert instance status to original
+				await db
+					.update(mcpServerInstances)
+					.set({
+						status: instance.status,
+						status_message: healthResult.error || 'Server is still unreachable',
+						status_updated_at: new Date(),
+					})
+					.where(eq(mcpServerInstances.id, instance.id));
+
 				request.log.info({
 					operation: 'reconnect_installation_still_offline',
 					teamId,
