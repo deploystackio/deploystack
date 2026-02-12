@@ -333,11 +333,19 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 						})
 						.where(eq(mcpServerInstances.installation_id, flow.installation_id!));
 
-					// Update installation OAuth pending flag
+					// Update installation OAuth config + pending flag
+					// Re-auth performs new DCR registration, so oauth_client_id/secret
+					// must be updated for the token refresh cron job to work correctly
 					await db
 						.update(mcpServerInstallations)
 						.set({
-							oauth_pending: false
+							oauth_pending: false,
+							oauth_client_id: flow.oauth_client_id,
+							oauth_client_secret: flow.oauth_client_secret,
+							oauth_provider_id: flow.oauth_provider_id || null,
+							oauth_token_endpoint: flow.oauth_token_endpoint,
+							oauth_token_endpoint_auth_method: flow.oauth_token_endpoint_auth_method,
+							updated_at: new Date()
 						})
 						.where(eq(mcpServerInstallations.id, flow.installation_id!));
 
