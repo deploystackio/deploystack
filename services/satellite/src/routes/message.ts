@@ -392,9 +392,29 @@ async function handleToolCall(message: JSONRPCMessage, server: FastifyInstance):
 }
 
 /**
- * Handle resources/list request - return empty resources for now
+ * Handle resources/list request - legacy stub
+ * Resource proxying is handled by the SDK-based /mcp route (McpServerWrapper)
+ * and /i/:instancePath/mcp route (InstanceRouter)
  */
-async function handleResourcesList(message: JSONRPCMessage, _server: FastifyInstance): Promise<any> {
+async function handleResourcesList(message: JSONRPCMessage, server: FastifyInstance): Promise<any> {
+  const toolDiscoveryManager = (server as any).toolDiscoveryManager;
+
+  if (toolDiscoveryManager) {
+    const resources = toolDiscoveryManager.getAllResources();
+    return {
+      jsonrpc: '2.0',
+      id: message.id,
+      result: {
+        resources: resources.map((r: any) => ({
+          uri: r.namespacedUri,
+          name: `[${r.serverSlug}] ${r.name}`,
+          description: r.description,
+          mimeType: r.mimeType
+        }))
+      }
+    };
+  }
+
   return {
     jsonrpc: '2.0',
     id: message.id,
@@ -405,9 +425,28 @@ async function handleResourcesList(message: JSONRPCMessage, _server: FastifyInst
 }
 
 /**
- * Handle resources/templates/list request - return empty templates for now
+ * Handle resources/templates/list request - legacy stub
+ * Resource template proxying is handled by the SDK-based routes
  */
-async function handleResourceTemplatesList(message: JSONRPCMessage, _server: FastifyInstance): Promise<any> {
+async function handleResourceTemplatesList(message: JSONRPCMessage, server: FastifyInstance): Promise<any> {
+  const toolDiscoveryManager = (server as any).toolDiscoveryManager;
+
+  if (toolDiscoveryManager) {
+    const templates = toolDiscoveryManager.getAllResourceTemplates();
+    return {
+      jsonrpc: '2.0',
+      id: message.id,
+      result: {
+        resourceTemplates: templates.map((t: any) => ({
+          uriTemplate: t.namespacedUriTemplate,
+          name: `[${t.serverSlug}] ${t.name}`,
+          description: t.description,
+          mimeType: t.mimeType
+        }))
+      }
+    };
+  }
+
   return {
     jsonrpc: '2.0',
     id: message.id,

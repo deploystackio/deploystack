@@ -4,6 +4,9 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+  ListResourceTemplatesRequestSchema,
   isInitializeRequest
 } from '@modelcontextprotocol/sdk/types.js';
 import { FastifyBaseLogger, FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
@@ -17,7 +20,9 @@ import { SsePingService } from '../services/sse-ping-service';
 import type { EventBus } from '../services/event-bus';
 import { getVersionString } from '../config/version';
 import { McpToolExecutor } from '../lib/mcp-tool-executor';
+import { McpResourceExecutor } from '../lib/mcp-resource-executor';
 import { McpSessionManager } from '../lib/mcp-session-manager';
+import { UnifiedResourceDiscoveryManager } from '../services/unified-resource-discovery-manager';
 
 /**
  * User request context extracted from OAuth token
@@ -45,6 +50,7 @@ export class McpServerWrapper {
 
   // Extracted modules for code reuse
   private toolExecutor?: McpToolExecutor;
+  private resourceExecutor?: McpResourceExecutor;
   private sessionManager?: McpSessionManager;
 
   // AsyncLocalStorage for per-user request context (Per-User Process Routing)
@@ -88,6 +94,17 @@ export class McpServerWrapper {
     this.logger.debug({
       operation: 'mcp_dependencies_set'
     }, 'MCP server dependencies set, executor and session manager initialized');
+  }
+
+  /**
+   * Set resource executor for resource proxying
+   */
+  setResourceExecutor(resourceExecutor: McpResourceExecutor): void {
+    this.resourceExecutor = resourceExecutor;
+
+    this.logger.debug({
+      operation: 'resource_executor_set'
+    }, 'Resource executor set for MCP resource proxying');
   }
 
   /**
@@ -148,7 +165,7 @@ export class McpServerWrapper {
   }
 
   /**
-   * Setup hierarchical MCP server with only 2 meta-tools
+   * Setup hierarchical MCP server with 4 meta-tools
    */
   private setupMcpServer(server: Server): void {
     if (!this.toolDiscoveryManager || !this.toolSearchService) {
@@ -158,9 +175,9 @@ export class McpServerWrapper {
     this.logger.debug({
       operation: 'mcp_server_setup_hierarchical',
       mode: 'hierarchical'
-    }, 'Setting up hierarchical MCP server with 2 meta-tools');
+    }, 'Setting up hierarchical MCP server with 4 meta-tools');
 
-    // Handle tools/list - return only 2 meta-tools
+    // Handle tools/list - return 4 meta-tools (discover, execute, list_resources, read_resource)
     server.setRequestHandler(ListToolsRequestSchema, async () => {
       this.logger.debug({
         operation: 'tools_list_request_hierarchical'
@@ -203,6 +220,29 @@ export class McpServerWrapper {
             },
             required: ['tool_path', 'arguments']
           }
+        },
+        {
+          name: 'list_mcp_resources',
+          description: 'List all available MCP resources across all connected servers. Resources are server-provided data like files, UI components, or configuration that can be read with read_mcp_resource.',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+            required: []
+          }
+        },
+        {
+          name: 'read_mcp_resource',
+          description: 'Read the content of an MCP resource by its URI. Use list_mcp_resources first to discover available resources and their URIs.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              uri: {
+                type: 'string',
+                description: 'The resource URI from list_mcp_resources (format: serverSlug|originalUri, e.g., "excalidraw|ui://excalidraw/mcp-app.html")'
+              }
+            },
+            required: ['uri']
+          }
         }
       ];
 
@@ -235,17 +275,80 @@ export class McpServerWrapper {
         return await this.handleDiscoverTools(toolArgs);
       } else if (toolName === 'execute_mcp_tool') {
         return await this.handleExecuteTool(toolArgs);
+      } else if (toolName === 'list_mcp_resources') {
+        return await this.handleListResources();
+      } else if (toolName === 'read_mcp_resource') {
+        return await this.handleReadResource(toolArgs);
       } else {
-        throw new Error(`Unknown meta-tool: ${toolName}. Available tools: discover_mcp_tools, execute_mcp_tool`);
+        throw new Error(`Unknown meta-tool: ${toolName}. Available tools: discover_mcp_tools, execute_mcp_tool, list_mcp_resources, read_mcp_resource`);
       }
+    });
+
+    // Register native SDK resource handlers for MCP clients that use resources/list directly
+    server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      const resources = this.toolDiscoveryManager!.getAllResources();
+
+      this.logger.debug({
+        operation: 'resources_list_request_hierarchical',
+        resource_count: resources.length
+      }, `Returning ${resources.length} resources via native SDK handler`);
+
+      return {
+        resources: resources.map(r => ({
+          uri: r.namespacedUri,
+          name: `[${r.serverSlug}] ${r.name}`,
+          description: r.description,
+          mimeType: r.mimeType,
+          annotations: r.annotations,
+          ...(r._meta ? { _meta: r._meta } : {})
+        }))
+      };
+    });
+
+    server.setRequestHandler(ReadResourceRequestSchema, async (request: any) => {
+      const uri = request.params?.uri;
+      if (!uri) {
+        throw new Error('Missing required parameter: uri');
+      }
+
+      if (!this.resourceExecutor) {
+        throw new Error('Resource executor not available');
+      }
+
+      this.logger.info({
+        operation: 'resource_read_request_hierarchical',
+        uri
+      }, `Reading resource via native SDK handler: ${uri}`);
+
+      return await this.resourceExecutor.readResource(uri);
+    });
+
+    server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+      const templates = this.toolDiscoveryManager!.getAllResourceTemplates();
+
+      this.logger.debug({
+        operation: 'resource_templates_list_request_hierarchical',
+        template_count: templates.length
+      }, `Returning ${templates.length} resource templates via native SDK handler`);
+
+      return {
+        resourceTemplates: templates.map(t => ({
+          uriTemplate: t.namespacedUriTemplate,
+          name: `[${t.serverSlug}] ${t.name}`,
+          description: t.description,
+          mimeType: t.mimeType,
+          annotations: t.annotations,
+          ...(t._meta ? { _meta: t._meta } : {})
+        }))
+      };
     });
 
     this.logger.info({
       operation: 'mcp_server_setup_complete_hierarchical',
       mode: 'hierarchical',
-      meta_tools: 2,
+      meta_tools: 4,
       actual_tools_available: this.toolDiscoveryManager.getAllTools().length
-    }, `Hierarchical MCP server setup complete with 2 meta-tools (${this.toolDiscoveryManager.getAllTools().length} tools available)`);
+    }, `Hierarchical MCP server setup complete with 4 meta-tools (${this.toolDiscoveryManager.getAllTools().length} tools available)`);
   }
 
   /**
@@ -323,13 +426,32 @@ export class McpServerWrapper {
     const searchTime = Date.now() - startTime;
 
     const response: any = {
-      tools: results.map(result => ({
-        tool_path: result.tool_path,
-        description: result.description,
-        server_name: result.server_name,
-        transport: result.transport,
-        relevance_score: result.score
-      })),
+      tools: results.map(result => {
+        const toolEntry: any = {
+          tool_path: result.tool_path,
+          description: result.description,
+          server_name: result.server_name,
+          transport: result.transport,
+          relevance_score: result.score
+        };
+
+        // Include _meta if present (e.g., MCP Apps UI hints)
+        if (result._meta) {
+          // Deep clone to avoid mutating cached data
+          const meta = JSON.parse(JSON.stringify(result._meta));
+
+          // Rewrite _meta.ui.resourceUri to use namespaced format for hierarchical router
+          // e.g., "ui://excalidraw/mcp-app.html" -> "excalidraw|ui://excalidraw/mcp-app.html"
+          if (meta.ui && typeof meta.ui === 'object' && (meta.ui as any).resourceUri) {
+            const serverSlug = result.tool_path.split(':')[0];
+            (meta.ui as any).resourceUri = `${serverSlug}|${(meta.ui as any).resourceUri}`;
+          }
+
+          toolEntry._meta = meta;
+        }
+
+        return toolEntry;
+      }),
       total_found: results.length,
       search_time_ms: searchTime,
       query: query
@@ -564,6 +686,126 @@ export class McpServerWrapper {
     }
 
     return result;
+  }
+
+  /**
+   * Handle list_mcp_resources meta-tool
+   */
+  private async handleListResources(): Promise<any> {
+    if (!this.toolDiscoveryManager) {
+      throw new Error('Tool discovery manager not available');
+    }
+
+    // Get user context for per-user filtering
+    const userContext = this.userContextStore.getStore();
+
+    let resources = this.toolDiscoveryManager.getAllResources();
+    const templates = this.toolDiscoveryManager.getAllResourceTemplates();
+
+    // Per-user filtering: only show resources from user's installations
+    if (userContext && this.dynamicConfigManager) {
+      const userConfigs = this.dynamicConfigManager.getConfigsForUser(userContext.user_id);
+      const userServerNames = new Set(userConfigs.map(config => config.name));
+
+      resources = resources.filter(r => userServerNames.has(r.serverName));
+    }
+
+    this.logger.info({
+      operation: 'list_mcp_resources',
+      resource_count: resources.length,
+      template_count: templates.length,
+      user_id: userContext?.user_id
+    }, `Listing ${resources.length} resources and ${templates.length} templates`);
+
+    const response = {
+      resources: resources.map(r => ({
+        uri: r.namespacedUri,
+        name: r.name,
+        description: r.description,
+        mimeType: r.mimeType,
+        server: r.serverSlug,
+        ...(r._meta ? { _meta: r._meta } : {})
+      })),
+      resource_templates: templates.map(t => ({
+        uri_template: t.namespacedUriTemplate,
+        name: t.name,
+        description: t.description,
+        mimeType: t.mimeType,
+        server: t.serverSlug,
+        ...(t._meta ? { _meta: t._meta } : {})
+      })),
+      total_resources: resources.length,
+      total_templates: templates.length
+    };
+
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(response, null, 2)
+      }]
+    };
+  }
+
+  /**
+   * Handle read_mcp_resource meta-tool
+   */
+  private async handleReadResource(args: any): Promise<any> {
+    if (!this.resourceExecutor) {
+      throw new Error('Resource executor not available');
+    }
+
+    const uri = args.uri;
+    if (!uri || typeof uri !== 'string') {
+      throw new Error('Invalid uri parameter - must be a non-empty string');
+    }
+
+    this.logger.info({
+      operation: 'read_mcp_resource',
+      uri
+    }, `Reading resource: ${uri}`);
+
+    // Per-user routing: find the user's specific installation
+    const parsed = UnifiedResourceDiscoveryManager.parseNamespacedUri(uri);
+    if (!parsed) {
+      throw new Error(`Invalid resource URI format: ${uri}. Expected format: "serverSlug|originalUri"`);
+    }
+
+    const userContext = this.userContextStore.getStore();
+    let serverNameOverride: string | undefined;
+
+    if (userContext && this.dynamicConfigManager) {
+      const config = this.dynamicConfigManager.findConfigByServerAndUser(parsed.serverSlug, userContext.user_id);
+      if (config) {
+        serverNameOverride = config.name;
+      }
+    }
+
+    const result = await this.resourceExecutor.readResource(uri, serverNameOverride);
+
+    // Format the response for tool output
+    if (result?.contents && Array.isArray(result.contents)) {
+      // Resource response has contents array - return as text
+      const contentParts = result.contents.map((c: any) => {
+        if (c.text) return c.text;
+        if (c.blob) return `[Binary content, ${c.blob.length} chars base64, mimeType: ${c.mimeType || 'unknown'}]`;
+        return JSON.stringify(c);
+      });
+
+      return {
+        content: [{
+          type: 'text',
+          text: contentParts.join('\n')
+        }]
+      };
+    }
+
+    // Fallback: return raw result
+    return {
+      content: [{
+        type: 'text',
+        text: JSON.stringify(result, null, 2)
+      }]
+    };
   }
 
   /**

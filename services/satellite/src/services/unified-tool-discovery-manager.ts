@@ -4,6 +4,7 @@ import { DynamicConfigManager, DynamicMcpServersConfig, ConfigurationChanges } f
 import { RemoteToolDiscoveryManager } from './remote-tool-discovery-manager';
 import { StdioToolDiscoveryManager } from './stdio-tool-discovery-manager';
 import { ProcessManager, RuntimeState } from '../process';
+import { UnifiedResourceDiscoveryManager, UnifiedCachedResource, UnifiedCachedResourceTemplate } from './unified-resource-discovery-manager';
 
 /**
  * Server availability status for tool filtering (OAuth support)
@@ -48,6 +49,7 @@ export interface UnifiedCachedTool {
   transport: 'stdio' | 'http' | 'sse'; // Transport type for routing
   serverSlug: string;           // Server slug for tool_path format (e.g., "brightdata-mcp-1")
   discoveredAt?: Date;          // When the tool was discovered
+  _meta?: Record<string, unknown>; // Tool metadata (e.g., MCP Apps UI hints)
 }
 
 /**
@@ -63,6 +65,11 @@ export class UnifiedToolDiscoveryManager {
   private logger: FastifyBaseLogger;
   private configManager?: DynamicConfigManager;
   private isInitialized: boolean = false;
+
+  /**
+   * Resource discovery manager for MCP resources
+   */
+  private resourceManager: UnifiedResourceDiscoveryManager;
 
   /**
    * Tracks disabled tools per installation
@@ -92,6 +99,23 @@ export class UnifiedToolDiscoveryManager {
     this.remoteToolManager = remoteToolManager;
     this.stdioToolManager = stdioToolManager;
     this.logger = logger.child({ component: 'UnifiedToolDiscoveryManager' });
+
+    // Initialize resource discovery manager (shares serverStatus for availability filtering)
+    this.resourceManager = new UnifiedResourceDiscoveryManager(this.logger, this.serverStatus);
+
+    // Wire resource discovery callbacks from both managers
+    const resourceCallback = (
+      installationName: string,
+      serverSlug: string,
+      resources: any[],
+      templates: any[],
+      transport: 'stdio' | 'http' | 'sse'
+    ) => {
+      this.resourceManager.updateServerResources(installationName, serverSlug, resources, templates, transport);
+    };
+
+    this.remoteToolManager.setResourceDiscoveryCallback(resourceCallback);
+    this.stdioToolManager.setResourceDiscoveryCallback(resourceCallback);
 
     // OAuth: Wire up status callbacks from discovery managers
     this.remoteToolManager.setStatusCallback((serverSlug, status, message) => {
@@ -230,7 +254,8 @@ export class UnifiedToolDiscoveryManager {
         inputSchema: tool.inputSchema,
         transport: 'http' as const,
         serverSlug: tool.serverSlug,
-        discoveredAt: tool.discoveredAt
+        discoveredAt: tool.discoveredAt,
+        ...(tool._meta ? { _meta: tool._meta } : {})
       })),
 
       // Map stdio tools
@@ -241,7 +266,8 @@ export class UnifiedToolDiscoveryManager {
         description: tool.description,
         inputSchema: tool.inputSchema,
         transport: 'stdio' as const,
-        serverSlug: tool.serverSlug
+        serverSlug: tool.serverSlug,
+        ...(tool._meta ? { _meta: tool._meta } : {})
       }))
     ];
 
@@ -271,7 +297,8 @@ export class UnifiedToolDiscoveryManager {
         inputSchema: tool.inputSchema,
         transport: 'http' as const,
         serverSlug: tool.serverSlug,
-        discoveredAt: tool.discoveredAt
+        discoveredAt: tool.discoveredAt,
+        ...(tool._meta ? { _meta: tool._meta } : {})
       })),
       ...stdioTools.map(tool => ({
         serverName: tool.serverName,
@@ -280,7 +307,8 @@ export class UnifiedToolDiscoveryManager {
         description: tool.description,
         inputSchema: tool.inputSchema,
         transport: 'stdio' as const,
-        serverSlug: tool.serverSlug
+        serverSlug: tool.serverSlug,
+        ...(tool._meta ? { _meta: tool._meta } : {})
       }))
     ];
   }
@@ -310,7 +338,8 @@ export class UnifiedToolDiscoveryManager {
         inputSchema: remoteTool.inputSchema,
         transport: 'http',
         serverSlug: remoteTool.serverSlug,
-        discoveredAt: remoteTool.discoveredAt
+        discoveredAt: remoteTool.discoveredAt,
+        ...(remoteTool._meta ? { _meta: remoteTool._meta } : {})
       };
     }
 
@@ -480,6 +509,59 @@ export class UnifiedToolDiscoveryManager {
         cleared_count: toolCount
       }, `Cleared disabled tools for installation: ${installationId}`);
     }
+  }
+
+  // =========================================================================
+  // RESOURCE DISCOVERY (delegated to UnifiedResourceDiscoveryManager)
+  // =========================================================================
+
+  /**
+   * Get resource discovery manager (for direct access when needed)
+   */
+  getResourceManager(): UnifiedResourceDiscoveryManager {
+    return this.resourceManager;
+  }
+
+  /**
+   * Get all cached resources (filtered by server availability)
+   */
+  getAllResources(): UnifiedCachedResource[] {
+    return this.resourceManager.getAllResources();
+  }
+
+  /**
+   * Get resource by namespaced URI
+   */
+  getResource(namespacedUri: string): UnifiedCachedResource | null {
+    return this.resourceManager.getResource(namespacedUri);
+  }
+
+  /**
+   * Get resources for a specific server
+   */
+  getResourcesByServer(installationName: string): UnifiedCachedResource[] {
+    return this.resourceManager.getResourcesByServer(installationName);
+  }
+
+  /**
+   * Get all cached resource templates (filtered by server availability)
+   */
+  getAllResourceTemplates(): UnifiedCachedResourceTemplate[] {
+    return this.resourceManager.getAllResourceTemplates();
+  }
+
+  /**
+   * Get resource templates for a specific server
+   */
+  getResourceTemplatesByServer(installationName: string): UnifiedCachedResourceTemplate[] {
+    return this.resourceManager.getResourceTemplatesByServer(installationName);
+  }
+
+  /**
+   * Clear resources for a specific server
+   */
+  clearServerResources(installationName: string): void {
+    this.resourceManager.clearServerResources(installationName);
   }
 
   /**

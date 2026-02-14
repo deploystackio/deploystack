@@ -13,6 +13,7 @@ interface SearchableTool {
   namespacedName: string;       // Namespaced name (e.g., "filesystem-read_file")
   description: string;          // Tool description
   transport: 'stdio' | 'http' | 'sse';
+  _meta?: Record<string, unknown>; // Tool metadata (e.g., MCP Apps UI hints)
 }
 
 /**
@@ -24,6 +25,7 @@ export interface ToolSearchResult {
   server_name: string;          // Friendly server name
   transport: 'stdio' | 'http' | 'sse';
   score?: number;               // Relevance score (lower is better, 0 = perfect match)
+  _meta?: Record<string, unknown>; // Tool metadata (e.g., MCP Apps UI hints)
 }
 
 /**
@@ -125,7 +127,8 @@ export class ToolSearchService {
         description: tool.description,
         server_name: tool.serverName,
         transport: tool.transport,
-        score: result.score
+        score: result.score,
+        ...(tool._meta ? { _meta: tool._meta } : {})
       };
     });
   }
@@ -174,7 +177,8 @@ export class ToolSearchService {
       toolName: tool.originalName,
       namespacedName: tool.namespacedName,
       description: tool.description,
-      transport: tool.transport
+      transport: tool.transport,
+      ...(tool._meta ? { _meta: tool._meta } : {})
     }));
   }
 
@@ -219,7 +223,8 @@ export class ToolSearchService {
       description: tool.description,
       server_name: tool.serverName,
       transport: tool.transport,
-      score: 0 // Perfect score for direct listing
+      score: 0, // Perfect score for direct listing
+      ...(tool._meta ? { _meta: tool._meta } : {})
     }));
   }
 

@@ -7,6 +7,7 @@ import { registerRoutes } from './routes';
 import { McpServerWrapper } from './core/mcp-server-wrapper';
 import { InstanceRouter } from './core/instance-router';
 import { McpSessionManager } from './lib/mcp-session-manager';
+import { McpResourceExecutor } from './lib/mcp-resource-executor';
 import { BackendClient } from './services/backend-client';
 import { HeartbeatService } from './services/heartbeat-service';
 import { HttpProxyManager } from './services/http-proxy-manager';
@@ -372,8 +373,9 @@ export async function createServer() {
           // Remove server completely (handles both active and dormant)
           const removed = await processManager.removeServerCompletely(serverName);
 
-          // Clear tools from cache
+          // Clear tools and resources from cache
           stdioToolDiscoveryManager.clearServerTools(serverName);
+          toolDiscoveryManager.clearServerResources(serverName);
 
           server.log.info({
             operation: 'cleanup_removed_server_success',
@@ -425,8 +427,9 @@ export async function createServer() {
               // Remove the existing process completely
               await processManager.removeServerCompletely(serverName);
 
-              // Clear old tools from cache
+              // Clear old tools and resources from cache
               stdioToolDiscoveryManager.clearServerTools(serverName);
+              toolDiscoveryManager.clearServerResources(serverName);
             }
 
             // Build MCP server config for process spawning with new configuration
@@ -1259,11 +1262,30 @@ export async function createServer() {
     satellite_id: satelliteId
   }, 'MCP SDK routes setup - official MCP transport now active');
 
+  // Initialize MCP Resource Executor for resource proxying
+  const oauthTokenServiceRef = (server as any).oauthTokenService as OAuthTokenService | undefined;
+  const resourceExecutor = new McpResourceExecutor(
+    server.log,
+    processManager,
+    toolDiscoveryManager.getResourceManager(),
+    dynamicConfigManager,
+    oauthTokenServiceRef
+  );
+
+  // Wire resource executor to hierarchical router
+  mcpServerWrapper.setResourceExecutor(resourceExecutor);
+
+  server.log.info({
+    operation: 'resource_executor_initialized',
+    satellite_id: satelliteId
+  }, 'MCP Resource Executor initialized for resource proxying');
+
   // Initialize Instance Router for path-based MCP access
   const instanceSessionManager = new McpSessionManager(server.log);
   const instanceRouter = new InstanceRouter({
     logger: server.log,
     toolExecutor: (mcpServerWrapper as any).toolExecutor, // Reuse shared tool executor
+    resourceExecutor, // Shared resource executor
     sessionManager: instanceSessionManager, // Separate session manager
     configManager: dynamicConfigManager,
     toolDiscoveryManager,

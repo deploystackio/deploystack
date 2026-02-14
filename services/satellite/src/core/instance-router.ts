@@ -2,12 +2,16 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import {
   ListToolsRequestSchema,
-  CallToolRequestSchema
+  CallToolRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+  ListResourceTemplatesRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { FastifyInstance, FastifyRequest, FastifyReply, FastifyBaseLogger } from 'fastify';
 import { createHash } from 'crypto';
 import { McpToolExecutor } from '../lib/mcp-tool-executor';
+import { McpResourceExecutor } from '../lib/mcp-resource-executor';
 import { McpSessionManager } from '../lib/mcp-session-manager';
 import { UnifiedToolDiscoveryManager } from '../services/unified-tool-discovery-manager';
 import { DynamicConfigManager } from '../services/dynamic-config-manager';
@@ -38,6 +42,7 @@ interface InstanceContext {
 export class InstanceRouter {
   private logger: FastifyBaseLogger;
   private toolExecutor: McpToolExecutor;
+  private resourceExecutor?: McpResourceExecutor;
   private sessionManager: McpSessionManager;
   private configManager: DynamicConfigManager;
   private toolDiscoveryManager: UnifiedToolDiscoveryManager;
@@ -47,6 +52,7 @@ export class InstanceRouter {
   constructor(deps: {
     logger: FastifyBaseLogger;
     toolExecutor: McpToolExecutor;
+    resourceExecutor?: McpResourceExecutor;
     sessionManager: McpSessionManager;
     configManager: DynamicConfigManager;
     toolDiscoveryManager: UnifiedToolDiscoveryManager;
@@ -55,6 +61,7 @@ export class InstanceRouter {
   }) {
     this.logger = deps.logger.child({ component: 'InstanceRouter' });
     this.toolExecutor = deps.toolExecutor;
+    this.resourceExecutor = deps.resourceExecutor;
     this.sessionManager = deps.sessionManager;
     this.configManager = deps.configManager;
     this.toolDiscoveryManager = deps.toolDiscoveryManager;
@@ -111,6 +118,7 @@ export class InstanceRouter {
           name: tool.originalName, // Original tool name (NOT namespaced)
           description: tool.description,
           inputSchema: tool.inputSchema,
+          ...(tool._meta ? { _meta: tool._meta } : {}),
         })),
       };
     });
@@ -220,6 +228,74 @@ export class InstanceRouter {
           });
         }
       }
+    });
+
+    // Register resources/list handler - return resources from THIS instance using original URIs
+    server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      const allResources = this.toolDiscoveryManager.getResourcesByServer(processId);
+
+      this.logger.debug({
+        operation: 'instance_resources_list',
+        process_id: processId,
+        resource_count: allResources.length
+      }, `Listing ${allResources.length} resources for instance ${processId}`);
+
+      return {
+        resources: allResources.map(r => ({
+          uri: r.originalUri, // Original URI (no namespacing for instance router)
+          name: r.name,
+          description: r.description,
+          mimeType: r.mimeType,
+          annotations: r.annotations,
+          ...(r._meta ? { _meta: r._meta } : {})
+        }))
+      };
+    });
+
+    // Register resources/read handler - proxy to instance
+    server.setRequestHandler(ReadResourceRequestSchema, async (request: any) => {
+      const uri = request.params?.uri;
+      if (!uri) {
+        throw new Error('Missing required parameter: uri');
+      }
+
+      if (!this.resourceExecutor) {
+        throw new Error('Resource executor not available');
+      }
+
+      this.logger.info({
+        operation: 'instance_resource_read',
+        process_id: processId,
+        uri
+      }, `Reading resource ${uri} from instance ${processId}`);
+
+      // Determine transport type from config
+      const serverConfig = this.configManager.getMcpServerConfig(processId);
+      const transport = (serverConfig?.transport_type || serverConfig?.type || 'stdio') as 'stdio' | 'http' | 'sse';
+
+      return await this.resourceExecutor.readResourceDirect(processId, uri, transport);
+    });
+
+    // Register resources/templates/list handler
+    server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+      const allTemplates = this.toolDiscoveryManager.getResourceTemplatesByServer(processId);
+
+      this.logger.debug({
+        operation: 'instance_resource_templates_list',
+        process_id: processId,
+        template_count: allTemplates.length
+      }, `Listing ${allTemplates.length} resource templates for instance ${processId}`);
+
+      return {
+        resourceTemplates: allTemplates.map(t => ({
+          uriTemplate: t.originalUriTemplate, // Original URI template (no namespacing)
+          name: t.name,
+          description: t.description,
+          mimeType: t.mimeType,
+          annotations: t.annotations,
+          ...(t._meta ? { _meta: t._meta } : {})
+        }))
+      };
     });
 
     this.logger.info({

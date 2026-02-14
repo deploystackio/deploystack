@@ -8,6 +8,7 @@ import { McpServerConfig } from './command-polling-service';
 import type { EventBus } from './event-bus';
 import { maskUrlForLogging } from '../utils/log-masker';
 import { OAuthTokenService } from './oauth-token-service';
+import type { ResourceDiscoveryCallback } from './unified-resource-discovery-manager';
 
 /**
  * Cached tool information with namespacing
@@ -20,6 +21,7 @@ export interface CachedTool {
   serverName: string;
   serverSlug: string;     // Server slug for tool_path format (e.g., "brightdata-mcp-1")
   discoveredAt: Date;
+  _meta?: Record<string, unknown>; // Tool metadata (e.g., MCP Apps UI hints)
 }
 
 /**
@@ -55,6 +57,7 @@ export class RemoteToolDiscoveryManager {
   private oauthTokenService?: OAuthTokenService;
   private statusCallback?: ServerStatusCallback;
   private backendStatusCallback?: (installationId: string, status: string, statusMessage?: string) => void;
+  private resourceDiscoveryCallback?: ResourceDiscoveryCallback;
 
   constructor(logger: FastifyBaseLogger, eventBus?: EventBus) {
     this.logger = logger.child({ component: 'RemoteToolDiscoveryManager' });
@@ -73,6 +76,13 @@ export class RemoteToolDiscoveryManager {
    */
   setBackendStatusCallback(callback: (installationId: string, status: string, statusMessage?: string) => void): void {
     this.backendStatusCallback = callback;
+  }
+
+  /**
+   * Set callback for resource discovery (called when resources are discovered alongside tools)
+   */
+  setResourceDiscoveryCallback(callback: ResourceDiscoveryCallback): void {
+    this.resourceDiscoveryCallback = callback;
   }
 
   /**
@@ -549,7 +559,8 @@ export class RemoteToolDiscoveryManager {
           inputSchema: tool.inputSchema || {},
           serverName: serverName, // Keep original serverName for routing
           serverSlug: serverSlug, // Store slug for tool_path format
-          discoveredAt: discoveredAt
+          discoveredAt: discoveredAt,
+          ...(tool._meta ? { _meta: tool._meta } : {})
         };
       });
 
@@ -560,6 +571,41 @@ export class RemoteToolDiscoveryManager {
         tool_count: cachedTools.length,
         sdk_used: true
       }, `Successfully discovered ${cachedTools.length} tools from ${serverName} using MCP SDK in ${responseTime}ms`);
+
+      // Discover resources alongside tools (non-fatal)
+      if (this.resourceDiscoveryCallback) {
+        try {
+          const resourcesResponse = await client.listResources();
+          const resources = resourcesResponse?.resources || [];
+
+          let templates: any[] = [];
+          try {
+            const templatesResponse = await client.listResourceTemplates();
+            templates = templatesResponse?.resourceTemplates || [];
+          } catch {
+            // Server doesn't support resource templates
+          }
+
+          const transportForResources = (config.transport_type || 'http') as 'http' | 'sse';
+
+          if (resources.length > 0 || templates.length > 0) {
+            this.resourceDiscoveryCallback(serverName, serverSlug, resources, templates, transportForResources);
+
+            this.logger.info({
+              operation: 'remote_resource_discovery_success',
+              server_name: serverName,
+              resource_count: resources.length,
+              template_count: templates.length
+            }, `Discovered ${resources.length} resources and ${templates.length} templates from ${serverName}`);
+          }
+        } catch {
+          // Server doesn't support resources - expected for most servers
+          this.logger.debug({
+            operation: 'remote_resource_discovery_not_supported',
+            server_name: serverName
+          }, `Server ${serverName} does not support resources (normal)`);
+        }
+      }
 
       // Emit status change event to backend
       if (config.installation_id && config.team_id) {

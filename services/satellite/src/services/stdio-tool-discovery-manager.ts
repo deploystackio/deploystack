@@ -1,6 +1,7 @@
 import { Logger } from 'pino';
 import { ProcessManager, RuntimeState } from '../process';
 import type { EventBus } from './event-bus';
+import type { ResourceDiscoveryCallback } from './unified-resource-discovery-manager';
 
 /**
  * Status callback for local status tracking
@@ -22,6 +23,7 @@ export interface CachedStdioTool {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   inputSchema: any;            // JSON Schema for tool parameters
   serverSlug: string;          // Server slug for tool_path format (e.g., "sequential")
+  _meta?: Record<string, unknown>; // Tool metadata (e.g., MCP Apps UI hints)
 }
 
 /**
@@ -37,6 +39,7 @@ export class StdioToolDiscoveryManager {
   private toolsByServer = new Map<string, Set<string>>();
   private statusCallback?: StdioServerStatusCallback;
   private backendStatusCallback?: (installationId: string, status: string, statusMessage?: string) => void;
+  private resourceDiscoveryCallback?: ResourceDiscoveryCallback;
 
   constructor(
     private processManager: ProcessManager,
@@ -62,6 +65,13 @@ export class StdioToolDiscoveryManager {
    */
   setBackendStatusCallback(callback: (installationId: string, status: string, statusMessage?: string) => void): void {
     this.backendStatusCallback = callback;
+  }
+
+  /**
+   * Set callback for resource discovery (called when resources are discovered alongside tools)
+   */
+  setResourceDiscoveryCallback(callback: ResourceDiscoveryCallback): void {
+    this.resourceDiscoveryCallback = callback;
   }
 
   /**
@@ -200,7 +210,8 @@ export class StdioToolDiscoveryManager {
           namespacedName: namespacedName,
           description: tool.description || '',
           inputSchema: tool.inputSchema || {},
-          serverSlug: serverSlug
+          serverSlug: serverSlug,
+          ...(tool._meta ? { _meta: tool._meta } : {})
         };
 
         this.toolCache.set(namespacedName, cachedTool);
@@ -260,6 +271,53 @@ export class StdioToolDiscoveryManager {
         }, `Tool discovery event emitted to backend for ${installationName}`);
       } catch (error) {
         this.logger.warn({ error }, 'Failed to emit mcp.tools.discovered event (non-fatal)');
+      }
+
+      // Discover resources alongside tools (non-fatal)
+      if (this.resourceDiscoveryCallback) {
+        try {
+          const resourcesRequest = {
+            jsonrpc: '2.0',
+            id: `resources-list-${Date.now()}`,
+            method: 'resources/list',
+            params: {}
+          };
+
+          const resourcesResponse = await this.processManager.sendMessage(processInfo, resourcesRequest, 10000);
+          const resources = resourcesResponse?.resources || [];
+
+          let templates: Array<{ uriTemplate: string; name: string; description?: string; mimeType?: string; annotations?: unknown; _meta?: Record<string, unknown> }> = [];
+          try {
+            const templatesRequest = {
+              jsonrpc: '2.0',
+              id: `resource-templates-list-${Date.now()}`,
+              method: 'resources/templates/list',
+              params: {}
+            };
+
+            const templatesResponse = await this.processManager.sendMessage(processInfo, templatesRequest, 10000);
+            templates = templatesResponse?.resourceTemplates || [];
+          } catch {
+            // Server doesn't support resource templates - that's fine
+          }
+
+          if (resources.length > 0 || templates.length > 0) {
+            this.resourceDiscoveryCallback(installationName, serverSlug, resources, templates, 'stdio');
+
+            this.logger.info({
+              operation: 'stdio_resource_discovery_success',
+              installation_name: installationName,
+              resource_count: resources.length,
+              template_count: templates.length
+            }, `Discovered ${resources.length} resources and ${templates.length} templates from ${installationName}`);
+          }
+        } catch {
+          // Server doesn't support resources - that's expected for most servers
+          this.logger.debug({
+            operation: 'stdio_resource_discovery_not_supported',
+            installation_name: installationName
+          }, `Server ${installationName} does not support resources (normal)`);
+        }
       }
 
       // Emit status change event to backend

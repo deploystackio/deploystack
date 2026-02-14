@@ -60,7 +60,8 @@ export class McpSessionManager {
       },
       {
         capabilities: {
-          tools: {}
+          tools: {},
+          resources: {}
         }
       }
     );
@@ -127,7 +128,8 @@ export class McpSessionManager {
       },
       {
         capabilities: {
-          tools: {}
+          tools: {},
+          resources: {}
         }
       }
     );
