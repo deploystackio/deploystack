@@ -86,9 +86,9 @@ const formData = ref<InstallationFormData>({
   }
 })
 
-// Computed property to check if server requires OAuth
+// Computed property to check if server requires OAuth (skip_oauth_flow overrides)
 const requiresOAuth = computed(() => {
-  return props.serverData?.requires_oauth === true
+  return props.serverData?.requires_oauth === true && props.serverData?.skip_oauth_flow !== true
 })
 
 // Computed property to determine if satellite step should be shown

@@ -128,6 +128,7 @@ const open = defineModel<boolean>('open', { required: true })
         <div v-if="server.requires_oauth || (server.runtime !== 'http' && server.packages) || (server.runtime === 'http' && server.remotes)" class="pt-4 border-t border-gray-200">
           <McpServerInfoSpecifications
             :requires-oauth="server.requires_oauth"
+            :skip-oauth-flow="server.skip_oauth_flow"
             :runtime="server.runtime"
             :packages="server.packages"
             :remotes="server.remotes"

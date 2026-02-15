@@ -587,6 +587,7 @@ onUnmounted(() => {
           <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
             <McpServerInfoSpecifications
               :runtime="server.runtime"
+              :skip-oauth-flow="server.skip_oauth_flow"
               :packages="server.packages"
               :remotes="server.remotes"
               :show-heading="false"

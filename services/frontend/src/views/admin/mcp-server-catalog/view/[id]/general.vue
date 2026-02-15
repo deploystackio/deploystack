@@ -671,6 +671,32 @@ const getRepositoryLabel = (platform: string | undefined) => {
                 </dd>
               </div>
 
+              <!-- Skip OAuth Flow -->
+              <div v-if="server.requires_oauth" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+                <dt class="text-sm/6 font-medium text-gray-900">Skip OAuth Flow</dt>
+                <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+                  <div class="flex items-center gap-2">
+                    <Badge
+                      v-if="server.skip_oauth_flow"
+                      variant="default"
+                      class="bg-amber-50 text-amber-700 border-amber-200"
+                    >
+                      Enabled
+                    </Badge>
+                    <Badge
+                      v-else
+                      variant="outline"
+                      class="bg-gray-50 text-gray-600 border-gray-200"
+                    >
+                      Disabled
+                    </Badge>
+                    <span v-if="server.skip_oauth_flow" class="text-xs text-muted-foreground">
+                      OAuth flow is skipped, users provide tokens via headers
+                    </span>
+                  </div>
+                </dd>
+              </div>
+
               <!-- Template Args (Only for stdio/sse transport) -->
               <div v-if="displayTemplateArgs.length > 0 && displayTransportType !== 'http'" class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
                 <dt class="text-sm/6 font-medium text-gray-900">Static Args</dt>

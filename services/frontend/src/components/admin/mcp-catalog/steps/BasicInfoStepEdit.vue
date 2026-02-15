@@ -69,6 +69,7 @@ const defaultData: BasicInfoFormData = {
   tags: [],
   featured: false,
   auto_install_new_default_team: false,
+  skip_oauth_flow: false,
   website_url: '',
   icon_url: '',
   language: 'typescript',
@@ -300,6 +301,23 @@ onUnmounted(() => {
             />
             <span class="text-sm text-gray-700">
               {{ localData.auto_install_new_default_team ? 'Yes' : 'No' }}
+            </span>
+          </div>
+        </SharedFormField>
+
+        <!-- Skip OAuth Flow -->
+        <SharedFormField
+          :label="t('mcpCatalog.form.basic.skipOAuthFlow.label')"
+          :description="t('mcpCatalog.form.basic.skipOAuthFlow.description')"
+        >
+          <div class="flex items-center space-x-3">
+            <Switch
+              id="skip_oauth_flow"
+              :model-value="localData.skip_oauth_flow"
+              @update:model-value="(value) => updateField('skip_oauth_flow', value)"
+            />
+            <span class="text-sm text-gray-700">
+              {{ localData.skip_oauth_flow ? 'Yes' : 'No' }}
             </span>
           </div>
         </SharedFormField>

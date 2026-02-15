@@ -31,6 +31,7 @@ export interface McpServer {
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
   requires_oauth?: boolean
+  skip_oauth_flow?: boolean
 
   // New three-tier schema fields
   template_args?: TemplateArg[] | string
@@ -258,6 +259,7 @@ export interface CreateMcpServerRequest {
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
   requires_oauth?: boolean
+  skip_oauth_flow?: boolean
 
   // New three-tier schema fields
   template_args?: TemplateArg[]
@@ -310,6 +312,7 @@ export interface UpdateMcpServerRequest {
   license?: string
   transport_type?: 'stdio' | 'http' | 'sse'
   requires_oauth?: boolean
+  skip_oauth_flow?: boolean
 
   // New three-tier schema fields
   template_args?: TemplateArg[]
@@ -357,6 +360,7 @@ export interface BasicInfoFormData {
   tags: string[]
   featured: boolean
   auto_install_new_default_team: boolean
+  skip_oauth_flow: boolean
   website_url: string
   icon_url?: string
   language: string

@@ -120,8 +120,9 @@ export interface CreateMcpServerRequest {
   featured?: boolean;
   auto_install_new_default_team?: boolean;
   requires_oauth?: boolean;
+  skip_oauth_flow?: boolean;
   source?: 'official_registry' | 'manual' | 'github';
-  
+
   // Official Registry Sync Tracking
   official_name?: string;
   synced_from_official_registry?: boolean;
@@ -177,6 +178,7 @@ export interface UpdateMcpServerRequest {
   featured?: boolean;
   auto_install_new_default_team?: boolean;
   requires_oauth?: boolean;
+  skip_oauth_flow?: boolean;
 }
 
 export interface McpServerFilters {
@@ -508,6 +510,7 @@ export class McpCatalogService {
       featured: userRole === 'global_admin' ? (data.featured || false) : false,
       auto_install_new_default_team: userRole === 'global_admin' ? (data.auto_install_new_default_team || false) : false,
       requires_oauth: data.requires_oauth ?? false,
+      skip_oauth_flow: data.skip_oauth_flow ?? false,
       source: (data as any).source || 'manual',
 
       // Official Registry Sync Tracking
@@ -629,6 +632,7 @@ export class McpCatalogService {
     }
 
     if (data.requires_oauth !== undefined) updateData.requires_oauth = data.requires_oauth;
+    if (data.skip_oauth_flow !== undefined) updateData.skip_oauth_flow = data.skip_oauth_flow;
 
     await this.db.update(this.mcpServers).set(updateData).where(eq(this.mcpServers.id, serverId));
     

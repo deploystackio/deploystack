@@ -424,6 +424,10 @@ export default {
         label: 'Auto Install for New Default Teams',
         description: 'When enabled, this server will be automatically installed in the default team for all new users who register for DeployStack. This helps provide new users with immediate access to useful MCP servers.'
       },
+      skipOAuthFlow: {
+        label: 'Skip OAuth Flow',
+        description: 'Skip the OAuth authorization flow even if OAuth is detected. Enable this when the server accepts static Bearer tokens (e.g., Personal Access Tokens) via headers instead of requiring an OAuth authorization flow.'
+      },
       transportType: {
         label: 'Transport Type',
         placeholder: 'Select transport type',

@@ -52,6 +52,7 @@ interface UpdateGlobalServerRequest {
   featured?: boolean;
   auto_install_new_default_team?: boolean;
   requires_oauth?: boolean;
+  skip_oauth_flow?: boolean;
 }
 
 interface UpdateGlobalServerSuccessResponse {
@@ -108,11 +109,17 @@ export default async function updateGlobalServer(server: FastifyInstance) {
       const db = getDb();
       const mcpService = new McpCatalogService(db, request.log);
       
+      // Truncate large fields for logging
+      const loggableUpdateData = {
+        ...updateData,
+        ...(updateData.github_readme_base64 ? { github_readme_base64: `${updateData.github_readme_base64.substring(0, 3)}...` } : {})
+      };
+
       request.log.info({
         operation: 'update_global_mcp_server',
         step: 'start',
         serverId,
-        updateData
+        updateData: loggableUpdateData
       }, 'Starting update process');
       
       // First check if server exists and is global

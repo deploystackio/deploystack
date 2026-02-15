@@ -272,6 +272,7 @@ export default async function createGlobalServer(server: FastifyInstance) {
         featured: requestData.featured,
         auto_install_new_default_team: requestData.auto_install_new_default_team,
         requires_oauth: requiresOauth || false,
+        skip_oauth_flow: requestData.skip_oauth_flow || false,
         source: 'manual' as const, // Always 'manual' for admin-created servers
         github_account_id: githubAccountId,
         github_readme_base64: githubReadmeBase64,

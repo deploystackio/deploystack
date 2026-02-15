@@ -470,8 +470,8 @@ export class McpInstallationService {
       totalLimit
     }, 'Total MCP server installation limit check passed');
 
-    // OAuth detection for remote MCP servers (HTTP/SSE)
-    if (server[0].transport_type === 'http' || server[0].transport_type === 'sse') {
+    // OAuth detection for remote MCP servers (HTTP/SSE) - skip when skip_oauth_flow is enabled
+    if ((server[0].transport_type === 'http' || server[0].transport_type === 'sse') && !server[0].skip_oauth_flow) {
       this.logger.debug({
         operation: 'create_installation',
         step: 'oauth_detection',

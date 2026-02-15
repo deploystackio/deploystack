@@ -110,6 +110,7 @@ export const mcpServers = pgTable('mcpServers', {
 
   // OAuth Support
   requires_oauth: boolean('requires_oauth').notNull().default(false),
+  skip_oauth_flow: boolean('skip_oauth_flow').notNull().default(false),
 
   // Health Check Status (for cumulative health checks at template level)
   health_status: text('health_status').notNull().default('unknown'), // 'unknown' | 'online' | 'offline'

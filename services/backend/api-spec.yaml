@@ -13978,6 +13978,9 @@ paths:
                             requires_oauth:
                               type: boolean
                               description: Whether server requires OAuth
+                            skip_oauth_flow:
+                              type: boolean
+                              description: Skip OAuth flow (use headers/PAT instead)
                             github_stars:
                               type: number
                               nullable: true
@@ -14033,6 +14036,7 @@ paths:
                             - status
                             - featured
                             - requires_oauth
+                            - skip_oauth_flow
                             - source
                             - created_at
                             - updated_at
@@ -14308,6 +14312,9 @@ paths:
                       requires_oauth:
                         type: boolean
                         description: Whether this server requires OAuth authentication
+                      skip_oauth_flow:
+                        type: boolean
+                        description: Skip the OAuth authorization flow even if OAuth is detected
                       source:
                         type: string
                         enum:
@@ -14351,6 +14358,7 @@ paths:
                       - featured
                       - auto_install_new_default_team
                       - requires_oauth
+                      - skip_oauth_flow
                       - created_at
                       - updated_at
                 required:
@@ -14727,6 +14735,9 @@ paths:
                             requires_oauth:
                               type: boolean
                               description: Whether server requires OAuth
+                            skip_oauth_flow:
+                              type: boolean
+                              description: Skip OAuth flow (use headers/PAT instead)
                             github_stars:
                               type: number
                               nullable: true
@@ -14782,6 +14793,7 @@ paths:
                             - status
                             - featured
                             - requires_oauth
+                            - skip_oauth_flow
                             - source
                             - created_at
                             - updated_at
@@ -15731,6 +15743,10 @@ paths:
                 requires_oauth:
                   type: boolean
                   description: Whether this server requires OAuth authentication
+                skip_oauth_flow:
+                  type: boolean
+                  description: Skip the OAuth authorization flow even if OAuth is detected (use
+                    headers/PAT instead)
               required:
                 - name
                 - description
@@ -15923,6 +15939,9 @@ paths:
                       requires_oauth:
                         type: boolean
                         description: Whether this server requires OAuth authentication
+                      skip_oauth_flow:
+                        type: boolean
+                        description: Skip the OAuth authorization flow even if OAuth is detected
                       source:
                         type: string
                         enum:
@@ -15966,6 +15985,7 @@ paths:
                       - featured
                       - auto_install_new_default_team
                       - requires_oauth
+                      - skip_oauth_flow
                       - created_at
                       - updated_at
                 required:
@@ -16256,6 +16276,10 @@ paths:
                 requires_oauth:
                   type: boolean
                   description: Whether this server requires OAuth authentication
+                skip_oauth_flow:
+                  type: boolean
+                  description: Skip the OAuth authorization flow even if OAuth is detected (use
+                    headers/PAT instead)
                 template_args:
                   type: array
                   items:
@@ -16857,6 +16881,9 @@ paths:
                       requires_oauth:
                         type: boolean
                         description: Whether this server requires OAuth authentication
+                      skip_oauth_flow:
+                        type: boolean
+                        description: Skip the OAuth authorization flow even if OAuth is detected
                       source:
                         type: string
                         enum:
@@ -16900,6 +16927,7 @@ paths:
                       - featured
                       - auto_install_new_default_team
                       - requires_oauth
+                      - skip_oauth_flow
                       - created_at
                       - updated_at
                 required:

@@ -6,6 +6,7 @@ import { Shield, Package, Globe } from 'lucide-vue-next'
 
 interface Props {
   requiresOauth?: boolean | null
+  skipOauthFlow?: boolean | null
   runtime: string
   showHeading?: boolean
 
@@ -286,7 +287,10 @@ const formattedSpecification = computed(() => {
           Authentication
         </dt>
         <dd class="text-sm">
-          <Badge variant="default" class="text-xs">
+          <Badge v-if="skipOauthFlow" variant="outline" class="text-xs">
+            OAuth Detected (Skipped)
+          </Badge>
+          <Badge v-else variant="default" class="text-xs">
             Requires OAuth
           </Badge>
         </dd>

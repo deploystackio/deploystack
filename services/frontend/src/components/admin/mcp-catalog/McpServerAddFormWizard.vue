@@ -67,6 +67,7 @@ interface McpServerAddFormData {
     tags: string[]
     featured: boolean
     auto_install_new_default_team: boolean
+    skip_oauth_flow: boolean
     transport_type: string
     website_url: string
     icon_url: string
@@ -154,6 +155,7 @@ const formData = ref<McpServerAddFormData>({
     tags: [],
     featured: false,
     auto_install_new_default_team: false,
+    skip_oauth_flow: false,
     transport_type: 'auto',
     website_url: '',
     icon_url: '',
@@ -415,6 +417,7 @@ const autoPopulateFromGitHub = (repositoryData: any) => {
     // Keep existing values for these properties
     featured: formData.value.basic.featured,
     auto_install_new_default_team: formData.value.basic.auto_install_new_default_team,
+    skip_oauth_flow: formData.value.basic.skip_oauth_flow,
     transport_type: formData.value.basic.transport_type
   }
 }
@@ -481,6 +484,7 @@ const submitForm = async () => {
       tags: formData.value.basic.tags,
       featured: formData.value.basic.featured,
       auto_install_new_default_team: formData.value.basic.auto_install_new_default_team,
+      skip_oauth_flow: formData.value.basic.skip_oauth_flow,
       icon_url: formData.value.basic.icon_url,
 
       // New Configuration Schema (ADR-007)

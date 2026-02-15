@@ -1,0 +1,1 @@
+ALTER TABLE "mcpServers" ADD COLUMN "skip_oauth_flow" boolean DEFAULT false NOT NULL;

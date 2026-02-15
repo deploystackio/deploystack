@@ -82,7 +82,8 @@ const SERVER_FIELDS = {
   status: { type: 'string', enum: MCP_SERVER_STATUS_VALUES as unknown as string[], description: 'Server status' },
   featured: { type: 'boolean', description: 'Whether server is featured' },
   auto_install_new_default_team: { type: 'boolean', description: 'Auto-install for new default teams' },
-  requires_oauth: { type: 'boolean', description: 'Whether this server requires OAuth authentication' }
+  requires_oauth: { type: 'boolean', description: 'Whether this server requires OAuth authentication' },
+  skip_oauth_flow: { type: 'boolean', description: 'Skip the OAuth authorization flow even if OAuth is detected (use headers/PAT instead)' }
 } as const;
 
 // Search-specific query schema - extends list schema but makes 'q' required instead of optional 'search'
@@ -669,6 +670,10 @@ export const CREATE_GLOBAL_SERVER_REQUEST_SCHEMA = {
     requires_oauth: {
       type: 'boolean',
       description: 'Whether this server requires OAuth authentication'
+    },
+    skip_oauth_flow: {
+      type: 'boolean',
+      description: 'Skip the OAuth authorization flow even if OAuth is detected (use headers/PAT instead)'
     }
   },
   required: ['name', 'description', 'language', 'runtime'],
@@ -909,6 +914,10 @@ export const SERVER_ENTITY_SCHEMA = {
       type: 'boolean',
       description: 'Whether this server requires OAuth authentication'
     },
+    skip_oauth_flow: {
+      type: 'boolean',
+      description: 'Skip the OAuth authorization flow even if OAuth is detected'
+    },
     source: {
       type: 'string',
       enum: ['official_registry', 'manual'],
@@ -931,7 +940,7 @@ export const SERVER_ENTITY_SCHEMA = {
       description: 'Last sync timestamp'
     }
   },
-  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'packages', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'template_url_query_params', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'team_url_query_params_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'requires_oauth', 'created_at', 'updated_at']
+  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'packages', 'visibility', 'created_by', 'transport_type', 'template_args', 'template_env', 'template_headers', 'template_url_query_params', 'team_args_schema', 'team_env_schema', 'team_headers_schema', 'team_url_query_params_schema', 'user_args_schema', 'status', 'featured', 'auto_install_new_default_team', 'requires_oauth', 'skip_oauth_flow', 'created_at', 'updated_at']
 } as const;
 
 // GET endpoint uses the same schema as base entity (github_readme_base64 removed)
@@ -1185,6 +1194,7 @@ export const SERVER_LIST_ENTITY_SCHEMA = {
     status: { type: 'string', enum: MCP_SERVER_STATUS_VALUES as unknown as string[], description: 'Server status' },
     featured: { type: 'boolean', description: 'Whether server is featured' },
     requires_oauth: { type: 'boolean', description: 'Whether server requires OAuth' },
+    skip_oauth_flow: { type: 'boolean', description: 'Skip OAuth flow (use headers/PAT instead)' },
     github_stars: { type: 'number', nullable: true, description: 'GitHub stars count' },
     author_name: { type: 'string', nullable: true, description: 'Author name' },
     organization: { type: 'string', nullable: true, description: 'Organization' },
@@ -1196,7 +1206,7 @@ export const SERVER_LIST_ENTITY_SCHEMA = {
     team_slug: { type: 'string', nullable: true, description: 'Team slug (present when server belongs to a team)' },
     team_id: { type: 'string', nullable: true, description: 'Team ID (present when server belongs to a team)' }
   },
-  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'transport_type', 'visibility', 'status', 'featured', 'requires_oauth', 'source', 'created_at', 'updated_at']
+  required: ['id', 'name', 'slug', 'description', 'language', 'runtime', 'transport_type', 'visibility', 'status', 'featured', 'requires_oauth', 'skip_oauth_flow', 'source', 'created_at', 'updated_at']
 } as const;
 
 export const LIST_SERVERS_SUCCESS_RESPONSE_SCHEMA = {
@@ -1282,6 +1292,7 @@ export const UPDATE_GLOBAL_SERVER_REQUEST_SCHEMA = { type: 'object',
     featured: SERVER_FIELDS.featured,
     auto_install_new_default_team: SERVER_FIELDS.auto_install_new_default_team,
     requires_oauth: SERVER_FIELDS.requires_oauth,
+    skip_oauth_flow: SERVER_FIELDS.skip_oauth_flow,
     // Three-tier configuration schema - CRITICAL FIX
     template_args: { 
       type: 'array',
@@ -1543,8 +1554,9 @@ export interface ServerEntity {
   featured: boolean;
   auto_install_new_default_team: boolean;
   requires_oauth: boolean;
+  skip_oauth_flow: boolean;
   source: 'official_registry' | 'manual' | 'github';
-  
+
   // Official Registry Sync Tracking
   official_name: string | null;
   synced_from_official_registry: boolean;
@@ -1698,6 +1710,7 @@ export interface CreateGlobalServerRequest {
   featured?: boolean;
   auto_install_new_default_team?: boolean;
   requires_oauth?: boolean;
+  skip_oauth_flow?: boolean;
 
   // Official Registry Sync Tracking
   official_name?: string;
@@ -1780,6 +1793,7 @@ export interface ServerListEntity {
   status: McpServerStatus;
   featured: boolean;
   requires_oauth: boolean;
+  skip_oauth_flow: boolean;
   github_stars: number | null;
   author_name: string | null;
   organization: string | null;
@@ -1922,8 +1936,9 @@ export function formatServerResponse(server: any): ServerEntity {
     featured: server.featured,
     auto_install_new_default_team: server.auto_install_new_default_team,
     requires_oauth: server.requires_oauth || false,
+    skip_oauth_flow: server.skip_oauth_flow || false,
     source: server.source || 'manual',
-    
+
     // Official Registry Sync Tracking
     official_name: server.official_name || null,
     synced_from_official_registry: server.synced_from_official_registry || false,
@@ -1982,6 +1997,7 @@ export function formatServerListResponse(
     status: server.status,
     featured: server.featured,
     requires_oauth: server.requires_oauth || false,
+    skip_oauth_flow: server.skip_oauth_flow || false,
     github_stars: server.github_stars || null,
     author_name: server.author_name || null,
     organization: server.organization || null,

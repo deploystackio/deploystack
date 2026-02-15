@@ -222,6 +222,23 @@ loadCategories()
           </div>
         </SharedFormField>
 
+        <!-- Skip OAuth Flow -->
+        <SharedFormField
+          :label="t('mcpCatalog.form.basic.skipOAuthFlow.label')"
+          :description="t('mcpCatalog.form.basic.skipOAuthFlow.description')"
+        >
+          <div class="flex items-center space-x-3">
+            <Switch
+              id="skip_oauth_flow"
+              :model-value="localData.skip_oauth_flow"
+              @update:model-value="(value) => updateField('skip_oauth_flow', value)"
+            />
+            <span class="text-sm text-gray-700">
+              {{ localData.skip_oauth_flow ? 'Yes' : 'No' }}
+            </span>
+          </div>
+        </SharedFormField>
+
         <!-- Language -->
         <SharedFormField
           label="Programming Language"

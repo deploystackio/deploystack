@@ -778,8 +778,8 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
             instance_status: instanceStatus,
             instance_path: instancePath,
             instance_token_hash: instanceTokenHash,
-            // OAuth support for HTTP/SSE MCP servers
-            requires_oauth: server.requires_oauth || false,
+            // OAuth support for HTTP/SSE MCP servers (skip_oauth_flow overrides requires_oauth)
+            requires_oauth: (server.requires_oauth && !server.skip_oauth_flow) || false,
             // Source (for GitHub detection)
             source: server.source as 'manual' | 'github' | 'official_registry' | null,
             // Language and runtime from mcpServers table
@@ -1119,7 +1119,7 @@ export default async function satelliteConfigRoute(server: FastifyInstance) {
               instance_path: instancePath,
               instance_token_hash: instanceTokenHash,
               enabled: false, // Disabled due to processing error
-              requires_oauth: server.requires_oauth || false,
+              requires_oauth: (server.requires_oauth && !server.skip_oauth_flow) || false,
               source: server.source as 'manual' | 'github' | 'official_registry' | null,
               language: server.language || undefined,
               runtime: server.runtime || undefined

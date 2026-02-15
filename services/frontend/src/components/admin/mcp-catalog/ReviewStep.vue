@@ -305,6 +305,18 @@ const formatJson = (jsonString: string) => {
       </div>
 
       <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
+        <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.basic.skipOAuthFlow.label') }}</dt>
+        <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
+          <Badge v-if="getBasicData().skip_oauth_flow" variant="default" class="text-xs bg-amber-50 text-amber-700 border-amber-200">
+            {{ t('mcpCatalog.edit.values.yes') }}
+          </Badge>
+          <span v-else class="text-sm text-muted-foreground">
+            {{ t('mcpCatalog.edit.values.no') }}
+          </span>
+        </dd>
+      </div>
+
+      <div class="px-4 py-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
         <dt class="text-sm/6 font-medium text-gray-900">{{ t('mcpCatalog.form.review.fields.author') }}</dt>
         <dd class="mt-1 text-sm/6 text-gray-700 sm:col-span-2 sm:mt-0">
           {{ getBasicData().author_name || t('mcpCatalog.form.review.values.notSpecified') }}

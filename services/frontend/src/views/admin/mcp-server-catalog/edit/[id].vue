@@ -188,6 +188,7 @@ const convertServerToFormData = (server: McpServer, readmeBase64: string = ''): 
       tags: parsedTags,
       featured: Boolean(server.featured),
       auto_install_new_default_team: Boolean(server.auto_install_new_default_team),
+      skip_oauth_flow: Boolean(server.skip_oauth_flow),
       website_url: server.website_url || '',
       icon_url: server.icon_url || '',
       language: server.language || 'typescript',
@@ -335,6 +336,7 @@ const handleSubmit = async (formData: McpServerFormData) => {
       tags: formData.basic.tags,
       featured: formData.basic.featured,
       auto_install_new_default_team: formData.basic.auto_install_new_default_team,
+      skip_oauth_flow: formData.basic.skip_oauth_flow,
       icon_url: formData.basic.icon_url || undefined,
 
       // Repository (use finalRepositoryData which merges storage + formData)

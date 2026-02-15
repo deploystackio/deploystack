@@ -335,6 +335,7 @@ const formData = ref<McpServerFormData>({
     tags: [],
     featured: false,
     auto_install_new_default_team: false,
+    skip_oauth_flow: false,
     website_url: '',
     icon_url: '',
     language: 'typescript',
@@ -539,6 +540,7 @@ const autoPopulateFromRepository = (repositoryData: any) => {
       tags: repositoryData.topics || repositoryData.tags || [],
       featured: false,
       auto_install_new_default_team: false,
+      skip_oauth_flow: false,
       website_url: repositoryData.homepage || repositoryData.website_url || '',
       language: formData.value.basic.language || 'typescript',
       runtime: formData.value.basic.runtime || 'node'
