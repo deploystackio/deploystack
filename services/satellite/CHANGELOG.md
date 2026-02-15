@@ -1,5 +1,31 @@
 # Changelog
 
+# [0.21.0](https://github.com/deploystackio/deploystack/compare/frontend-v0.56.0...satellite-v0.20.0) (2026-02-14)
+
+
+### feat
+
+* **all:** add OAuth requirement field, hierarchical router improvements, and tool filtering ([](https://github.com/deploystackio/deploystack/commit/231b175e01b4e3d04bb6e20c5442d2f91e34b737))
+* **all:** add reconnect button for offline HTTP/SSE MCP servers ([](https://github.com/deploystackio/deploystack/commit/92ff5093ab02c1c61a8c87062380a003254d8e05))
+
+
+### fix
+
+* **all:** use WAF-friendly User-Agent headers for HTTP MCP server requests ([](https://github.com/deploystackio/deploystack/commit/2c9cae011f4fe648d6f0893e1a3150c7093bd9b4))
+
+# [0.21.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.20.0...satellite-v0.21.0) (2026-02-14)
+
+
+### feat
+
+* **all:** add OAuth requirement field, hierarchical router improvements, and tool filtering ([](https://github.com/deploystackio/deploystack/commit/231b175e01b4e3d04bb6e20c5442d2f91e34b737))
+* **all:** add reconnect button for offline HTTP/SSE MCP servers ([](https://github.com/deploystackio/deploystack/commit/92ff5093ab02c1c61a8c87062380a003254d8e05))
+
+
+### fix
+
+* **all:** use WAF-friendly User-Agent headers for HTTP MCP server requests ([](https://github.com/deploystackio/deploystack/commit/2c9cae011f4fe648d6f0893e1a3150c7093bd9b4))
+
 # [0.20.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.18.0...satellite-v0.19.0) (2026-02-08)
 
 
