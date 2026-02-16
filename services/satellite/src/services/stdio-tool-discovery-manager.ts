@@ -214,8 +214,9 @@ export class StdioToolDiscoveryManager {
           ...(tool._meta ? { _meta: tool._meta } : {})
         };
 
-        this.toolCache.set(namespacedName, cachedTool);
-        toolSet.add(namespacedName);
+        const cacheKey = `${installationName}::${namespacedName}`;
+        this.toolCache.set(cacheKey, cachedTool);
+        toolSet.add(cacheKey);
         cachedTools.push(cachedTool);
       }
 
@@ -363,7 +364,10 @@ export class StdioToolDiscoveryManager {
    * Get a specific tool by namespaced name
    */
   getTool(namespacedName: string): CachedStdioTool | null {
-    return this.toolCache.get(namespacedName) || null;
+    for (const tool of this.toolCache.values()) {
+      if (tool.namespacedName === namespacedName) return tool;
+    }
+    return null;
   }
 
   /**

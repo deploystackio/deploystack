@@ -133,8 +133,9 @@ export class UnifiedResourceDiscoveryManager {
         discoveredAt
       };
 
-      this.resourceCache.set(namespacedUri, cached);
-      resourceUriSet.add(namespacedUri);
+      const cacheKey = `${installationName}::${namespacedUri}`;
+      this.resourceCache.set(cacheKey, cached);
+      resourceUriSet.add(cacheKey);
     }
     this.resourcesByServer.set(installationName, resourceUriSet);
 
@@ -157,8 +158,9 @@ export class UnifiedResourceDiscoveryManager {
         discoveredAt
       };
 
-      this.templateCache.set(namespacedUri, cached);
-      templateUriSet.add(namespacedUri);
+      const cacheKey = `${installationName}::${namespacedUri}`;
+      this.templateCache.set(cacheKey, cached);
+      templateUriSet.add(cacheKey);
     }
     this.templatesByServer.set(installationName, templateUriSet);
 
@@ -194,7 +196,10 @@ export class UnifiedResourceDiscoveryManager {
    * Get resource by namespaced URI
    */
   getResource(namespacedUri: string): UnifiedCachedResource | null {
-    return this.resourceCache.get(namespacedUri) || null;
+    for (const resource of this.resourceCache.values()) {
+      if (resource.namespacedUri === namespacedUri) return resource;
+    }
+    return null;
   }
 
   /**
