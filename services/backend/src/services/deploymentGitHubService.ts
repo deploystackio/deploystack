@@ -133,59 +133,6 @@ export class DeploymentGitHubService {
   }
 
   /**
-   * List all GitHub App installations accessible to this app
-   * Returns installations sorted by most recent (updated_at descending)
-   * Filters out suspended installations
-   */
-  async listInstallations(): Promise<Array<{
-    id: number;
-    account: {
-      login: string;
-      id: number;
-    };
-    created_at: string;
-    updated_at: string;
-    repository_selection: 'all' | 'selected';
-    suspended_at: string | null;
-  }>> {
-    try {
-      const config = await getGitHubAppConfig();
-
-      const appOctokit = new Octokit({
-        authStrategy: createAppAuth,
-        auth: {
-          appId: config.appId,
-          privateKey: config.privateKey
-        }
-      });
-
-      // Query GitHub API for all installations
-      const { data: installations } = await appOctokit.apps.listInstallations({
-        per_page: 100
-      });
-
-      // Filter out suspended installations and sort by most recent
-      return installations
-        .filter(installation => !installation.suspended_at)
-        .map(installation => ({
-          id: installation.id,
-          account: {
-            login: installation.account?.login || 'unknown',
-            id: installation.account?.id || 0
-          },
-          created_at: installation.created_at,
-          updated_at: installation.updated_at,
-          repository_selection: installation.repository_selection as 'all' | 'selected',
-          suspended_at: installation.suspended_at
-        }))
-        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`Failed to list GitHub installations: ${message}`);
-    }
-  }
-
-  /**
    * Get repository details
    */
   async getRepository(teamId: string, owner: string, repo: string): Promise<RepositoryDetails> {
