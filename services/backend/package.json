@@ -33,7 +33,7 @@
     "@octokit/auth-app": "^8.2.0",
     "@octokit/request": "^10.0.7",
     "@octokit/rest": "^22.0.1",
-    "ajv": "^8.17.1",
+    "ajv": "^8.18.0",
     "ajv-formats": "^3.0.1",
     "arctic": "^3.7.0",
     "drizzle-orm": "^0.45.1",
