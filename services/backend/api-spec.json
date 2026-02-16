@@ -662,6 +662,7 @@
         ],
         "description": "Creates a new role with specified permissions. Requires role management permissions. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -698,8 +699,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -1167,6 +1167,7 @@
         ],
         "description": "Updates an existing role. System roles cannot be updated. Requires role management permissions. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -2015,6 +2016,7 @@
         ],
         "description": "Updates user information. Users can update their own profile, admins can update any user. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -3468,6 +3470,7 @@
         ],
         "description": "Updates multiple user preferences at once. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -3744,6 +3747,7 @@
         ],
         "description": "Sets a specific preference value by key path (e.g., \"walkthrough\", \"ui.theme\"). Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -3770,8 +3774,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -4166,6 +4169,7 @@
         ],
         "description": "Records that a user has acknowledged a specific notification. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -4183,8 +4187,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -5511,6 +5514,7 @@
         ],
         "description": "Submit feedback to DeployStack support. Requires Content-Type: application/json header. Feedback is sent via email if SMTP is configured.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -5529,8 +5533,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -5866,6 +5869,7 @@
         ],
         "description": "Creates a new global setting with the specified key, value, and metadata. Requires settings edit permissions.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -5914,8 +5918,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -6426,6 +6429,7 @@
         ],
         "description": "Updates an existing global setting. Requires settings edit permissions.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -6918,6 +6922,7 @@
         ],
         "description": "Searches for global settings by key pattern. Requires settings view permissions.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -6934,8 +6939,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -7171,6 +7175,7 @@
         ],
         "description": "Creates or updates multiple global settings in a single operation. Requires settings edit permissions.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -7232,8 +7237,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -8392,6 +8396,7 @@
         ],
         "description": "Tests GitHub App configuration by fetching Microsoft VS Code repository information. Only global administrators can access this endpoint.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -9375,6 +9380,7 @@
         ],
         "description": "Updates an existing team. Only team admins can update teams. Default team names cannot be changed. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -9862,6 +9868,7 @@
         ],
         "description": "Creates a new team with the specified name and description. Team creation limit is configurable via global settings (default: 3 teams maximum). The slug is automatically generated from the team name and made unique. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -9885,8 +9892,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -10578,6 +10584,7 @@
         ],
         "description": "Adds a new member to a team by email address. Only team admins and owners can add members. Cannot add members to default teams. Team member limit is configurable via global settings (default: 3 members maximum). Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -10604,8 +10611,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -10878,6 +10884,7 @@
         ],
         "description": "Updates a team member's role. Only team owners can change roles. Cannot change roles in default teams. Must maintain at least one team admin. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -10898,8 +10905,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -11398,6 +11404,7 @@
         ],
         "description": "Transfers ownership of a team to another team member. Only current team owner can transfer ownership. Cannot transfer ownership of default teams. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -11415,8 +11422,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -11877,6 +11883,7 @@
         ],
         "description": "Enable or disable multiple MCP tools for a specific installation in a single request. Returns detailed results for each tool. Requires mcp.tools.manage permission (team_admin or global_admin). Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -11914,8 +11921,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -12571,6 +12577,7 @@
         ],
         "description": "Enable or disable an MCP tool for a specific installation. When disabled, the satellite will return an LLM-friendly error message. Requires mcp.tools.manage permission (team_admin or global_admin).",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -12587,8 +12594,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -14147,6 +14153,7 @@
         ],
         "description": "Update generic settings for an MCP server installation. Settings are merged with existing values. Currently supports: request_logging_enabled (boolean). Requires mcp.installations.edit permission (team_admin or global_admin). Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -15640,6 +15647,7 @@
         ],
         "description": "Validates GitHub repository without creating any database entries. Returns repository metadata including runtime, MCP SDK, and build scripts. This is a lightweight validation endpoint used before the actual deployment.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -15663,8 +15671,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -15911,6 +15918,7 @@
         ],
         "description": "Validates GitHub repository and creates MCP server installation synchronously (2-5 seconds). Returns 201 when installation is created. Frontend then streams logs/status via SSE endpoints. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -15960,8 +15968,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -16176,6 +16183,7 @@
         ],
         "description": "Updates the branch for a GitHub-deployed MCP server and notifies satellites to redeploy. Only team admins can update branches. Only GitHub-deployed servers (source='github') can have their branch updated. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -16193,8 +16201,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -17312,6 +17319,7 @@
         ],
         "description": "Creates new cloud provider credentials for the team. Credentials are encrypted before storage.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -17984,6 +17992,7 @@
         ],
         "description": "Updates existing cloud credentials. Secret fields can only be replaced, not retrieved.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -19006,6 +19015,7 @@
         ],
         "description": "Create a new MCP server category - requires global admin permissions. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -19037,8 +19047,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -19411,6 +19420,7 @@
         ],
         "description": "Update an existing MCP server category - requires global admin permissions. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -21680,6 +21690,7 @@
         ],
         "description": "Create a new global MCP server - requires global admin permissions. Global servers are visible to all users. If transport_type is not provided, it will be automatically extracted from claude_desktop_config (CLI commands like npx, node, python = stdio). Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -22490,8 +22501,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -22983,6 +22993,7 @@
         ],
         "description": "Update an existing global MCP server - requires global admin permissions. Only global servers can be updated through this endpoint. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -24486,6 +24497,7 @@
         ],
         "description": "Update the status of a global MCP server. Setting status to \"disabled\" will prevent new installations. Requires global admin permissions. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -24508,8 +24520,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -24757,6 +24768,7 @@
         ],
         "description": "Queues deletion of multiple global MCP servers. Each server and all its team installations will be removed via background jobs. Teams with installations will be notified and satellites will be updated. Requires global admin permissions. Requires Content-Type: application/json header.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -24780,8 +24792,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -25419,6 +25430,7 @@
         ],
         "description": "Creates a new MCP server installation for the specified team. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -25552,8 +25564,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -27226,6 +27237,7 @@
         ],
         "description": "Updates an existing MCP server installation. Can update installation name and environment variables. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -28019,6 +28031,7 @@
         ],
         "description": "Updates the environment variables for an existing MCP server installation. This endpoint specifically handles environment variable updates only. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -28044,8 +28057,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -28593,6 +28605,7 @@
         ],
         "description": "Updates the headers for an existing MCP server installation. This endpoint specifically handles headers updates only. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -28618,8 +28631,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -29167,6 +29179,7 @@
         ],
         "description": "Updates the URL query parameters for an existing MCP server installation. This endpoint specifically handles query parameters updates only. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -29192,8 +29205,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -29741,6 +29753,7 @@
         ],
         "description": "Updates the command line arguments for an existing MCP server installation. This endpoint specifically handles args updates only. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -29763,8 +29776,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -30523,6 +30535,7 @@
         ],
         "description": "Creates a pending MCP server installation and returns OAuth authorization URL for user authentication. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -30564,8 +30577,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -31251,6 +31263,7 @@
         ],
         "description": "Creates a new user-specific configuration for an MCP server installation. This allows individual users to customize arguments and environment variables for their personal use. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users).",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -32083,6 +32096,7 @@
       },
       "put": {
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -32598,6 +32612,7 @@
         ],
         "description": "Updates the user-specific arguments for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users).",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -32617,8 +32632,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -32893,6 +32907,7 @@
         ],
         "description": "Updates the user-specific environment variables for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users).",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -32912,8 +32927,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -33188,6 +33202,7 @@
         ],
         "description": "Updates the user-specific HTTP headers for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users).",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -33207,8 +33222,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -33483,6 +33497,7 @@
         ],
         "description": "Updates the user-specific URL query parameters for an MCP server installation configuration. Requires Content-Type: application/json header when sending request body. Supports both cookie-based authentication (for web users) and OAuth2 Bearer token authentication (for CLI users).",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -33502,8 +33517,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -33778,6 +33792,7 @@
         ],
         "description": "RFC 7591 compliant dynamic client registration endpoint for MCP clients",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -33818,8 +33833,7 @@
                 "additionalProperties": true
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -33914,6 +33928,7 @@
         ],
         "description": "Processes team selection and generates authorization code",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -33969,8 +33984,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "302": {
@@ -34409,6 +34423,7 @@
         ],
         "description": "Processes user authorization decision with team selection and returns redirect URL. Requires Content-Type: application/json header.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -34440,8 +34455,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -34639,6 +34653,7 @@
         ],
         "description": "Exchanges authorization code for access token using PKCE, or refreshes access token using refresh token. Accepts both application/json and application/x-www-form-urlencoded content types.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -35092,6 +35107,7 @@
         ],
         "description": "Processes user consent decision and returns redirect URL or error. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -35118,8 +35134,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -35476,6 +35491,7 @@
         ],
         "description": "RFC 7662 compliant token introspection for resource servers (satellites). Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -35496,8 +35512,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -35578,6 +35593,7 @@
         ],
         "description": "Sends a test email to verify SMTP configuration. Only global administrators can access this endpoint. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -35595,8 +35611,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -37202,6 +37217,7 @@
         ],
         "description": "Trigger synchronization with official MCP Registry using background job coordination. Returns immediately with batch ID. The coordinator job discovers servers and creates individual sync jobs. Progress can be monitored via GET /api/admin/mcp-registry/progress/{batchId}",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -39232,6 +39248,7 @@
         ],
         "description": "Allows global administrators to update any team's name, description, and non-HTTP MCP server limit.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -40842,6 +40859,7 @@
         ],
         "description": "Allows global administrators to assign a role to a specific user. Users cannot change their own role. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -40859,8 +40877,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -41266,6 +41283,7 @@
         ],
         "description": "Creates a pre-registered OAuth provider for MCP server authentication (e.g., GitHub, Google).",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -41357,8 +41375,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -41864,6 +41881,7 @@
         ],
         "description": "Updates a pre-registered OAuth provider. All fields are optional.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -42434,6 +42452,7 @@
         ],
         "description": "Registers a satellite using a valid registration token. BREAKING CHANGE: Now requires Authorization: Bearer <token> header. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -42491,8 +42510,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -42928,6 +42946,7 @@
         ],
         "description": "Satellite reports the result of command execution. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -42964,8 +42983,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -43115,6 +43133,7 @@
         ],
         "description": "Satellite reports health status and system metrics. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -43295,8 +43314,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -44629,6 +44647,7 @@
         ],
         "description": "Update the status of a specific satellite. Requires global_admin role.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -44650,8 +44669,7 @@
                 ]
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -44801,6 +44819,7 @@
         ],
         "description": "Update satellite status and capabilities. Requires global_admin role. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -46083,6 +46102,7 @@
         ],
         "description": "Generates a time-limited JWT token for registering global satellites. Only global administrators can create these tokens. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -46415,6 +46435,7 @@
         ],
         "description": "Generates a time-limited JWT token for registering team-scoped satellites. Team administrators can create tokens for their teams. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -46915,6 +46936,7 @@
         ],
         "description": "Receives and processes batched events from satellites for real-time tracking and analytics. Satellites send 1-100 events per request. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -46958,8 +46980,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -47126,6 +47147,7 @@
         ],
         "description": "Returns decrypted OAuth access and refresh tokens for a specific MCP server installation. Only accessible by authenticated satellites. Rate limited to 100 requests per minute per satellite.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -47155,8 +47177,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -47311,6 +47332,7 @@
         ],
         "description": "Returns token metadata (existence, expiration, refresh capability) without decrypting the tokens. Useful for satellites to check token status before attempting retrieval.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -47340,8 +47362,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "parameters": [
           {
@@ -47553,6 +47574,7 @@
         ],
         "description": "Creates a new user account using email and password. The first registered user automatically becomes a global administrator. Automatically creates a session and default team for the user. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -47596,8 +47618,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -47760,6 +47781,7 @@
         ],
         "description": "Authenticates a user using their registered identifier (email or username) and password. This endpoint is accessed via the /api/auth/email/login path due to server-level prefixing. Establishes a session by setting an authentication cookie. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -47783,8 +47805,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -47940,6 +47961,7 @@
         ],
         "description": "Allows authenticated users to change their password by providing their current password and a new password. Requires an active session. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -47962,8 +47984,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "security": [
           {
@@ -48236,6 +48257,7 @@
         ],
         "description": "Resends a verification email to the specified email address. This endpoint is public and does not require authentication. Only works if the email address exists and is not already verified.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -48519,6 +48541,7 @@
         ],
         "description": "Resets the password for email users using a valid reset token. The token must be valid and not expired (10-minute expiration). After successful reset, all user sessions are invalidated for security. Only works for users with email authentication. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -48543,8 +48566,7 @@
                 "additionalProperties": false
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -48688,6 +48710,7 @@
         ],
         "description": "Allows global administrators to initiate password reset for users with email authentication. The admin cannot reset their own password. Requires global_send_mail setting to be enabled. The user will receive an email with a reset link that works the same as self-initiated password resets.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
@@ -48906,6 +48929,7 @@
         ],
         "description": "Allows authenticated users to update their profile information including username, first name, and last name. Requires an active session. At least one field must be provided. Requires Content-Type: application/json header when sending request body.",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {

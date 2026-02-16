@@ -460,6 +460,7 @@ paths:
         management permissions. Requires Content-Type: application/json header
         when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -487,7 +488,6 @@ paths:
                 - name
                 - permissions
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -819,6 +819,7 @@ paths:
         role management permissions. Requires Content-Type: application/json
         header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -1413,6 +1414,7 @@ paths:
         admins can update any user. Requires Content-Type: application/json
         header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -2429,6 +2431,7 @@ paths:
       description: "Updates multiple user preferences at once. Requires Content-Type:
         application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -2609,6 +2612,7 @@ paths:
         "ui.theme"). Requires Content-Type: application/json header when sending
         request body.'
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -2623,7 +2627,6 @@ paths:
               required:
                 - value
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -2886,6 +2889,7 @@ paths:
         Requires Content-Type: application/json header when sending request
         body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -2898,7 +2902,6 @@ paths:
               required:
                 - notification_id
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -3796,6 +3799,7 @@ paths:
         application/json header. Feedback is sent via email if SMTP is
         configured."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -3809,7 +3813,6 @@ paths:
               required:
                 - message
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -4036,6 +4039,7 @@ paths:
       description: Creates a new global setting with the specified key, value, and
         metadata. Requires settings edit permissions.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -4071,7 +4075,6 @@ paths:
                 - value
                 - type
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -4421,6 +4424,7 @@ paths:
         - Global Settings
       description: Updates an existing global setting. Requires settings edit permissions.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -4758,6 +4762,7 @@ paths:
       description: Searches for global settings by key pattern. Requires settings view
         permissions.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -4769,7 +4774,6 @@ paths:
               required:
                 - pattern
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -4931,6 +4935,7 @@ paths:
       description: Creates or updates multiple global settings in a single operation.
         Requires settings edit permissions.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -4975,7 +4980,6 @@ paths:
               required:
                 - settings
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -5773,6 +5777,7 @@ paths:
         repository information. Only global administrators can access this
         endpoint.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -6484,6 +6489,7 @@ paths:
         Default team names cannot be changed. Requires Content-Type:
         application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -6832,6 +6838,7 @@ paths:
         made unique. Requires Content-Type: application/json header when sending
         request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -6849,7 +6856,6 @@ paths:
               required:
                 - name
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -7346,6 +7352,7 @@ paths:
         Requires Content-Type: application/json header when sending request
         body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -7365,7 +7372,6 @@ paths:
                 - email
                 - role
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -7564,6 +7570,7 @@ paths:
         admin. Requires Content-Type: application/json header when sending
         request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -7578,7 +7585,6 @@ paths:
               required:
                 - role
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -7936,6 +7942,7 @@ paths:
         teams. Requires Content-Type: application/json header when sending
         request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -7948,7 +7955,6 @@ paths:
               required:
                 - newOwnerId
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -8280,6 +8286,7 @@ paths:
         mcp.tools.manage permission (team_admin or global_admin). Requires
         Content-Type: application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -8307,7 +8314,6 @@ paths:
               required:
                 - tools
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -8781,6 +8787,7 @@ paths:
         disabled, the satellite will return an LLM-friendly error message.
         Requires mcp.tools.manage permission (team_admin or global_admin).
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -8792,7 +8799,6 @@ paths:
               required:
                 - is_disabled
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -9900,6 +9906,7 @@ paths:
         permission (team_admin or global_admin). Requires Content-Type:
         application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -10909,6 +10916,7 @@ paths:
         scripts. This is a lightweight validation endpoint used before the
         actual deployment.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -10926,7 +10934,6 @@ paths:
                 - repository_url
                 - branch
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -11091,6 +11098,7 @@ paths:
         Frontend then streams logs/status via SSE endpoints. Requires
         Content-Type: application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -11127,7 +11135,6 @@ paths:
                 - repository_url
                 - branch
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -11278,6 +11285,7 @@ paths:
         Requires Content-Type: application/json header when sending request
         body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -11290,7 +11298,6 @@ paths:
               required:
                 - branch
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -12044,6 +12051,7 @@ paths:
       description: Creates new cloud provider credentials for the team. Credentials
         are encrypted before storage.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -12503,6 +12511,7 @@ paths:
       description: Updates existing cloud credentials. Secret fields can only be
         replaced, not retrieved.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -13207,6 +13216,7 @@ paths:
         permissions. Requires Content-Type: application/json header when sending
         request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -13230,7 +13240,6 @@ paths:
               required:
                 - name
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -13494,6 +13503,7 @@ paths:
         permissions. Requires Content-Type: application/json header when sending
         request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -15144,6 +15154,7 @@ paths:
         Requires Content-Type: application/json header when sending request
         body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -15753,7 +15764,6 @@ paths:
                 - language
                 - runtime
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -16122,6 +16132,7 @@ paths:
         Requires Content-Type: application/json header when sending request
         body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -17243,6 +17254,7 @@ paths:
         permissions. Requires Content-Type: application/json header when sending
         request body.'
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -17259,7 +17271,6 @@ paths:
               required:
                 - status
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -17436,6 +17447,7 @@ paths:
         Requires global admin permissions. Requires Content-Type:
         application/json header."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -17453,7 +17465,6 @@ paths:
               required:
                 - server_ids
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -17881,6 +17892,7 @@ paths:
         Requires Content-Type: application/json header when sending request
         body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -17984,7 +17996,6 @@ paths:
                 - server_id
                 - installation_name
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -19243,6 +19254,7 @@ paths:
         installation name and environment variables. Requires Content-Type:
         application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -19826,6 +19838,7 @@ paths:
         updates only. Requires Content-Type: application/json header when
         sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -19844,7 +19857,6 @@ paths:
               required:
                 - team_env
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -20257,6 +20269,7 @@ paths:
         endpoint specifically handles headers updates only. Requires
         Content-Type: application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -20275,7 +20288,6 @@ paths:
               required:
                 - team_headers
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -20689,6 +20701,7 @@ paths:
         updates only. Requires Content-Type: application/json header when
         sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -20707,7 +20720,6 @@ paths:
               required:
                 - team_url_query_params
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -21121,6 +21133,7 @@ paths:
         Requires Content-Type: application/json header when sending request
         body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -21137,7 +21150,6 @@ paths:
               required:
                 - args
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -21695,6 +21707,7 @@ paths:
         authorization URL for user authentication. Requires Content-Type:
         application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -21727,7 +21740,6 @@ paths:
                 - server_id
                 - installation_type
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -22202,6 +22214,7 @@ paths:
         cookie-based authentication (for web users) and OAuth2 Bearer token
         authentication (for CLI users)."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -22787,6 +22800,7 @@ paths:
                 description: Internal Server Error
     put:
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -23143,6 +23157,7 @@ paths:
         sending request body. Supports both cookie-based authentication (for web
         users) and OAuth2 Bearer token authentication (for CLI users)."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -23156,7 +23171,6 @@ paths:
               required:
                 - args
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -23351,6 +23365,7 @@ paths:
         authentication (for web users) and OAuth2 Bearer token authentication
         (for CLI users)."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -23364,7 +23379,6 @@ paths:
               required:
                 - env
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -23559,6 +23573,7 @@ paths:
         authentication (for web users) and OAuth2 Bearer token authentication
         (for CLI users)."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -23572,7 +23587,6 @@ paths:
               required:
                 - headers
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -23767,6 +23781,7 @@ paths:
         authentication (for web users) and OAuth2 Bearer token authentication
         (for CLI users)."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -23780,7 +23795,6 @@ paths:
               required:
                 - query_params
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -23971,6 +23985,7 @@ paths:
         - OAuth2
       description: RFC 7591 compliant dynamic client registration endpoint for MCP clients
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -23998,7 +24013,6 @@ paths:
               required:
                 - redirect_uris
               additionalProperties: true
-        required: true
       responses:
         "201":
           description: Default Response
@@ -24058,6 +24072,7 @@ paths:
         - OAuth2
       description: Processes team selection and generates authorization code
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -24098,7 +24113,6 @@ paths:
                 - team_id
                 - consent
               additionalProperties: false
-        required: true
       responses:
         "302":
           description: Redirect to client callback or error redirect
@@ -24404,6 +24418,7 @@ paths:
       description: "Processes user authorization decision with team selection and
         returns redirect URL. Requires Content-Type: application/json header."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -24427,7 +24442,6 @@ paths:
                 - team_id
                 - action
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -24566,6 +24580,7 @@ paths:
         refreshes access token using refresh token. Accepts both
         application/json and application/x-www-form-urlencoded content types.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -24887,6 +24902,7 @@ paths:
         Requires Content-Type: application/json header when sending request
         body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -24906,7 +24922,6 @@ paths:
                 - request_id
                 - action
               additionalProperties: false
-        required: true
       responses:
         "200":
           description: Consent processed successfully
@@ -25157,6 +25172,7 @@ paths:
         (satellites). Requires Content-Type: application/json header when
         sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -25171,7 +25187,6 @@ paths:
               required:
                 - token
               additionalProperties: false
-        required: true
       responses:
         "200":
           description: Token introspection response
@@ -25226,6 +25241,7 @@ paths:
         administrators can access this endpoint. Requires Content-Type:
         application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -25238,7 +25254,6 @@ paths:
               required:
                 - email
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -26390,6 +26405,7 @@ paths:
         discovers servers and creates individual sync jobs. Progress can be
         monitored via GET /api/admin/mcp-registry/progress/{batchId}
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -27815,6 +27831,7 @@ paths:
       description: Allows global administrators to update any team's name,
         description, and non-HTTP MCP server limit.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -28959,6 +28976,7 @@ paths:
         Users cannot change their own role. Requires Content-Type:
         application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -28971,7 +28989,6 @@ paths:
               required:
                 - role_id
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -29255,6 +29272,7 @@ paths:
       description: Creates a pre-registered OAuth provider for MCP server
         authentication (e.g., GitHub, Google).
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -29330,7 +29348,6 @@ paths:
                 - authorization_endpoint
                 - token_endpoint
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -29690,6 +29707,7 @@ paths:
         - Admin - OAuth Providers
       description: Updates a pre-registered OAuth provider. All fields are optional.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -30096,6 +30114,7 @@ paths:
         CHANGE: Now requires Authorization: Bearer <token> header. Requires
         Content-Type: application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -30139,7 +30158,6 @@ paths:
               required:
                 - name
               additionalProperties: false
-        required: true
       security:
         - bearerAuth: []
       responses:
@@ -30439,6 +30457,7 @@ paths:
       description: "Satellite reports the result of command execution. Requires
         Content-Type: application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -30466,7 +30485,6 @@ paths:
                 - command_id
                 - status
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -30565,6 +30583,7 @@ paths:
       description: "Satellite reports health status and system metrics. Requires
         Content-Type: application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -30696,7 +30715,6 @@ paths:
                 - status
                 - system_metrics
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -31606,6 +31624,7 @@ paths:
         - Satellite Management
       description: Update the status of a specific satellite. Requires global_admin role.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -31621,7 +31640,6 @@ paths:
                   description: New satellite status
               required:
                 - status
-        required: true
       parameters:
         - schema:
             type: string
@@ -31718,6 +31736,7 @@ paths:
         role. Requires Content-Type: application/json header when sending
         request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -32592,6 +32611,7 @@ paths:
         satellites. Only global administrators can create these tokens. Requires
         Content-Type: application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -32820,6 +32840,7 @@ paths:
         Requires Content-Type: application/json header when sending request
         body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -33159,6 +33180,7 @@ paths:
         request. Requires Content-Type: application/json header when sending
         request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -33191,7 +33213,6 @@ paths:
               required:
                 - events
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -33306,6 +33327,7 @@ paths:
         MCP server installation. Only accessible by authenticated satellites.
         Rate limited to 100 requests per minute per satellite.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -33328,7 +33350,6 @@ paths:
                 - user_id
                 - team_id
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -33435,6 +33456,7 @@ paths:
         without decrypting the tokens. Useful for satellites to check token
         status before attempting retrieval.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -33457,7 +33479,6 @@ paths:
                 - user_id
                 - team_id
               additionalProperties: false
-        required: true
       parameters:
         - schema:
             type: string
@@ -33602,6 +33623,7 @@ paths:
         Automatically creates a session and default team for the user. Requires
         Content-Type: application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -33636,7 +33658,6 @@ paths:
                 - email
                 - password
               additionalProperties: false
-        required: true
       responses:
         "201":
           description: User registered successfully
@@ -33757,6 +33778,7 @@ paths:
         session by setting an authentication cookie. Requires Content-Type:
         application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -33774,7 +33796,6 @@ paths:
                 - login
                 - password
               additionalProperties: false
-        required: true
       responses:
         "200":
           description: Login successful. Session cookie is set.
@@ -33889,6 +33910,7 @@ paths:
         Requires Content-Type: application/json header when sending request
         body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -33905,7 +33927,6 @@ paths:
                 - current_password
                 - new_password
               additionalProperties: false
-        required: true
       security:
         - cookieAuth: []
       responses:
@@ -34097,6 +34118,7 @@ paths:
         endpoint is public and does not require authentication. Only works if
         the email address exists and is not already verified.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -34300,6 +34322,7 @@ paths:
         works for users with email authentication. Requires Content-Type:
         application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -34318,7 +34341,6 @@ paths:
                 - token
                 - new_password
               additionalProperties: false
-        required: true
       responses:
         "200":
           description: Password reset successfully
@@ -34423,6 +34445,7 @@ paths:
         an email with a reset link that works the same as self-initiated
         password resets.
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -34575,6 +34598,7 @@ paths:
         session. At least one field must be provided. Requires Content-Type:
         application/json header when sending request body."
       requestBody:
+        required: true
         content:
           application/json:
             schema:
