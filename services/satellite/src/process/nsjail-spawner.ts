@@ -328,7 +328,7 @@ export class ProcessSpawner {
       max_processes: nsjailConfig.maxProcesses,
       max_open_files: nsjailConfig.maxOpenFiles,
       max_file_size_mb: nsjailConfig.maxFileSizeMB,
-      tmpfs_size: nsjailConfig.tmpfsSize
+      tmpfs_size_bytes: nsjailConfig.tmpfsSizeBytes
     }, `Spawning ${runtime} MCP server with nsjail isolation (rlimit only)`);
 
     // Get current user UID and GID (deploystack user in production)
@@ -361,7 +361,7 @@ export class ProcessSpawner {
       '-R', '/sbin',                            // Read-only mount: /sbin
       '-R', '/etc',                             // Read-only mount: /etc (includes resolv.conf)
       '-R', '/opt/deploystack/.local/bin',      // User-local Python tools (uv, uvx, pip)
-      '-T', `/tmp:size=${nsjailConfig.tmpfsSize}`, // Writable temp with size limit (100M)
+      '-m', `none:/tmp:tmpfs:size=${nsjailConfig.tmpfsSizeBytes}`, // Writable tmpfs with explicit byte size
       '-B', `${cacheDir}:/home/${runtime}`,    // Runtime-specific cache directory mount
       // Mount GitHub deployment directory if present
       ...(config.temp_dir ? ['-B', `${config.temp_dir}:/app:ro`, '--cwd', '/app'] : []),
@@ -506,8 +506,8 @@ export class ProcessSpawner {
       '-R', '/sbin',
       '-R', '/etc',
       '-R', '/opt/deploystack/.local/bin',  // User-local Python tools (uv, uvx, pip)
-      // Writable temp
-      '-T', `/tmp:size=${nsjailConfig.tmpfsSize}`,
+      // Writable tmpfs with explicit byte size
+      '-m', `none:/tmp:tmpfs:size=${nsjailConfig.tmpfsSizeBytes}`,
       // Working directory (read-write for install/build to work)
       '-B', `${workingDir}:/build:rw`,
       '--cwd', '/build',

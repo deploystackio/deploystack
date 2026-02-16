@@ -11,6 +11,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { FastifyBaseLogger, FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
 import { AsyncLocalStorage } from 'async_hooks';
+import { EventEmitter } from 'events';
 import { UnifiedToolDiscoveryManager } from '../services/unified-tool-discovery-manager';
 import { ProcessManager } from '../process';
 import { ToolSearchService } from '../services/tool-search-service';
@@ -186,7 +187,7 @@ export class McpServerWrapper {
       const metaTools = [
         {
           name: 'discover_mcp_tools',
-          description: 'Search for MCP tools using 1-3 keywords only. Examples: "markdown", "github create", "database query". Use "*" to list all available tools (max 20). Avoid long descriptions. Use tool name or main function as keywords. Returns tool paths for execute_mcp_tool.',
+          description: 'Search for MCP tools using 1-3 keywords only. Examples: "markdown", "github create", "database query". Use "*" to list all available tools (max 50). Use "@servers" for a compact summary of installed servers and tool counts. Avoid long descriptions. Use tool name or main function as keywords. Returns tool paths for execute_mcp_tool. For "*" wildcard queries, use offset parameter to paginate through all tools.',
           inputSchema: {
             type: 'object',
             properties: {
@@ -196,8 +197,13 @@ export class McpServerWrapper {
               },
               limit: {
                 type: 'number',
-                description: 'Maximum number of results to return (default: 10, max: 20 for wildcard)',
+                description: 'Maximum number of results to return (default: 10, max: 50 for wildcard)',
                 default: 10
+              },
+              offset: {
+                type: 'number',
+                description: 'Number of tools to skip for pagination (only for "*" wildcard queries, default: 0)',
+                default: 0
               }
             },
             required: ['query']
@@ -361,6 +367,7 @@ export class McpServerWrapper {
 
     const query = args.query;
     const limit = args.limit || 10;
+    const offset = Math.max(0, Math.floor(args.offset || 0));
 
     if (!query || typeof query !== 'string') {
       throw new Error('Invalid query parameter - must be a non-empty string');
@@ -369,57 +376,126 @@ export class McpServerWrapper {
     // Get user context for per-user tool filtering (per-user routing)
     const userContext = this.userContextStore.getStore();
 
-    // Handle wildcard query "*" - list all tools (max 20)
+    // Handle special query modes
     const isWildcard = query.trim() === '*';
-    const wildcardLimit = 20;
+    const isServerList = query.trim() === '@servers';
+    const wildcardLimit = 50;
 
     this.logger.info({
       operation: 'discover_mcp_tools',
       query: query,
       limit: isWildcard ? wildcardLimit : limit,
+      offset: isWildcard ? offset : undefined,
       is_wildcard: isWildcard,
+      is_server_list: isServerList,
       user_id: userContext?.user_id,
       has_user_context: !!userContext
-    }, `Discovering tools with query: "${query}"${isWildcard ? ' (wildcard mode)' : ''}${userContext ? ` (user: ${userContext.user_id})` : ''}`);
+    }, `Discovering tools with query: "${query}"${isWildcard ? ` (wildcard mode, offset: ${offset})` : ''}${isServerList ? ' (server list mode)' : ''}${userContext ? ` (user: ${userContext.user_id})` : ''}`);
 
     const startTime = Date.now();
+
+    // Resolve user's allowed installations BEFORE search/list so filtering
+    // happens before limit and totalAvailable are calculated
+    let userServerNames: Set<string> | undefined;
+    if (userContext) {
+      const userConfigs = this.dynamicConfigManager.getConfigsForUser(userContext.user_id);
+      userServerNames = new Set(userConfigs.map(config => config.name));
+
+      this.logger.debug({
+        operation: 'discover_mcp_tools_user_filter',
+        user_id: userContext.user_id,
+        user_server_count: userServerNames.size,
+        user_servers: Array.from(userServerNames)
+      }, `User has ${userServerNames.size} installations`);
+    }
+
+    // Handle @servers query - compact server summary
+    if (isServerList) {
+      let allResults = this.toolSearchService.listAll();
+
+      if (userServerNames) {
+        allResults = allResults.filter(tool => userServerNames.has(tool.server_name));
+      }
+
+      // Group by server slug, count tools, capture transport
+      const serverMap = new Map<string, { tool_count: number; transport: string }>();
+      for (const tool of allResults) {
+        const serverSlug = tool.tool_path.split(':')[0];
+        const existing = serverMap.get(serverSlug);
+        if (existing) {
+          existing.tool_count++;
+        } else {
+          serverMap.set(serverSlug, { tool_count: 1, transport: tool.transport });
+        }
+      }
+
+      const servers = Array.from(serverMap.entries()).map(([name, info]) => ({
+        name,
+        tool_count: info.tool_count,
+        transport: info.transport
+      }));
+
+      const searchTime = Date.now() - startTime;
+
+      this.logger.info({
+        operation: 'discover_mcp_tools_server_list',
+        server_count: servers.length,
+        total_tools: allResults.length,
+        search_time_ms: searchTime
+      }, `Server list: ${servers.length} servers with ${allResults.length} total tools`);
+
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            servers,
+            total_servers: servers.length,
+            total_tools: allResults.length,
+            search_time_ms: searchTime,
+            query: query
+          }, null, 2)
+        }]
+      };
+    }
 
     let results;
     let totalAvailable = 0;
     let truncationMessage: string | undefined;
 
     if (isWildcard) {
-      // Wildcard: return all tools up to max 20
-      results = this.toolSearchService.listAll(wildcardLimit);
-      totalAvailable = this.toolSearchService.getEnabledToolCount();
+      // Wildcard: get all tools, filter by user, then apply offset + limit pagination
+      results = this.toolSearchService.listAll();
 
-      if (totalAvailable > wildcardLimit) {
-        truncationMessage = `Showing ${wildcardLimit} of ${totalAvailable} available tools. Use specific keywords (e.g., "github", "database", "markdown") to find additional tools not shown here.`;
+      if (userServerNames) {
+        results = results.filter(tool => userServerNames.has(tool.server_name));
+      }
+
+      totalAvailable = results.length;
+
+      // Apply offset first, then limit
+      results = results.slice(offset, offset + wildcardLimit);
+
+      if (totalAvailable > offset + results.length) {
+        truncationMessage = `Showing tools ${offset + 1}-${offset + results.length} of ${totalAvailable} total. Use offset: ${offset + wildcardLimit} to see the next page.`;
       }
     } else {
-      // Normal search
-      results = this.toolSearchService.search(query, limit);
+      // Normal search: use inflated limit to account for user filtering, then trim
+      const searchLimit = userServerNames ? limit * 10 : limit;
+      results = this.toolSearchService.search(query, searchLimit);
+
+      if (userServerNames) {
+        results = results.filter(tool => userServerNames.has(tool.server_name));
+      }
+
+      results = results.slice(0, limit);
     }
 
-    // Per-user routing: Filter results to only show user's installations
-    if (userContext) {
-      const userConfigs = this.dynamicConfigManager.getConfigsForUser(userContext.user_id);
-      const userServerNames = new Set(userConfigs.map(config => config.name));
-
-      this.logger.debug({
-        operation: 'discover_mcp_tools_user_filter',
-        user_id: userContext.user_id,
-        user_server_count: userServerNames.size,
-        user_servers: Array.from(userServerNames),
-        results_before_filter: results.length
-      }, `Filtering tools to user's ${userServerNames.size} installations`);
-
-      results = results.filter(tool => userServerNames.has(tool.server_name));
-
+    if (userServerNames) {
       this.logger.debug({
         operation: 'discover_mcp_tools_user_filtered',
-        user_id: userContext.user_id,
-        results_after_filter: results.length
+        user_id: userContext?.user_id,
+        results_after_filter: results.length,
+        total_available: totalAvailable
       }, `Filtered to ${results.length} tools from user's installations`);
     }
 
@@ -457,10 +533,15 @@ export class McpServerWrapper {
       query: query
     };
 
-    // Add truncation notice for wildcard queries with more tools available
-    if (truncationMessage) {
-      response.notice = truncationMessage;
+    // Add pagination info for wildcard queries
+    if (isWildcard) {
       response.total_available = totalAvailable;
+      response.offset = offset;
+      response.has_more = offset + results.length < totalAvailable;
+      if (response.has_more) {
+        response.next_offset = offset + results.length;
+        response.notice = truncationMessage;
+      }
     }
 
     this.logger.info({
@@ -470,8 +551,9 @@ export class McpServerWrapper {
       search_time_ms: searchTime,
       is_wildcard: isWildcard,
       total_available: totalAvailable,
-      was_truncated: !!truncationMessage
-    }, `Discovery complete: found ${results.length} tools in ${searchTime}ms${truncationMessage ? ` (truncated from ${totalAvailable})` : ''}`);
+      offset: isWildcard ? offset : undefined,
+      has_more: isWildcard ? offset + results.length < totalAvailable : undefined
+    }, `Discovery complete: found ${results.length} tools in ${searchTime}ms${isWildcard ? ` (offset: ${offset}, total: ${totalAvailable})` : ''}`);
 
     return {
       content: [
@@ -700,14 +782,15 @@ export class McpServerWrapper {
     const userContext = this.userContextStore.getStore();
 
     let resources = this.toolDiscoveryManager.getAllResources();
-    const templates = this.toolDiscoveryManager.getAllResourceTemplates();
+    let templates = this.toolDiscoveryManager.getAllResourceTemplates();
 
-    // Per-user filtering: only show resources from user's installations
+    // Per-user filtering: only show resources and templates from user's installations
     if (userContext && this.dynamicConfigManager) {
       const userConfigs = this.dynamicConfigManager.getConfigsForUser(userContext.user_id);
       const userServerNames = new Set(userConfigs.map(config => config.name));
 
       resources = resources.filter(r => userServerNames.has(r.serverName));
+      templates = templates.filter(t => userServerNames.has(t.serverName));
     }
 
     this.logger.info({
@@ -938,6 +1021,85 @@ export class McpServerWrapper {
   }
 
   /**
+   * Resurrect a stale MCP session after satellite restart.
+   * Creates a new transport with the same session ID and bootstraps it
+   * with a synthetic initialize request so clients can continue seamlessly.
+   */
+  private async resurrectSession(sessionId: string, request: FastifyRequest): Promise<void> {
+    this.logger.info({
+      operation: 'mcp_session_resurrection',
+      session_id: sessionId
+    }, 'Auto-resurrecting stale session after satellite restart');
+
+    // Respawn dormant stdio processes
+    await this.respawnDormantProcesses();
+
+    // Create session with fixed ID
+    const sessionEntry = this.sessionManager!.createSessionWithId(
+      sessionId,
+      (server) => {
+        this.setupMcpServer(server);
+      }
+    );
+
+    const { transport, server } = sessionEntry;
+    await server.connect(transport);
+
+    // Bootstrap the transport with a synthetic initialize request.
+    // The transport only sets _initialized=true when it processes an initialize request.
+    const syntheticInitRequest = {
+      jsonrpc: '2.0' as const,
+      id: 0,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2024-11-05',
+        capabilities: {},
+        clientInfo: {
+          name: 'resurrected-session',
+          version: '1.0.0'
+        }
+      }
+    };
+
+    this.logger.debug({
+      operation: 'mcp_bootstrap_transport',
+      session_id: sessionId
+    }, 'Bootstrapping transport with synthetic initialize request');
+
+    // Create a mock response with EventEmitter interface.
+    // @hono/node-server's getRequestListener calls outgoing.on("close", ...)
+    // so the mock must implement the EventEmitter API to avoid TypeError.
+    let initializeResponseSent = false;
+    const mockRes = Object.assign(new EventEmitter(), {
+      writeHead: (_status: number, _headers?: any) => mockRes,
+      write: (_chunk: any) => true,
+      end: (_data?: any) => { initializeResponseSent = true; return mockRes; },
+      setHeader: (_name: string, _value: string | string[]) => mockRes,
+      socket: request.raw.socket,
+      statusCode: 200,
+      statusMessage: 'OK',
+      headersSent: false,
+      writable: true,
+      writableFinished: false,
+      destroy: () => mockRes,
+    });
+
+    await transport.handleRequest(request.raw as any, mockRes as any, syntheticInitRequest);
+
+    if (!initializeResponseSent) {
+      this.logger.warn({
+        operation: 'mcp_bootstrap_failed',
+        session_id: sessionId
+      }, 'Synthetic initialize request did not complete');
+    } else {
+      this.logger.info({
+        operation: 'mcp_session_resurrected_success',
+        session_id: sessionId
+      }, 'Session resurrected and initialized successfully');
+    }
+  }
+
+  /**
    * Setup Fastify routes for MCP transport
    */
   setupRoutes(fastify: FastifyInstance): void {
@@ -1004,82 +1166,11 @@ export class McpServerWrapper {
         await server.connect(transport);
       } else if (sessionId) {
         // Stale session ID - auto-resurrect the session transparently
-        this.logger.info({
-          operation: 'mcp_session_resurrection',
-          session_id: sessionId,
-          request_method: requestBody?.method || 'unknown'
-        }, 'Auto-resurrecting stale session after satellite restart');
+        await this.resurrectSession(sessionId, request);
 
-        // Check for dormant stdio processes and respawn them
-        await this.respawnDormantProcesses();
-
-        // Create session with fixed ID using session manager
-        const sessionEntry = this.sessionManager!.createSessionWithId(
-          sessionId,
-          (server) => {
-            // Setup MCP server with hierarchical router
-            this.setupMcpServer(server);
-          }
-        );
-
-        transport = sessionEntry.transport;
-        server = sessionEntry.server;
-        await server.connect(transport);
-
-        // Bootstrap the transport by processing a synthetic initialize request
-        // The transport only sets _initialized=true when it processes an initialize request
-        const syntheticInitRequest = {
-          jsonrpc: '2.0' as const,
-          id: 0,
-          method: 'initialize',
-          params: {
-            protocolVersion: '2024-11-05',
-            capabilities: {},
-            clientInfo: {
-              name: 'resurrected-session',
-              version: '1.0.0'
-            }
-          }
-        };
-
-        this.logger.debug({
-          operation: 'mcp_bootstrap_transport',
-          session_id: sessionId
-        }, 'Bootstrapping transport with synthetic initialize request');
-
-        // Create a minimal mock response that captures the initialize response
-        let initializeResponseSent = false;
-        const mockRes = {
-          writeHead: (_status: number, _headers?: any) => {
-            // Capture response but don't send to client
-            return mockRes;
-          },
-          write: (_chunk: any) => {
-            // Swallow the initialize response
-            return true;
-          },
-          end: (_data?: any) => {
-            initializeResponseSent = true;
-            return mockRes;
-          },
-          setHeader: (_name: string, _value: string | string[]) => {
-            return mockRes;
-          },
-          socket: request.raw.socket,
-          statusCode: 200,
-          statusMessage: 'OK',
-          headersSent: false,
-        };
-
-        // Process the synthetic initialize request using the actual request with synthetic body
-        await transport.handleRequest(request.raw as any, mockRes as any, syntheticInitRequest);
-
-        if (!initializeResponseSent) {
-          this.logger.warn({
-            operation: 'mcp_bootstrap_failed',
-            session_id: sessionId
-          }, 'Synthetic initialize request did not complete');
-        }
+        const session = this.sessionManager!.getSession(sessionId)!;
+        transport = session.transport;
+        server = session.server;
       } else {
         // No session ID at all - reject
         this.logger.warn({
@@ -1119,9 +1210,19 @@ export class McpServerWrapper {
     // Handle GET requests for server-to-client notifications via SSE
     fastify.get('/mcp', async (request: FastifyRequest, reply: FastifyReply) => {
       const sessionId = request.headers['mcp-session-id'] as string | undefined;
-      if (!sessionId || !this.sessionManager!.hasSession(sessionId)) {
-        reply.code(400).send('Invalid or missing session ID');
+      if (!sessionId) {
+        reply.code(400).send('Missing session ID');
         return;
+      }
+
+      if (!this.sessionManager!.hasSession(sessionId)) {
+        // Stale session after satellite restart - resurrect for SSE reconnection
+        this.logger.info({
+          operation: 'mcp_session_resurrection_get',
+          session_id: sessionId
+        }, 'Auto-resurrecting stale session for SSE reconnection');
+
+        await this.resurrectSession(sessionId, request);
       }
 
       // Register connection for SSE ping keep-alive (prevents proxy timeout)
@@ -1136,8 +1237,18 @@ export class McpServerWrapper {
     // Handle DELETE requests for session termination
     fastify.delete('/mcp', async (request: FastifyRequest, reply: FastifyReply) => {
       const sessionId = request.headers['mcp-session-id'] as string | undefined;
-      if (!sessionId || !this.sessionManager!.hasSession(sessionId)) {
-        reply.code(400).send('Invalid or missing session ID');
+      if (!sessionId) {
+        reply.code(400).send('Missing session ID');
+        return;
+      }
+
+      if (!this.sessionManager!.hasSession(sessionId)) {
+        // Session already gone (satellite restart) - return success
+        this.logger.info({
+          operation: 'mcp_session_delete_stale',
+          session_id: sessionId
+        }, 'DELETE for stale session - already gone after restart');
+        reply.code(200).send({ ok: true });
         return;
       }
 

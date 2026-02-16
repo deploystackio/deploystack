@@ -241,9 +241,67 @@ export class OAuthDiscoveryService {
     // Check for WWW-Authenticate: Bearer header
     const wwwAuthenticate = response.headers.get('www-authenticate');
     if (!wwwAuthenticate || !wwwAuthenticate.toLowerCase().includes('bearer')) {
+      // Server returned 401/403 but without WWW-Authenticate: Bearer header.
+      // Some servers (e.g., Miro) don't include WWW-Authenticate but still expose
+      // RFC 9728/8414 well-known endpoints. Try probing those as a fallback.
+      this.logger.debug(
+        { url, method, status: response.status, wwwAuthenticate },
+        'No Bearer authentication scheme in header, trying well-known endpoints as fallback'
+      );
+
+      const serverOrigin = new URL(url);
+      const origin = `${serverOrigin.protocol}//${serverOrigin.host}`;
+
+      // Try RFC 9728 protected resource metadata first
+      const resourceMetadataUrl = `${origin}/.well-known/oauth-protected-resource`;
+      try {
+        const rmResponse = await fetch(resourceMetadataUrl, {
+          method: 'GET',
+          headers: { Accept: 'application/json', 'User-Agent': OAuthDiscoveryService.USER_AGENT },
+          signal: AbortSignal.timeout(5000)
+        });
+        if (rmResponse.ok) {
+          const rmData = await rmResponse.json();
+          if (rmData.authorization_servers && rmData.authorization_servers.length > 0) {
+            this.logger.info(
+              { url, method, resourceMetadataUrl },
+              'OAuth detected via RFC 9728 protected resource metadata fallback (no WWW-Authenticate header)'
+            );
+            return {
+              requiresOauth: true,
+              resourceMetadataUrl
+            };
+          }
+        }
+      } catch { /* ignore, try next */ }
+
+      // Try RFC 8414 authorization server metadata
+      const rfc8414Url = `${origin}/.well-known/oauth-authorization-server`;
+      try {
+        const asResponse = await fetch(rfc8414Url, {
+          method: 'GET',
+          headers: { Accept: 'application/json', 'User-Agent': OAuthDiscoveryService.USER_AGENT },
+          signal: AbortSignal.timeout(5000)
+        });
+        if (asResponse.ok) {
+          const asData = await asResponse.json();
+          if (asData.authorization_endpoint && asData.token_endpoint) {
+            this.logger.info(
+              { url, method, rfc8414Url },
+              'OAuth detected via RFC 8414 authorization server metadata fallback (no WWW-Authenticate header)'
+            );
+            return {
+              requiresOauth: true,
+              discoveryUrl: rfc8414Url
+            };
+          }
+        }
+      } catch { /* ignore */ }
+
+      // All fallbacks failed — truly no OAuth
       this.logger.debug(
         { url, method, wwwAuthenticate },
-        'No Bearer authentication scheme found'
+        'No Bearer authentication scheme found and no well-known OAuth endpoints detected'
       );
       return { requiresOauth: false };
     }

@@ -1,4 +1,25 @@
 /**
+ * Parse human-readable size string to bytes for nsjail tmpfs mounts.
+ * nsjail's -T flag hardcodes 4MB; we use -m with explicit byte size instead.
+ */
+function parseSizeToBytes(sizeStr: string): number {
+  const match = sizeStr.match(/^(\d+)\s*([KMGT])?$/i);
+  if (!match) {
+    throw new Error(`Invalid size format: ${sizeStr}`);
+  }
+  const value = parseInt(match[1], 10);
+  const unit = (match[2] || '').toUpperCase();
+  const multipliers: Record<string, number> = {
+    '': 1,
+    'K': 1024,
+    'M': 1024 * 1024,
+    'G': 1024 * 1024 * 1024,
+    'T': 1024 * 1024 * 1024 * 1024
+  };
+  return value * (multipliers[unit] || 1);
+}
+
+/**
  * nsjail Resource Limits Configuration
  * These limits apply only in production on Linux platforms when nsjail isolation is enabled
  *
@@ -32,11 +53,14 @@ export const nsjailConfig = {
   /** Maximum file size in MB (default: 50, prevents oversized package downloads) */
   maxFileSizeMB: parseInt(process.env.NSJAIL_RLIMIT_FSIZE || '50', 10),
 
-  /** Tmpfs size for /tmp directory (default: 100M) */
-  tmpfsSize: process.env.NSJAIL_TMPFS_SIZE || '100M',
+  /** Tmpfs size for /tmp directory in bytes (default: 100M = 104857600) */
+  tmpfsSizeBytes: parseSizeToBytes(process.env.NSJAIL_TMPFS_SIZE || '100M'),
 
-  /** Tmpfs size for GitHub deployment working directories (default: 300M) */
-  deploymentTmpfsSize: process.env.NSJAIL_DEPLOYMENT_TMPFS_SIZE || '300M'
+  /** Tmpfs size for GitHub deployment working directories (human-readable, for mount syscall) */
+  deploymentTmpfsSize: process.env.NSJAIL_DEPLOYMENT_TMPFS_SIZE || '300M',
+
+  /** Tmpfs size for GitHub deployment working directories in bytes (for nsjail -m flag) */
+  deploymentTmpfsSizeBytes: parseSizeToBytes(process.env.NSJAIL_DEPLOYMENT_TMPFS_SIZE || '300M')
 };
 
 /**

@@ -299,10 +299,51 @@ export default async function deployGitHubRoutes(server: FastifyInstance) {
     const installation = await credentialService.getInstallation(teamId, 'github');
 
     if (!installation) {
-      // No database record - team must install the GitHub App via the /install flow
-      const response: ConnectionStatusResponse = { connected: false };
-      const jsonString = JSON.stringify(response);
-      return reply.status(200).type('application/json').send(jsonString);
+      // No database record - try to auto-detect from the current user's personal GitHub account
+      const user = request.user as { githubId?: string | null } | undefined;
+      const githubId = user?.githubId;
+
+      if (!githubId) {
+        // User authenticated via email, not GitHub - cannot auto-detect
+        const response: ConnectionStatusResponse = { connected: false };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
+      }
+
+      try {
+        const userInstallations = await githubService.listUserInstallations(githubId);
+
+        if (userInstallations.length > 0) {
+          const selectedInstallation = userInstallations[0];
+
+          await credentialService.storeInstallation({
+            teamId,
+            source: 'github',
+            installationId: selectedInstallation.id.toString()
+          });
+
+          server.log.info({
+            teamId,
+            githubId,
+            installation_id: selectedInstallation.id,
+            account_login: selectedInstallation.account.login,
+            operation: 'auto_linked_user_installation'
+          }, 'Auto-linked GitHub installation to team (scoped to user)');
+
+          const response: ConnectionStatusResponse = { connected: true };
+          const jsonString = JSON.stringify(response);
+          return reply.status(200).type('application/json').send(jsonString);
+        }
+
+        const response: ConnectionStatusResponse = { connected: false };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
+      } catch (error) {
+        server.log.warn({ error, teamId, githubId }, 'Failed to auto-detect GitHub installation for user');
+        const response: ConnectionStatusResponse = { connected: false };
+        const jsonString = JSON.stringify(response);
+        return reply.status(200).type('application/json').send(jsonString);
+      }
     }
 
     // Step 2: Verify installation still exists on GitHub
@@ -319,7 +360,40 @@ export default async function deployGitHubRoutes(server: FastifyInstance) {
           operation: 'stale_installation_cleaned'
         }, 'Cleaned up stale GitHub installation record');
 
-        // Team must re-install the GitHub App via the /install flow
+        // After cleanup, try user-scoped auto-detection for a valid installation
+        const user = request.user as { githubId?: string | null } | undefined;
+        const githubId = user?.githubId;
+
+        if (githubId) {
+          try {
+            const userInstallations = await githubService.listUserInstallations(githubId);
+
+            if (userInstallations.length > 0) {
+              const selectedInstallation = userInstallations[0];
+
+              await credentialService.storeInstallation({
+                teamId,
+                source: 'github',
+                installationId: selectedInstallation.id.toString()
+              });
+
+              server.log.info({
+                teamId,
+                githubId,
+                installation_id: selectedInstallation.id,
+                account_login: selectedInstallation.account.login,
+                operation: 'auto_linked_user_installation_after_cleanup'
+              }, 'Auto-linked GitHub installation to team after cleaning stale record');
+
+              const response: ConnectionStatusResponse = { connected: true };
+              const jsonString = JSON.stringify(response);
+              return reply.status(200).type('application/json').send(jsonString);
+            }
+          } catch (retryError) {
+            server.log.warn({ error: retryError, teamId, githubId }, 'Failed to auto-detect installation after cleanup');
+          }
+        }
+
         const response: ConnectionStatusResponse = { connected: false };
         const jsonString = JSON.stringify(response);
         return reply.status(200).type('application/json').send(jsonString);

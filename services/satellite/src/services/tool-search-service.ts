@@ -187,7 +187,7 @@ export class ToolSearchService {
    * Used when query is "*" to return all tools
    * Filters out disabled tools
    */
-  listAll(limit: number = 20): ToolSearchResult[] {
+  listAll(limit?: number): ToolSearchResult[] {
     const startTime = Date.now();
 
     // Get tools from single source of truth
@@ -207,18 +207,20 @@ export class ToolSearchService {
     const searchableTools = this.flattenTools(enabledTools);
 
     const listTime = Date.now() - startTime;
+    const returnCount = limit ? Math.min(searchableTools.length, limit) : searchableTools.length;
 
     this.logger.info({
       operation: 'tool_list_all_executed',
       total_tools: allTools.length,
       enabled_tools: searchableTools.length,
-      returned_tools: Math.min(searchableTools.length, limit),
+      returned_tools: returnCount,
       list_time_ms: listTime,
-      limit: limit
-    }, `List all completed: returning ${Math.min(searchableTools.length, limit)}/${searchableTools.length} tools in ${listTime}ms`);
+      limit: limit ?? 'unlimited'
+    }, `List all completed: returning ${returnCount}/${searchableTools.length} tools in ${listTime}ms`);
 
-    // Return up to limit tools
-    return searchableTools.slice(0, limit).map(tool => ({
+    // Return up to limit tools (or all if no limit)
+    const toolsToReturn = limit ? searchableTools.slice(0, limit) : searchableTools;
+    return toolsToReturn.map(tool => ({
       tool_path: `${tool.serverSlug}:${tool.toolName}`,
       description: tool.description,
       server_name: tool.serverName,

@@ -133,6 +133,62 @@ export class DeploymentGitHubService {
   }
 
   /**
+   * List GitHub App installations belonging to a specific user's personal account.
+   * Queries all app installations via App JWT auth, then filters to only those
+   * where the installation account ID matches the given GitHub user ID.
+   * This prevents cross-tenant leakage — org installations are excluded.
+   */
+  async listUserInstallations(githubId: string): Promise<Array<{
+    id: number;
+    account: {
+      login: string;
+      id: number;
+    };
+    created_at: string;
+    updated_at: string;
+  }>> {
+    if (!githubId) {
+      return [];
+    }
+
+    try {
+      const config = await getGitHubAppConfig();
+
+      const appOctokit = new Octokit({
+        authStrategy: createAppAuth,
+        auth: {
+          appId: config.appId,
+          privateKey: config.privateKey
+        }
+      });
+
+      const { data: installations } = await appOctokit.apps.listInstallations({
+        per_page: 100
+      });
+
+      // Only return installations on this user's personal account
+      return installations
+        .filter(installation =>
+          !installation.suspended_at &&
+          installation.account?.id?.toString() === githubId
+        )
+        .map(installation => ({
+          id: installation.id,
+          account: {
+            login: installation.account?.login || 'unknown',
+            id: installation.account?.id || 0
+          },
+          created_at: installation.created_at,
+          updated_at: installation.updated_at
+        }))
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to list GitHub installations: ${message}`);
+    }
+  }
+
+  /**
    * Get repository details
    */
   async getRepository(teamId: string, owner: string, repo: string): Promise<RepositoryDetails> {
