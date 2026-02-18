@@ -25,7 +25,7 @@
     "test:backend:unit:coverage": "cd services/backend && npm run test:unit:coverage"
   },
   "devDependencies": {
-    "markdownlint-cli2": "^0.20.0",
+    "markdownlint-cli2": "^0.21.0",
     "webpack": "^5.105.2"
   },
   "overrides": {
