@@ -48,11 +48,11 @@ export async function downloadRepository(
   owner: string,
   repo: string,
   ref: string,
-  token: string,
+  token?: string,
   logger?: Logger,
   maxRetries = 3
 ): Promise<Buffer> {
-  const octokit = new Octokit({ auth: token });
+  const octokit = token ? new Octokit({ auth: token }) : new Octokit();
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {

@@ -100,6 +100,7 @@ export const mcpServers = pgTable('mcpServers', {
 
   // Source Tracking
   source: text('source', { enum: ['official_registry', 'manual', 'github'] }).notNull().default('manual'),
+  deployment_source: text('deployment_source'), // 'github_app' | 'github_public' - only set for source='github'
 
   // Official Registry Sync Tracking
   synced_from_official_registry: boolean('synced_from_official_registry').notNull().default(false),

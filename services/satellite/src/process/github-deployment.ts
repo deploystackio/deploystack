@@ -930,24 +930,29 @@ export class GitHubDeploymentHandler {
       ref: githubInfo.ref
     }, `Parsed GitHub URL: ${githubInfo.owner}/${githubInfo.repo}#${githubInfo.ref}`);
 
-    // Fetch GitHub App installation token
+    // Fetch GitHub App installation token (may be null for public repos)
     const tokenResult = await this.backendClient.fetchGitHubToken(config.installation_id);
-    if (!tokenResult || !tokenResult.token) {
-      throw new Error('Failed to fetch GitHub token for private repository deployment');
-    }
+    const githubToken = tokenResult?.token || undefined;
 
-    this.logger.debug({
-      operation: 'github_token_fetched',
-      installation_id: config.installation_id,
-      expires_at: tokenResult.expires_at
-    }, 'GitHub token fetched successfully');
+    if (githubToken) {
+      this.logger.debug({
+        operation: 'github_token_fetched',
+        installation_id: config.installation_id,
+        expires_at: tokenResult!.expires_at
+      }, 'GitHub token fetched successfully');
+    } else {
+      this.logger.info({
+        operation: 'github_deployment_public',
+        installation_id: config.installation_id
+      }, 'No GitHub token available, proceeding as public repository');
+    }
 
     // Download repository as tarball
     const tarballBuffer = await downloadRepository(
       githubInfo.owner,
       githubInfo.repo,
       githubInfo.ref,
-      tokenResult.token,
+      githubToken,
       this.logger
     );
 

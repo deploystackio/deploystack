@@ -35,6 +35,12 @@ const DEPLOY_REQUEST_SCHEMA = {
       minLength: 1,
       description: 'Git branch to deploy from (e.g., main)'
     },
+    deployment_source: {
+      type: 'string',
+      enum: ['github_app', 'github_public'],
+      default: 'github_app',
+      description: 'Deployment source: github_app (authenticated via GitHub App) or github_public (public repo, no auth)'
+    },
     satellite_id: {
       type: 'string',
       description: 'Satellite ID to deploy on (optional, uses team default if omitted)'
@@ -95,6 +101,7 @@ interface DeployRequest {
   source: 'github';
   repository_url: string;
   branch: string;
+  deployment_source?: 'github_app' | 'github_public';
   satellite_id?: string;
   team_env?: Record<string, string>;
   template_args?: string[];
@@ -311,6 +318,7 @@ export default async function deployRoutes(server: FastifyInstance) {
       source,
       repository_url,
       branch,
+      deployment_source = 'github_app',
       satellite_id,
       team_env,
       template_args
@@ -474,22 +482,32 @@ export default async function deployRoutes(server: FastifyInstance) {
         availableGithubSlots: team.github_mcp_limit - githubCount
       }, 'Team limits validated - deployment allowed');
 
-      const credentialService = new DeploymentCredentialService(db);
-
       // ============================================
       // STEP 1-6: Validate Repository (Shared Logic)
       // ============================================
-      request.log.info({ repository_url, branch }, 'Validating repository using shared service');
+      request.log.info({ repository_url, branch, deployment_source }, 'Validating repository using shared service');
 
-      const repoValidationResult = await DeploymentValidationService.validate(
-        {
-          teamId,
+      let repoValidationResult;
+
+      if (deployment_source === 'github_public') {
+        // Public repo validation - no GitHub App needed
+        repoValidationResult = await DeploymentValidationService.validatePublic({
           repository_url,
-          branch,
-          userId
-        },
-        credentialService
-      );
+          branch
+        });
+      } else {
+        // Authenticated validation via GitHub App
+        const credentialService = new DeploymentCredentialService(db);
+        repoValidationResult = await DeploymentValidationService.validate(
+          {
+            teamId,
+            repository_url,
+            branch,
+            userId
+          },
+          credentialService
+        );
+      }
 
       if (!repoValidationResult.valid) {
         request.log.warn({
@@ -628,6 +646,7 @@ export default async function deployRoutes(server: FastifyInstance) {
         // Status and source fields
         status: 'active', // Required for satellite config filtering
         source: 'github', // Source type for deletion logic
+        deployment_source: deployment_source, // 'github_app' or 'github_public'
         created_by: userId,
         created_at: new Date(),
         updated_at: new Date()

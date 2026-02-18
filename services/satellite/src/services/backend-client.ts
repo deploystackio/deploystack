@@ -842,15 +842,26 @@ export class BackendClient {
           // Keep default error message
         }
 
-        this.logger.error({
-          operation: 'github_token_fetch_failed',
-          backend_url: this.backendUrl,
-          satellite_id: data.satellite_id,
-          installation_id: installationId,
-          status_code: response.status,
-          error_message: errorMessage,
-          response_time_ms: responseTime
-        }, 'GitHub token fetch failed');
+        // 404 means no GitHub App credentials (public repo deployment)
+        if (response.status === 404) {
+          this.logger.info({
+            operation: 'github_token_not_found',
+            backend_url: this.backendUrl,
+            satellite_id: data.satellite_id,
+            installation_id: installationId,
+            response_time_ms: responseTime
+          }, 'No GitHub App credentials found (public repo deployment)');
+        } else {
+          this.logger.error({
+            operation: 'github_token_fetch_failed',
+            backend_url: this.backendUrl,
+            satellite_id: data.satellite_id,
+            installation_id: installationId,
+            status_code: response.status,
+            error_message: errorMessage,
+            response_time_ms: responseTime
+          }, 'GitHub token fetch failed');
+        }
 
         return null;
       }

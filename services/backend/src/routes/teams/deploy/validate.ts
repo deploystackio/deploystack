@@ -19,6 +19,12 @@ const VALIDATE_REQUEST_SCHEMA = {
       type: 'string',
       minLength: 1,
       description: 'Git branch to validate (e.g., main)'
+    },
+    deployment_source: {
+      type: 'string',
+      enum: ['github_app', 'github_public'],
+      default: 'github_app',
+      description: 'Deployment source: github_app (authenticated via GitHub App) or github_public (public repo, no auth)'
     }
   },
   required: ['repository_url', 'branch'],
@@ -79,6 +85,7 @@ const VALIDATE_ERROR_RESPONSE_SCHEMA = {
 interface ValidateRequest {
   repository_url: string;
   branch: string;
+  deployment_source?: 'github_app' | 'github_public';
 }
 
 interface ErrorResponse {
@@ -156,30 +163,40 @@ export default async function validateRoute(server: FastifyInstance) {
 
     const { teamId } = request.params as { teamId: string };
     const userId = request.user!.id;
-    const { repository_url, branch } = request.body as ValidateRequest;
+    const { repository_url, branch, deployment_source = 'github_app' } = request.body as ValidateRequest;
 
     request.log.info({
       operation: 'github_validation_start',
       teamId,
       userId,
       repositoryUrl: repository_url,
-      branch
+      branch,
+      deployment_source
     }, 'Starting GitHub repository validation');
 
     try {
-      const db = getDb();
-      const credentialService = new DeploymentCredentialService(db);
+      let result;
 
-      // Call shared validation service
-      const result = await DeploymentValidationService.validate(
-        {
-          teamId,
+      if (deployment_source === 'github_public') {
+        // Public repo validation - no GitHub App needed
+        result = await DeploymentValidationService.validatePublic({
           repository_url,
-          branch,
-          userId
-        },
-        credentialService
-      );
+          branch
+        });
+      } else {
+        // Authenticated validation via GitHub App
+        const db = getDb();
+        const credentialService = new DeploymentCredentialService(db);
+        result = await DeploymentValidationService.validate(
+          {
+            teamId,
+            repository_url,
+            branch,
+            userId
+          },
+          credentialService
+        );
+      }
 
       if (!result.valid) {
         request.log.warn({

@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
+import { Octokit } from '@octokit/rest';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
+import { requireAuthenticationAny } from '../../../middleware/oauthMiddleware';
 import { DeploymentGitHubService } from '../../../services/deploymentGitHubService';
 import { DeploymentCredentialService } from '../../../services/deploymentCredentialService';
 import { getDb } from '../../../db';
@@ -569,6 +571,116 @@ export default async function deployGitHubRoutes(server: FastifyInstance) {
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
       server.log.error({ error, owner, repo }, 'Failed to fetch branches');
+      const errorResponse: ErrorResponse = {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch branches'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(400).type('application/json').send(jsonString);
+    }
+  });
+
+  // GET /api/teams/{teamId}/deploy/public/branches
+  server.get('/teams/:teamId/deploy/public/branches', {
+    preValidation: [
+      requireAuthenticationAny(),
+      requireTeamPermission('mcp.servers.deploy')
+    ],
+    schema: {
+      tags: ['Deployment'],
+      summary: 'List branches for a public GitHub repository',
+      description: 'Returns branches for a public GitHub repository without requiring GitHub App installation. Uses unauthenticated GitHub API access.',
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          teamId: { type: 'string', minLength: 1 }
+        },
+        required: ['teamId'],
+        additionalProperties: false
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          owner: { type: 'string', minLength: 1 },
+          repo: { type: 'string', minLength: 1 }
+        },
+        required: ['owner', 'repo'],
+        additionalProperties: false
+      },
+      response: {
+        200: {
+          ...BRANCHES_RESPONSE_SCHEMA,
+          description: 'List of branches'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad request'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Repository not found or is private'
+        }
+      }
+    }
+  }, async (request, reply) => {
+    // Check if deployment feature is enabled
+    const deploymentEnabled = await GlobalSettings.getBoolean('deployment.enabled', false);
+    if (!deploymentEnabled) {
+      const errorResponse: ErrorResponse = {
+        success: false,
+        error: 'GitHub deployment feature is not enabled. Please contact your DeployStack administrator to enable this feature in Global Settings.'
+      };
+      const jsonString = JSON.stringify(errorResponse);
+      return reply.status(403).type('application/json').send(jsonString);
+    }
+
+    const { owner, repo } = request.query as { owner: string; repo: string };
+
+    try {
+      // Use unauthenticated Octokit for public repos
+      const octokit = new Octokit();
+
+      // Get repository info for default branch
+      const { data: repoData } = await octokit.repos.get({ owner, repo });
+
+      // Fetch branches (up to 100)
+      const { data: branchList } = await octokit.repos.listBranches({
+        owner,
+        repo,
+        per_page: 100
+      });
+
+      const response: BranchesResponse = {
+        branches: branchList.map(b => ({
+          name: b.name,
+          commit_sha: b.commit.sha,
+          protected: b.protected
+        })),
+        default_branch: repoData.default_branch
+      };
+
+      const jsonString = JSON.stringify(response);
+      return reply.status(200).type('application/json').send(jsonString);
+    } catch (error) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        const errorResponse: ErrorResponse = {
+          success: false,
+          error: 'Repository not found or is private. Only public repositories are supported.'
+        };
+        const jsonString = JSON.stringify(errorResponse);
+        return reply.status(404).type('application/json').send(jsonString);
+      }
+
+      server.log.error({ error, owner, repo }, 'Failed to fetch public repository branches');
       const errorResponse: ErrorResponse = {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch branches'

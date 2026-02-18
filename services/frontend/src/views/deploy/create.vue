@@ -50,7 +50,8 @@ const formData = ref({
   repository: {
     url: '',
     name: '',
-    branch: 'main'
+    branch: 'main',
+    deployment_source: 'github_app' as 'github_app' | 'github_public'
   },
   satellite: {
     satellite_id: ''
@@ -132,7 +133,8 @@ async function handleValidate() {
     // Call validation endpoint
     const result = await DeploymentService.validateRepository(teamId.value, {
       repository_url: formData.value.repository.url,
-      branch: formData.value.repository.branch
+      branch: formData.value.repository.branch,
+      deployment_source: formData.value.repository.deployment_source
     })
 
     // Store validation metadata
@@ -169,7 +171,8 @@ async function handleRetryValidation() {
     // Call validation endpoint again
     const result = await DeploymentService.validateRepository(teamId.value, {
       repository_url: formData.value.repository.url,
-      branch: formData.value.repository.branch
+      branch: formData.value.repository.branch,
+      deployment_source: formData.value.repository.deployment_source
     })
 
     // Store validation metadata
@@ -205,6 +208,7 @@ async function handleDeploy() {
       repository_url: formData.value.repository.url,
       branch: formData.value.repository.branch,
       satellite_id: formData.value.satellite.satellite_id,
+      deployment_source: formData.value.repository.deployment_source,
       team_env: formData.value.config.teamEnv,
       template_args: formData.value.config.templateArgs
     })

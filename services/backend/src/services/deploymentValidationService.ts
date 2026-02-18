@@ -44,6 +44,11 @@ export interface ValidationOptions {
   userId: string;
 }
 
+export interface PublicValidationOptions {
+  repository_url: string;
+  branch: string;
+}
+
 /**
  * Helper function to parse GitHub URL
  */
@@ -61,17 +66,7 @@ function parseGitHubUrl(url: string): { owner: string; repo: string } {
  */
 export class DeploymentValidationService {
   /**
-   * Validates a GitHub repository and returns metadata
-   *
-   * Steps:
-   * 1. Parse GitHub URL
-   * 2. Get GitHub App installation token (verifies team access)
-   * 3. Validate repository exists
-   * 4. Validate branch exists
-   * 5. Detect runtime (Node.js/Python/Go)
-   * 6. Detect MCP SDK
-   * 7. Extract scripts (if applicable)
-   * 8. Get commit SHA
+   * Validates a GitHub repository using authenticated GitHub App access
    */
   static async validate(
     options: ValidationOptions,
@@ -80,9 +75,7 @@ export class DeploymentValidationService {
     const { teamId, repository_url, branch } = options;
 
     try {
-      // ============================================
-      // STEP 1: Parse GitHub URL
-      // ============================================
+      // Parse GitHub URL
       let owner: string;
       let repo: string;
       try {
@@ -97,9 +90,7 @@ export class DeploymentValidationService {
         };
       }
 
-      // ============================================
-      // STEP 2: Get GitHub App Installation Token
-      // ============================================
+      // Get GitHub App Installation Token
       const githubInstallation = await credentialService.getInstallation(teamId, 'github');
       if (!githubInstallation) {
         return {
@@ -121,167 +112,7 @@ export class DeploymentValidationService {
       const { token } = await auth({ type: 'installation' });
       const octokit = new OctokitConstructor({ auth: token });
 
-      // ============================================
-      // STEP 3: Validate Repository Exists
-      // ============================================
-      try {
-        const { data: repoData } = await octokit.repos.get({ owner, repo });
-
-        // Check if repository is empty (only check for default branch, not size)
-        // Note: GitHub's size field is in KB and can be 0 for very small repos
-        if (!repoData.default_branch) {
-          return {
-            valid: false,
-            error: `Repository ${owner}/${repo} is empty. Please push code to the repository before deploying.`,
-            step: 'validate_repository_not_empty'
-          };
-        }
-      } catch (error: unknown) {
-        if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-          return {
-            valid: false,
-            error: `Repository ${owner}/${repo} not found or not accessible. Ensure the GitHub App has access to this repository.`,
-            step: 'validate_repository_access'
-          };
-        }
-        throw error;
-      }
-
-      // ============================================
-      // STEP 4: Get Latest Commit SHA
-      // ============================================
-      let commitSha: string;
-      try {
-        const { data: branchData } = await octokit.repos.getBranch({
-          owner,
-          repo,
-          branch
-        });
-        commitSha = branchData.commit.sha;
-      } catch (error: unknown) {
-        if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-          return {
-            valid: false,
-            error: `Branch '${branch}' not found in ${owner}/${repo}. Please check the branch name.`,
-            step: 'validate_branch_exists'
-          };
-        }
-        throw error;
-      }
-
-      // ============================================
-      // STEP 5: Detect Runtime and MCP SDK
-      // ============================================
-      const runtimeResult = await RuntimeDetector.detectRuntime(
-        octokit,
-        owner,
-        repo,
-        commitSha
-      );
-
-      // If no MCP SDK detected, return error
-      if (!runtimeResult.mcp_sdk.detected) {
-        const runtimeName = runtimeResult.runtime !== 'unknown'
-          ? runtimeResult.runtime
-          : 'any supported language';
-        return {
-          valid: false,
-          error: `Not a valid MCP server (missing MCP SDK dependency for ${runtimeName})`,
-          step: 'validate_mcp_sdk'
-        };
-      }
-
-      // For Node.js, ensure package.json has required fields
-      if (runtimeResult.runtime === 'node' && runtimeResult.packageJson) {
-        if (!runtimeResult.packageJson.name) {
-          return {
-            valid: false,
-            error: 'package.json missing required "name" field',
-            step: 'validate_package_json'
-          };
-        }
-      }
-
-      // ============================================
-      // STEP 5.5: Validate Build Scripts (Security)
-      // ============================================
-      // Validate build scripts to prevent arbitrary code execution during npm install/build
-      if (runtimeResult.runtime === 'node' && runtimeResult.scripts) {
-        const scriptsValidation = validateNodeScripts(runtimeResult.scripts);
-        if (!scriptsValidation.valid) {
-          return {
-            valid: false,
-            error: scriptsValidation.error,
-            step: 'validate_build_scripts'
-          };
-        }
-      }
-
-      // Validate Python project for dangerous patterns
-      if (runtimeResult.runtime === 'python') {
-        // Check for setup.py (runs arbitrary code during pip install)
-        let hasSetupPy = false;
-        try {
-          await octokit.repos.getContent({ owner, repo, path: 'setup.py', ref: commitSha });
-          hasSetupPy = true;
-        } catch {
-          // setup.py doesn't exist, which is good
-        }
-
-        // Get pyproject.toml content for validation
-        let pyprojectContent: string | undefined;
-        try {
-          const { data } = await octokit.repos.getContent({
-            owner,
-            repo,
-            path: 'pyproject.toml',
-            ref: commitSha
-          });
-          if ('content' in data) {
-            pyprojectContent = Buffer.from(data.content, 'base64').toString('utf8');
-          }
-        } catch {
-          // pyproject.toml doesn't exist
-        }
-
-        const pythonValidation = validatePythonProject(pyprojectContent, hasSetupPy);
-        if (!pythonValidation.valid) {
-          return {
-            valid: false,
-            error: pythonValidation.error,
-            step: 'validate_build_scripts'
-          };
-        }
-      }
-
-      // ============================================
-      // STEP 6: Return Validation Metadata
-      // ============================================
-      // For Python projects, use pyprojectToml metadata; for Node.js, use packageJson
-      const metadata = runtimeResult.runtime === 'python' && runtimeResult.pyprojectToml
-        ? {
-            name: runtimeResult.pyprojectToml.name,
-            version: runtimeResult.pyprojectToml.version,
-            description: runtimeResult.pyprojectToml.description,
-            license: runtimeResult.pyprojectToml.license
-          }
-        : {
-            name: runtimeResult.packageJson?.name,
-            version: runtimeResult.packageJson?.version,
-            description: runtimeResult.packageJson?.description,
-            license: runtimeResult.packageJson?.license
-          };
-
-      return {
-        valid: true,
-        metadata: {
-          ...metadata,
-          runtime: runtimeResult.runtime,
-          mcp_sdk: runtimeResult.mcp_sdk,
-          scripts: runtimeResult.scripts,
-          commit_sha: commitSha
-        }
-      };
+      return this._validateWithOctokit(octokit, owner, repo, branch);
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -291,5 +122,206 @@ export class DeploymentValidationService {
         step: 'internal_error'
       };
     }
+  }
+
+  /**
+   * Validates a public GitHub repository without authentication.
+   * Uses unauthenticated Octokit (subject to lower rate limits).
+   */
+  static async validatePublic(
+    options: PublicValidationOptions
+  ): Promise<ValidationResult> {
+    const { repository_url, branch } = options;
+
+    try {
+      // Parse GitHub URL
+      let owner: string;
+      let repo: string;
+      try {
+        const parsed = parseGitHubUrl(repository_url);
+        owner = parsed.owner;
+        repo = parsed.repo;
+      } catch {
+        return {
+          valid: false,
+          error: 'Invalid GitHub URL format. Expected: https://github.com/owner/repo',
+          step: 'parse_github_url'
+        };
+      }
+
+      // Unauthenticated Octokit for public repos
+      const octokit = new OctokitConstructor();
+
+      return this._validateWithOctokit(octokit, owner, repo, branch, true);
+
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        valid: false,
+        error: errorMessage,
+        step: 'internal_error'
+      };
+    }
+  }
+
+  /**
+   * Core validation logic shared between authenticated and public paths
+   */
+  private static async _validateWithOctokit(
+    octokit: InstanceType<typeof OctokitConstructor>,
+    owner: string,
+    repo: string,
+    branch: string,
+    isPublic = false
+  ): Promise<ValidationResult> {
+    // Validate Repository Exists
+    try {
+      const { data: repoData } = await octokit.repos.get({ owner, repo });
+
+      // Check if repository is empty (only check for default branch, not size)
+      if (!repoData.default_branch) {
+        return {
+          valid: false,
+          error: `Repository ${owner}/${repo} is empty. Please push code to the repository before deploying.`,
+          step: 'validate_repository_not_empty'
+        };
+      }
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        const errorMsg = isPublic
+          ? `Repository ${owner}/${repo} not found. Make sure the repository is public and the URL is correct.`
+          : `Repository ${owner}/${repo} not found or not accessible. Ensure the GitHub App has access to this repository.`;
+        return {
+          valid: false,
+          error: errorMsg,
+          step: 'validate_repository_access'
+        };
+      }
+      throw error;
+    }
+
+    // Get Latest Commit SHA
+    let commitSha: string;
+    try {
+      const { data: branchData } = await octokit.repos.getBranch({
+        owner,
+        repo,
+        branch
+      });
+      commitSha = branchData.commit.sha;
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        return {
+          valid: false,
+          error: `Branch '${branch}' not found in ${owner}/${repo}. Please check the branch name.`,
+          step: 'validate_branch_exists'
+        };
+      }
+      throw error;
+    }
+
+    // Detect Runtime and MCP SDK
+    const runtimeResult = await RuntimeDetector.detectRuntime(
+      octokit,
+      owner,
+      repo,
+      commitSha
+    );
+
+    // If no MCP SDK detected, return error
+    if (!runtimeResult.mcp_sdk.detected) {
+      const runtimeName = runtimeResult.runtime !== 'unknown'
+        ? runtimeResult.runtime
+        : 'any supported language';
+      return {
+        valid: false,
+        error: `Not a valid MCP server (missing MCP SDK dependency for ${runtimeName})`,
+        step: 'validate_mcp_sdk'
+      };
+    }
+
+    // For Node.js, ensure package.json has required fields
+    if (runtimeResult.runtime === 'node' && runtimeResult.packageJson) {
+      if (!runtimeResult.packageJson.name) {
+        return {
+          valid: false,
+          error: 'package.json missing required "name" field',
+          step: 'validate_package_json'
+        };
+      }
+    }
+
+    // Validate Build Scripts (Security)
+    if (runtimeResult.runtime === 'node' && runtimeResult.scripts) {
+      const scriptsValidation = validateNodeScripts(runtimeResult.scripts);
+      if (!scriptsValidation.valid) {
+        return {
+          valid: false,
+          error: scriptsValidation.error,
+          step: 'validate_build_scripts'
+        };
+      }
+    }
+
+    // Validate Python project for dangerous patterns
+    if (runtimeResult.runtime === 'python') {
+      let hasSetupPy = false;
+      try {
+        await octokit.repos.getContent({ owner, repo, path: 'setup.py', ref: commitSha });
+        hasSetupPy = true;
+      } catch {
+        // setup.py doesn't exist, which is good
+      }
+
+      let pyprojectContent: string | undefined;
+      try {
+        const { data } = await octokit.repos.getContent({
+          owner,
+          repo,
+          path: 'pyproject.toml',
+          ref: commitSha
+        });
+        if ('content' in data) {
+          pyprojectContent = Buffer.from(data.content, 'base64').toString('utf8');
+        }
+      } catch {
+        // pyproject.toml doesn't exist
+      }
+
+      const pythonValidation = validatePythonProject(pyprojectContent, hasSetupPy);
+      if (!pythonValidation.valid) {
+        return {
+          valid: false,
+          error: pythonValidation.error,
+          step: 'validate_build_scripts'
+        };
+      }
+    }
+
+    // Return Validation Metadata
+    const metadata = runtimeResult.runtime === 'python' && runtimeResult.pyprojectToml
+      ? {
+          name: runtimeResult.pyprojectToml.name,
+          version: runtimeResult.pyprojectToml.version,
+          description: runtimeResult.pyprojectToml.description,
+          license: runtimeResult.pyprojectToml.license
+        }
+      : {
+          name: runtimeResult.packageJson?.name,
+          version: runtimeResult.packageJson?.version,
+          description: runtimeResult.packageJson?.description,
+          license: runtimeResult.packageJson?.license
+        };
+
+    return {
+      valid: true,
+      metadata: {
+        ...metadata,
+        runtime: runtimeResult.runtime,
+        mcp_sdk: runtimeResult.mcp_sdk,
+        scripts: runtimeResult.scripts,
+        commit_sha: commitSha
+      }
+    };
   }
 }

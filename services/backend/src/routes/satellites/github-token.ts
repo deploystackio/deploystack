@@ -245,15 +245,15 @@ export default async function githubTokenRoute(server: FastifyInstance) {
         .limit(1);
 
       if (deploymentCreds.length === 0 || !deploymentCreds[0].installation_id) {
-        request.log.error({
+        request.log.info({
           operation: 'github_token_no_installation',
           teamId: installation.team_id
-        }, 'Team does not have GitHub App installation');
+        }, 'No GitHub App credentials found (may be a public repo deployment)');
 
         const errorResponse: ErrorResponse = {
-          error: 'Team does not have GitHub App installed'
+          error: 'No GitHub App credentials found'
         };
-        return reply.status(500).send(errorResponse);
+        return reply.status(404).send(errorResponse);
       }
 
       const githubInstallationId = deploymentCreds[0].installation_id;

@@ -17,6 +17,7 @@ export interface DeploymentParams {
   repository_url: string
   branch: string
   satellite_id: string
+  deployment_source?: 'github_app' | 'github_public'
   team_env?: Record<string, string>
   template_args?: string[]
 }
@@ -124,6 +125,30 @@ export class DeploymentService {
   }
 
   /**
+   * Get branches for a public GitHub repository (no GitHub App needed)
+   */
+  static async getPublicBranches(
+    teamId: string,
+    owner: string,
+    repo: string
+  ): Promise<BranchesResponse> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/deploy/public/branches?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`,
+      {
+        method: 'GET',
+        credentials: 'include'
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || 'Failed to fetch branches')
+    }
+
+    return response.json()
+  }
+
+  /**
    * Validate a repository before deployment (lightweight validation)
    */
   static async validateRepository(
@@ -131,6 +156,7 @@ export class DeploymentService {
     data: {
       repository_url: string
       branch: string
+      deployment_source?: 'github_app' | 'github_public'
     }
   ): Promise<{
     valid: boolean
@@ -195,6 +221,7 @@ export class DeploymentService {
           repository_url: params.repository_url,
           branch: params.branch,
           satellite_id: params.satellite_id,
+          deployment_source: params.deployment_source || 'github_app',
           team_env: params.team_env || {},
           template_args: params.template_args || []
         })

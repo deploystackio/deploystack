@@ -1,0 +1,1 @@
+ALTER TABLE "mcpServers" ADD COLUMN "deployment_source" text;
