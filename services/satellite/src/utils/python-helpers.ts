@@ -12,10 +12,16 @@ import path from 'node:path';
  * Python entry point resolution result
  */
 export interface PythonEntryPoint {
-  /** Command to execute (e.g., ".venv/bin/mcp-hello-world" or ".venv/bin/python") */
+  /** Command to execute (always "python3" — security allowlist validated) */
   command: string;
-  /** Entry point path (e.g., "" for installed scripts, "server.py" for direct execution) */
+  /** Entry point path (e.g., ".venv/bin/plane-mcp-server" or "server.py") */
   entryPoint: string;
+  /**
+   * Python module entry point string from [project.scripts] (e.g., "plane_mcp.__main__:main").
+   * When present, use `python3 -m <module>` instead of running the venv shebang script directly.
+   * The shebang contains an absolute host path that doesn't exist inside nsjail's filesystem.
+   */
+  moduleEntryPoint?: string;
 }
 
 /**
@@ -77,8 +83,23 @@ export async function isPyprojectSimpleScript(tempDir: string): Promise<boolean>
     const packageName = nameMatch ? nameMatch[1].replace(/-/g, '_') : null;
     const hasPackageDir = packageName ? await fileExists(path.join(tempDir, packageName)) : false;
 
+    // Also check the module root from [project.scripts] entry point values
+    // e.g. "plane_mcp.__main__:main" → check for plane_mcp/ directory
+    let hasScriptModuleDir = false;
+    const scriptsSection = content.match(/\[project\.scripts\]\s*\n([^[]+)/);
+    if (scriptsSection) {
+      const moduleMatches = scriptsSection[1].matchAll(/=\s*["']([^.:'"]+)/g);
+      for (const match of moduleMatches) {
+        const moduleRoot = match[1];
+        if (await fileExists(path.join(tempDir, moduleRoot))) {
+          hasScriptModuleDir = true;
+          break;
+        }
+      }
+    }
+
     // If it has proper package structure (src/ or package dir), it's installable
-    if (hasSrcDir || hasPackageDir) {
+    if (hasSrcDir || hasPackageDir || hasScriptModuleDir) {
       return false;
     }
 
@@ -113,12 +134,35 @@ export async function parsePyprojectDependencies(pyprojectPath: string): Promise
   const content = await fs.readFile(pyprojectPath, 'utf8');
 
   // Extract dependencies array from [project] section
-  const depsMatch = content.match(/dependencies\s*=\s*\[([\s\S]*?)\]/);
-  if (!depsMatch) {
+  // Use a bracket-aware approach: find "dependencies = [" then match until the
+  // closing "]" at the same nesting level. A simple regex like /\[([\s\S]*?)\]/
+  // breaks when dependencies contain extras syntax like "pkg[redis]" because
+  // the regex stops at the first "]" inside the extras bracket.
+  const startMatch = content.match(/dependencies\s*=\s*\[/);
+  if (!startMatch || startMatch.index === undefined) {
     return [];
   }
 
-  const depsContent = depsMatch[1];
+  const arrayStart = startMatch.index + startMatch[0].length;
+  let depth = 1;
+  let arrayEnd = -1;
+
+  for (let i = arrayStart; i < content.length; i++) {
+    if (content[i] === '[') depth++;
+    else if (content[i] === ']') {
+      depth--;
+      if (depth === 0) {
+        arrayEnd = i;
+        break;
+      }
+    }
+  }
+
+  if (arrayEnd === -1) {
+    return [];
+  }
+
+  const depsContent = content.substring(arrayStart, arrayEnd);
 
   // Parse individual dependencies (handle both "pkg" and 'pkg' quotes)
   const deps = depsContent
@@ -134,8 +178,8 @@ export async function parsePyprojectDependencies(pyprojectPath: string): Promise
  * Resolves Python entry point with 8 fallback patterns
  *
  * Priority order:
- * 1. [project.scripts] → .venv/bin/{script_name}
- * 2. [project.gui-scripts] → .venv/bin/{script_name}
+ * 1. [project.scripts] → python3 .venv/bin/{script_name}
+ * 2. [project.gui-scripts] → python3 .venv/bin/{script_name}
  * 3. __main__.py at root → .venv/bin/python __main__.py
  * 4. src/__main__.py → .venv/bin/python src/__main__.py
  * 5. server.py → .venv/bin/python server.py
@@ -161,23 +205,25 @@ export async function resolvePythonEntryPoint(
     // Look for [project.scripts] section
     const scriptsMatch = content.match(/\[project\.scripts\]\s*\n([^[]+)/);
     if (scriptsMatch) {
-      const firstScriptMatch = scriptsMatch[1].match(/^(\w+)\s*=/m);
+      // Match: script-name = "module.path:function"
+      const firstScriptMatch = scriptsMatch[1].match(/^([\w-]+)\s*=\s*["']([^"']+)["']/m);
       if (firstScriptMatch) {
         const scriptName = firstScriptMatch[1];
-        // Entry point is installed in .venv/bin/ after uv sync
-        const entryPoint = path.join(tempDir, '.venv', 'bin', scriptName);
-        return { command: entryPoint, entryPoint };
+        const moduleEntryPoint = firstScriptMatch[2]; // e.g. "plane_mcp.__main__:main"
+        const scriptPath = path.join(tempDir, '.venv', 'bin', scriptName);
+        return { command: 'python3', entryPoint: scriptPath, moduleEntryPoint };
       }
     }
 
     // Look for [project.gui-scripts] as fallback
     const guiMatch = content.match(/\[project\.gui-scripts\]\s*\n([^[]+)/);
     if (guiMatch) {
-      const firstScriptMatch = guiMatch[1].match(/^(\w+)\s*=/m);
+      const firstScriptMatch = guiMatch[1].match(/^([\w-]+)\s*=\s*["']([^"']+)["']/m);
       if (firstScriptMatch) {
         const scriptName = firstScriptMatch[1];
-        const entryPoint = path.join(tempDir, '.venv', 'bin', scriptName);
-        return { command: entryPoint, entryPoint };
+        const moduleEntryPoint = firstScriptMatch[2];
+        const scriptPath = path.join(tempDir, '.venv', 'bin', scriptName);
+        return { command: 'python3', entryPoint: scriptPath, moduleEntryPoint };
       }
     }
   }

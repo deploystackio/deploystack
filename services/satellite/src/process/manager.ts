@@ -374,10 +374,16 @@ export class ProcessManager extends EventEmitter {
           const trimmedLine = line.trim();
           if (!trimmedLine) continue;
 
-          // Check rate limit BEFORE processing
+          // Pre-filter nsjail INFO lines before rate limiting (infrastructure noise that
+          // would be discarded anyway — don't waste rate limit slots on them)
+          const nsjailPreCheck = parseNsjailLog(trimmedLine);
+          if (nsjailPreCheck && nsjailPreCheck.level === 'I') {
+            continue;
+          }
+
+          // Check rate limit (only for lines we'll actually buffer)
           const rateLimitResult = rateLimiter.shouldAcceptLog(trimmedLine, currentTime);
           if (!rateLimitResult.accept) {
-            // Log dropped - skip this line
             continue;
           }
 
@@ -386,16 +392,11 @@ export class ProcessManager extends EventEmitter {
             ? rateLimitResult.truncatedMessage!
             : trimmedLine;
 
-          // Check if this is an nsjail log
+          // Re-parse nsjail for WARNING/ERROR/FATAL (truncation may have changed finalMessage)
           const nsjailLog = parseNsjailLog(finalMessage);
 
           if (nsjailLog) {
-            // nsjail log detected - filter out INFO level (infrastructure noise)
-            if (nsjailLog.level === 'I') {
-              // Skip nsjail INFO logs (Mount, Uid map, Jail parameters, etc.)
-              continue;
-            }
-            // Keep nsjail WARNING/ERROR/FATAL logs with correct level mapping
+            // nsjail WARNING/ERROR/FATAL - map to correct level
             const level: 'warn' | 'error' = nsjailLog.level === 'W' ? 'warn' : 'error';
             this.logBuffer.add({
               installation_id: config.installation_id,
@@ -435,6 +436,25 @@ export class ProcessManager extends EventEmitter {
         exit_code: code,
         signal: signal
       }, `MCP server exited: ${config.installation_name} (code: ${code}, signal: ${signal})`);
+
+      // Send exit notification to user-facing logs on non-zero exit (crash)
+      if (code !== 0 && code !== null) {
+        const exitMessage = signal
+          ? `Server process terminated by signal ${signal} (exit code: ${code})`
+          : `Server process exited with error (exit code: ${code})`;
+
+        this.logBuffer.add({
+          installation_id: config.installation_id,
+          team_id: config.team_id,
+          user_id: config.user_id,
+          level: 'error',
+          message: exitMessage,
+          timestamp: new Date().toISOString()
+        });
+
+        // Flush immediately so crash logs reach the backend without waiting for 3s interval
+        this.logBuffer.flush();
+      }
 
       this.emit('processExit', processInfo, code, signal);
     });

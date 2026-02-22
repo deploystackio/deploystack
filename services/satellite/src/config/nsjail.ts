@@ -24,7 +24,7 @@ function parseSizeToBytes(sizeStr: string): number {
  * These limits apply only in production on Linux platforms when nsjail isolation is enabled
  *
  * Defaults based on empirical testing with package managers (npm, uvx) and runtime requirements:
- * - 2048MB virtual memory (RLIMIT_AS): Fallback for systems without cgroup support
+ * - "inf" virtual memory (RLIMIT_AS): Node.js v24 WASM (undici HTTP parser) needs ~10GB virtual space
  * - 512MB physical memory (cgroup_mem_max): Precise control over actual memory usage
  * - 1000 processes: Adequate for package managers which spawn many child processes
  * - 1024 file descriptors: Adequate for file I/O operations
@@ -32,8 +32,11 @@ function parseSizeToBytes(sizeStr: string): number {
  * - 100MB tmpfs: Sufficient for package manager cache operations
  */
 export const nsjailConfig = {
-  /** Memory limit per MCP server process in MB (default: 2048, sufficient for most runtimes) */
-  memoryLimitMB: parseInt(process.env.NSJAIL_MEMORY_LIMIT_MB || '2048', 10),
+  /** Virtual address space limit per MCP process.
+   *  Accepts MB number (e.g. "4096") or nsjail keywords: "inf", "soft", "hard".
+   *  Default "inf" — Node.js v24 fetch (undici) uses WASM which reserves ~10GB
+   *  virtual address space. This is virtual memory only, not physical RAM. */
+  memoryLimitMB: process.env.NSJAIL_MEMORY_LIMIT_MB || 'inf',
 
   /** Cgroup physical memory limit in bytes (default: 512MB = 536870912 bytes) */
   cgroupMemMaxBytes: parseInt(process.env.NSJAIL_CGROUP_MEM_MAX_BYTES || '536870912', 10),

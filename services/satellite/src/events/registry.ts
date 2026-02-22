@@ -281,6 +281,7 @@ export function isValidEventType(type: string): type is EventType {
     'mcp.server.respawned',
     'mcp.server.status_changed',
     'mcp.server.logs',
+    'mcp.server.log_rate_limit_exceeded',
     'mcp.request.logs',
     'mcp.tools.discovered',
     'mcp.tools.updated',

@@ -9,6 +9,7 @@ import {
   validateCommand,
   validateArgs
 } from '../config/security-validation';
+import { detectCgroupV2, CgroupInfo } from '../lib/cgroup-detector';
 
 /**
  * Allowed build commands (npm, uv, pip)
@@ -65,7 +66,23 @@ export interface BuildCommandResult {
  * Routes between direct spawning (development) and nsjail isolation (production)
  */
 export class ProcessSpawner {
-  constructor(private logger: Logger) {}
+  private cgroupInfo: CgroupInfo;
+
+  constructor(private logger: Logger) {
+    // Detect cgroup v2 once at startup (cached for all spawns)
+    this.cgroupInfo = detectCgroupV2();
+
+    this.logger.info({
+      operation: 'cgroup_detection',
+      available: this.cgroupInfo.available,
+      version: this.cgroupInfo.version,
+      mount_path: this.cgroupInfo.mountPath,
+      reason: this.cgroupInfo.reason
+    }, this.cgroupInfo.available
+      ? `Cgroup v2 available at ${this.cgroupInfo.mountPath} — memory/PID limits will be enforced`
+      : `Cgroup v2 unavailable (${this.cgroupInfo.reason}) — falling back to rlimit only`
+    );
+  }
 
   /**
    * Determine if nsjail should be used for process isolation
@@ -278,7 +295,7 @@ export class ProcessSpawner {
    * Spawn process with nsjail isolation (production mode on Linux)
    *
    * Configuration supports multiple runtimes (Node.js, Python, etc.):
-   * - Memory: 2048MB virtual (RLIMIT_AS), 512MB physical (cgroup)
+   * - Memory: "inf" virtual (RLIMIT_AS), 512MB physical (cgroup)
    * - Processes: 1000 (package managers spawn many child processes)
    * - File descriptors: 1024 (adequate for I/O operations)
    * - File size: 50MB (prevents oversized downloads)
@@ -307,29 +324,23 @@ export class ProcessSpawner {
     // Ensure team-specific cache directory exists before mounting
     const cacheDir = await this.ensureCacheDirectory(config.team_id, runtime);
 
-    // Log cgroup status (disabled due to permissions)
-    const cgroupVersion = existsSync('/sys/fs/cgroup/cgroup.controllers') ? 'v2' : 'v1';
-    this.logger.info({
-      operation: 'cgroup_status',
-      version: cgroupVersion,
-      enabled: false,
-      reason: 'permissions',
-      team_id: config.team_id
-    }, `Cgroup ${cgroupVersion} detected but disabled (using rlimit only)`);
-
     this.logger.info({
       operation: 'spawn_nsjail',
       installation_name: config.installation_name,
       team_id: config.team_id,
       runtime: runtime,
       cache_dir: cacheDir,
+      cgroup_enabled: this.cgroupInfo.available,
+      cgroup_path: this.cgroupInfo.mountPath,
       memory_limit_mb: nsjailConfig.memoryLimitMB,
+      cgroup_mem_max_bytes: this.cgroupInfo.available ? nsjailConfig.cgroupMemMaxBytes : undefined,
+      cgroup_pids_max: this.cgroupInfo.available ? nsjailConfig.cgroupPidsMax : undefined,
       cpu_time_limit_seconds: nsjailConfig.cpuTimeLimitSeconds,
       max_processes: nsjailConfig.maxProcesses,
       max_open_files: nsjailConfig.maxOpenFiles,
       max_file_size_mb: nsjailConfig.maxFileSizeMB,
       tmpfs_size_bytes: nsjailConfig.tmpfsSizeBytes
-    }, `Spawning ${runtime} MCP server with nsjail isolation (rlimit only)`);
+    }, `Spawning ${runtime} MCP server with nsjail isolation (${this.cgroupInfo.available ? 'cgroup + rlimit' : 'rlimit only'})`);
 
     // Get current user UID and GID (deploystack user in production)
     const uid = process.getuid ? process.getuid() : 1000;
@@ -339,21 +350,31 @@ export class ProcessSpawner {
     // This also validates the command is in the allowlist
     const fullCommandPath = this.resolveCommandPath(config.command);
 
+    // Build cgroup flags conditionally based on runtime detection
+    const cgroupArgs: string[] = [];
+    if (this.cgroupInfo.available && this.cgroupInfo.mountPath) {
+      cgroupArgs.push(
+        '--use_cgroupv2',
+        '--cgroupv2_mount', this.cgroupInfo.mountPath,
+        '--cgroup_mem_max', String(nsjailConfig.cgroupMemMaxBytes),
+        '--cgroup_pids_max', String(nsjailConfig.cgroupPidsMax)
+      );
+    }
+
     // Build nsjail arguments based on working production configuration
     const nsjailArgs = [
       '-Mo',                                    // Mount mode: once, don't remount
       '--proc_rw',                              // Required for pthread_create and thread management
       '--user', String(uid),                    // Use current user (deploystack)
       '--group', String(gid),                   // Use current group (deploystack)
-      '--rlimit_as', String(nsjailConfig.memoryLimitMB), // Memory limit (MB) - 2048 for interpreters
+      '--rlimit_as', nsjailConfig.memoryLimitMB,          // Virtual memory limit (MB or "inf"/"soft"/"hard")
       '--rlimit_cpu', String(nsjailConfig.cpuTimeLimitSeconds), // CPU time limit (seconds)
       '--rlimit_nproc', String(nsjailConfig.maxProcesses), // Max processes - 1000 for package managers
       '--rlimit_nofile', String(nsjailConfig.maxOpenFiles), // Max file descriptors
       '--rlimit_fsize', String(nsjailConfig.maxFileSizeMB), // Max file size (MB)
       '--time_limit', '0',                      // No wall-clock time limit
-      // Cgroup limits disabled due to permissions (rlimit provides fallback limits)
-      // Physical memory limit removed (only virtual memory via rlimit_as: 2048MB)
-      // Process limit relies on rlimit_nproc: 1000
+      // Cgroup v2 limits (physical memory + PID) — only when delegated cgroup is available
+      ...cgroupArgs,
       '-R', '/usr',                             // Read-only mount: /usr
       '-R', '/lib',                             // Read-only mount: /lib
       '-R', '/lib64',                           // Read-only mount: /lib64
@@ -374,14 +395,19 @@ export class ProcessSpawner {
       // Inject user-provided environment variables (sanitized)
       ...this.sanitizeEnvVars(config.env, config.installation_name),
       '--disable_clone_newnet',                // Allow network access (required for package downloads)
-      '--disable_clone_newcgroup',             // Disable cgroup namespace (causes clone() errors on some kernels)
+      // Disable cgroup namespace only when cgroups are NOT available
+      // When cgroups are enabled, nsjail needs the cgroup namespace for per-process isolation
+      ...(this.cgroupInfo.available ? [] : ['--disable_clone_newcgroup']),
       '--disable_no_new_privs',                // May be needed for some packages
       '--hostname', `mcp-${config.team_id}`,   // Team-specific hostname
       '--',                                     // End of nsjail args
       fullCommandPath,                          // MCP server command with full path (e.g., /usr/bin/npx)
-      // Prepend /app/ to relative paths for GitHub deployments
-      ...config.args.map(arg => {
-        if (config.temp_dir && !path.isAbsolute(arg) && !arg.startsWith('-')) {
+      // Prepend /app/ to relative file path args for GitHub deployments.
+      // Skip: flags (starts with -), args following -c/-m (module/code, not paths).
+      ...config.args.map((arg, idx, arr) => {
+        const prevArg = idx > 0 ? arr[idx - 1] : '';
+        const isPythonNonPathArg = prevArg === '-c' || prevArg === '-m';
+        if (config.temp_dir && !path.isAbsolute(arg) && !arg.startsWith('-') && !isPythonNonPathArg) {
           return path.join('/app', arg);
         }
         return arg;
@@ -485,19 +511,31 @@ export class ProcessSpawner {
       runtime: options.runtime
     }, `Spawning sandboxed build command: ${command} ${args.join(' ')}`);
 
+    // Build cgroup flags conditionally based on runtime detection
+    const buildCgroupArgs: string[] = [];
+    if (this.cgroupInfo.available && this.cgroupInfo.mountPath) {
+      buildCgroupArgs.push(
+        '--use_cgroupv2',
+        '--cgroupv2_mount', this.cgroupInfo.mountPath,
+        '--cgroup_mem_max', String(nsjailConfig.cgroupMemMaxBytes),
+        '--cgroup_pids_max', String(nsjailConfig.cgroupPidsMax)
+      );
+    }
+
     // Build nsjail arguments for build commands
     const nsjailArgs = [
       '-Mo',                                    // Mount mode: once
       '--proc_rw',                              // Required for thread management
       '--user', String(uid),
       '--group', String(gid),
-      '--rlimit_as', String(nsjailConfig.memoryLimitMB),
+      '--rlimit_as', nsjailConfig.memoryLimitMB,           // Virtual memory limit (MB or "inf"/"soft"/"hard")
       '--rlimit_cpu', String(timeoutSeconds),
       '--rlimit_nproc', String(nsjailConfig.maxProcesses),
       '--rlimit_nofile', String(nsjailConfig.maxOpenFiles),
       '--rlimit_fsize', String(nsjailConfig.maxFileSizeMB),
       '--time_limit', String(timeoutSeconds),
-      // Cgroup limits disabled due to permissions (rlimit provides fallback limits)
+      // Cgroup v2 limits (physical memory + PID) — only when delegated cgroup is available
+      ...buildCgroupArgs,
       // Read-only system mounts
       '-R', '/usr',
       '-R', '/lib',
@@ -518,8 +556,8 @@ export class ProcessSpawner {
       '--symlink', '/proc/self/fd:/dev/fd',
       // Sanitized environment (NO SECRETS)
       ...this.getSanitizedBuildEnv(options.runtime),
-      // Disable cgroup namespace (causes clone() errors on some kernels)
-      '--disable_clone_newcgroup',
+      // Disable cgroup namespace only when cgroups are NOT available
+      ...(this.cgroupInfo.available ? [] : ['--disable_clone_newcgroup']),
       '--disable_no_new_privs',
       '--hostname', 'mcp-build',
       // Network: conditional based on phase

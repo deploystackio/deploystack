@@ -118,7 +118,7 @@ export class GitHubDeploymentHandler {
       emitBuildResult(this.logBuffer, metadata, 'npm install', result);
 
       if (result.code !== 0) {
-        throw new Error(`npm install failed with code ${result.code}: ${result.stderr.substring(0, 200)}`);
+        throw new Error(`npm install failed with code ${result.code}: ${result.stderr.substring(0, 1000)}`);
       }
 
       this.logger.info({
@@ -182,7 +182,7 @@ export class GitHubDeploymentHandler {
               stderr: stderr.substring(0, 500) // Limit stderr output
             }, `npm install failed with code ${code}`);
 
-            reject(new Error(`npm install failed with code ${code}: ${stderr.substring(0, 200)}`));
+            reject(new Error(`npm install failed with code ${code}: ${stderr.substring(0, 1000)}`));
           }
         });
 
@@ -252,7 +252,7 @@ export class GitHubDeploymentHandler {
         emitBuildResult(this.logBuffer, metadata, 'npm build', result);
 
         if (result.code !== 0) {
-          throw new Error(`npm run build failed with code ${result.code}: ${result.stderr.substring(0, 200)}`);
+          throw new Error(`npm run build failed with code ${result.code}: ${result.stderr.substring(0, 1000)}`);
         }
 
         this.logger.info({
@@ -316,7 +316,7 @@ export class GitHubDeploymentHandler {
                 stderr: stderr.substring(0, 500)
               }, `npm run build failed with code ${code}`);
 
-              reject(new Error(`npm run build failed with code ${code}: ${stderr.substring(0, 200)}`));
+              reject(new Error(`npm run build failed with code ${code}: ${stderr.substring(0, 1000)}`));
             }
           });
 
@@ -522,7 +522,7 @@ export class GitHubDeploymentHandler {
           message: `[${command}] ${result.stderr.substring(0, 500)}`,
           timestamp: new Date().toISOString()
         });
-        throw new Error(`${command} ${args.join(' ')} failed with code ${result.code}: ${result.stderr.substring(0, 200)}`);
+        throw new Error(`${command} ${args.join(' ')} failed with code ${result.code}: ${result.stderr.substring(0, 1000)}`);
       }
 
       // Step 2: For simple scripts, install dependencies into the venv
@@ -582,7 +582,7 @@ export class GitHubDeploymentHandler {
         emitBuildResult(this.logBuffer, metadata, 'uv pip', depsResult);
 
         if (depsResult.code !== 0) {
-          throw new Error(`uv pip install failed with code ${depsResult.code}: ${depsResult.stderr.substring(0, 200)}`);
+          throw new Error(`uv pip install failed with code ${depsResult.code}: ${depsResult.stderr.substring(0, 1000)}`);
         }
       }
 
@@ -649,7 +649,7 @@ export class GitHubDeploymentHandler {
                 exit_code: code,
                 stderr: stderr.substring(0, 500)
               }, `${cmd} failed with code ${code}`);
-              reject(new Error(`${cmd} failed with code ${code}: ${stderr.substring(0, 200)}`));
+              reject(new Error(`${cmd} failed with code ${code}: ${stderr.substring(0, 1000)}`));
             }
           });
 
@@ -674,29 +674,14 @@ export class GitHubDeploymentHandler {
         let pipArgs: string[];
 
         if (hasPyproject) {
-          // Parse dependencies from pyproject.toml and install them directly
+          // Parse dependencies from pyproject.toml using extracted helper
           const pyprojectPath = path.join(tempDir, 'pyproject.toml');
-          const pyprojectContent = await fs.promises.readFile(pyprojectPath, 'utf8');
+          const deps = await parsePyprojectDependencies(pyprojectPath);
 
-          // Extract dependencies array from [project] section
-          const depsMatch = pyprojectContent.match(/dependencies\s*=\s*\[([\s\S]*?)\]/);
-          if (depsMatch) {
-            const depsContent = depsMatch[1];
-            // Parse individual dependencies (handle both "pkg" and 'pkg' quotes)
-            const deps = depsContent
-              .split(',')
-              .map(d => d.trim())
-              .filter(d => d.length > 0)
-              .map(d => d.replace(/^["']|["']$/g, '')); // Remove quotes
-
-            if (deps.length > 0) {
-              pipArgs = ['pip', 'install', ...deps];
-            } else {
-              // No dependencies, skip
-              pipArgs = [];
-            }
+          if (deps.length > 0) {
+            pipArgs = ['pip', 'install', ...deps];
           } else {
-            // No dependencies section
+            // No dependencies, skip
             pipArgs = [];
           }
         } else {
@@ -734,7 +719,7 @@ export class GitHubDeploymentHandler {
    * Resolve Python package entry point from pyproject.toml or __main__.py
    * Delegates to resolvePythonEntryPoint() from python-helpers.ts
    */
-  async resolvePythonPackageEntry(tempDir: string): Promise<{ command: string; entryPoint: string }> {
+  async resolvePythonPackageEntry(tempDir: string): Promise<{ command: string; entryPoint: string; moduleEntryPoint?: string }> {
     this.logger.debug({
       operation: 'python_entry_resolve_start',
       temp_dir: tempDir
@@ -932,7 +917,7 @@ export class GitHubDeploymentHandler {
 
     // Fetch GitHub App installation token (may be null for public repos)
     const tokenResult = await this.backendClient.fetchGitHubToken(config.installation_id);
-    const githubToken = tokenResult?.token || undefined;
+    const githubToken = tokenResult?.token || '';
 
     if (githubToken) {
       this.logger.debug({
@@ -1038,15 +1023,12 @@ export class GitHubDeploymentHandler {
       await this.installPythonDependencies(deploymentDir, config.installation_id, config.team_id, config.user_id);
 
       // Resolve Python package entry point
-      const { command, entryPoint } = await this.resolvePythonPackageEntry(deploymentDir);
+      const { command, entryPoint, moduleEntryPoint } = await this.resolvePythonPackageEntry(deploymentDir);
 
       // Determine the correct command and args based on entry point type
       let updatedConfig: MCPServerConfig;
 
       if (command === 'python3') {
-        // Running with system python3 interpreter - make script path relative
-        const relativeEntryPoint = path.relative(deploymentDir, entryPoint);
-
         // Activate venv by setting PYTHONPATH environment variable
         // This allows system python3 to find packages in .venv/lib/python3.x/site-packages
         //
@@ -1071,10 +1053,37 @@ export class GitHubDeploymentHandler {
           is_production: isProduction
         }, `Activated Python venv via PYTHONPATH: ${sitePackagesPath}`);
 
+        // Determine args: prefer module entry point over script path.
+        // Module entry point (e.g., "plane_mcp.__main__:main") is used via `python3 -m`
+        // to avoid running the venv shebang script, which contains an absolute host path
+        // that doesn't exist inside nsjail's isolated filesystem.
+        let pythonArgs: string[];
+        if (moduleEntryPoint) {
+          // Extract module path from "module.path:func" → "module.path"
+          // Then invoke as: python3 -m module.path
+          // (The module must support __main__ execution, which all [project.scripts] entries do)
+          const colonIdx = moduleEntryPoint.lastIndexOf(':');
+          const modulePath = colonIdx !== -1
+            ? moduleEntryPoint.substring(0, colonIdx)
+            : moduleEntryPoint;
+          pythonArgs = ['-m', modulePath];
+
+          this.logger.info({
+            operation: 'python_module_entry',
+            module_entry_point: moduleEntryPoint,
+            module_path: modulePath,
+            python_args: pythonArgs
+          }, `Using module entry point: python3 -m ${modulePath}`);
+        } else {
+          // Fall back to running script file directly (relative path, nsjail prepends /app)
+          const relativeEntryPoint = path.relative(deploymentDir, entryPoint);
+          pythonArgs = [relativeEntryPoint];
+        }
+
         updatedConfig = {
           ...config,
           command: 'python3',
-          args: [relativeEntryPoint],
+          args: pythonArgs,
           temp_dir: deploymentDir,
           env: activatedEnv
         };
