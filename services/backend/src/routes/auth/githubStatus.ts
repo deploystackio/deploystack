@@ -1,27 +1,38 @@
 import type { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { GlobalSettingsInitService } from '../../global-settings';
 
-// Response schema for GitHub OAuth status
-const githubStatusResponseSchema = z.object({
-  enabled: z.boolean().describe('Whether GitHub OAuth is enabled and properly configured'),
-  configured: z.boolean().describe('Whether GitHub OAuth settings are present (regardless of enabled status)')
-});
+const GITHUB_STATUS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    enabled: { type: 'boolean' },
+    configured: { type: 'boolean' }
+  },
+  required: ['enabled', 'configured']
+} as const;
 
-const errorResponseSchema = z.object({
-  error: z.string().describe('Error message')
-});
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    error: { type: 'string' }
+  },
+  required: ['error']
+} as const;
 
-export default async function githubStatusRoute(fastify: FastifyInstance) {
-  fastify.get('/github/status', {
+export default async function githubStatusRoute(server: FastifyInstance) {
+  server.get('/github/status', {
     schema: {
       tags: ['Authentication'],
       summary: 'Check GitHub OAuth status',
       description: 'Returns whether GitHub OAuth is enabled and configured. This endpoint can be used by the frontend to determine whether to show the "Login with GitHub" button.',
       response: {
-        200: createSchema(githubStatusResponseSchema.describe('GitHub OAuth status information')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...GITHUB_STATUS_RESPONSE_SCHEMA,
+          description: 'GitHub OAuth status information'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     }
   }, async (_request, reply) => {
@@ -36,9 +47,9 @@ export default async function githubStatusRoute(fastify: FastifyInstance) {
         configured: isConfigured
       });
     } catch (error) {
-      fastify.log.error(error, 'Error checking GitHub OAuth status:');
-      return reply.status(500).send({ 
-        error: 'Failed to check GitHub OAuth status' 
+      server.log.error(error, 'Error checking GitHub OAuth status:');
+      return reply.status(500).send({
+        error: 'Failed to check GitHub OAuth status'
       });
     }
   });

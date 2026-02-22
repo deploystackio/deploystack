@@ -277,9 +277,9 @@ describe('Database Setup Route', () => {
     it('should have request body schema', async () => {
       const [, options] = mockFastify.post.mock.calls[0];
       
-      expect(options.schema.requestBody).toBeDefined();
-      expect(options.schema.requestBody.content).toBeDefined();
-      expect(options.schema.requestBody.content['application/json']).toBeDefined();
+      expect(options.schema.body).toBeDefined();
+      expect(options.schema.body.type).toBe('object');
+      expect(options.schema.body.properties).toBeDefined();
     });
 
     it('should have response schemas', async () => {

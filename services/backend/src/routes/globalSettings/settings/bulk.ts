@@ -1,36 +1,59 @@
 import type { FastifyInstance  } from 'fastify';
-import { ZodError } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
-import {
-  GlobalSettingSchema,
-  type BulkGlobalSettingsInput,
-} from '../schemas';
-import { z } from 'zod';
+import { type BulkGlobalSettingsInput } from '../schemas';
 
-// Response schemas for bulk operations
-const bulkSettingErrorSchema = z.object({
-  key: z.string().describe('Setting key that failed'),
-  error: z.string().describe('Error message')
-});
+const GLOBAL_SETTING_OBJECT = {
+  type: 'object',
+  properties: {
+    key: { type: 'string' },
+    name: { type: ['string', 'null'] },
+    value: { type: 'string' },
+    type: { type: ['string', 'null'] },
+    description: { type: ['string', 'null'] },
+    is_encrypted: { type: 'boolean' },
+    group_id: { type: ['string', 'null'] },
+    created_at: { type: ['string', 'null'] },
+    updated_at: { type: ['string', 'null'] }
+  }
+} as const;
 
-const bulkResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful'),
-  data: z.array(GlobalSettingSchema).describe('Successfully processed settings'),
-  errors: z.array(bulkSettingErrorSchema).optional().describe('Failed settings with error details'),
-  message: z.string().describe('Bulk operation result message')
-});
+const BULK_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    data: {
+      type: 'array',
+      items: GLOBAL_SETTING_OBJECT
+    },
+    errors: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          key: { type: 'string' },
+          error: { type: 'string' }
+        },
+        required: ['key', 'error']
+      }
+    },
+    message: { type: 'string' }
+  },
+  required: ['success', 'data', 'message']
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message'),
-  details: z.any().optional().describe('Additional error details (validation errors)')
-});
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' }
+  },
+  required: ['success', 'error']
+} as const;
 
-export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) {
+export default async function bulkGlobalSettingsRoute(server: FastifyInstance) {
   // POST /settings/bulk - Bulk create/update settings (admin only)
-  fastify.post<{ Body: BulkGlobalSettingsInput }>('/settings/bulk', {
+  server.post<{ Body: BulkGlobalSettingsInput }>('/settings/bulk', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Bulk create/update settings',
@@ -62,12 +85,30 @@ export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) 
         additionalProperties: false
       },
       response: {
-        200: createSchema(bulkResponseSchema.describe('All settings processed successfully')),
-        207: createSchema(bulkResponseSchema.describe('Partial success - Some settings processed, some failed')),
-        400: createSchema(errorResponseSchema.describe('Bad Request - Validation error or all settings failed')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...BULK_RESPONSE_SCHEMA,
+          description: 'All settings processed successfully'
+        },
+        207: {
+          ...BULK_RESPONSE_SCHEMA,
+          description: 'Partial success - Some settings processed, some failed'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Validation error or all settings failed'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
     preValidation: requireGlobalAdmin(),
@@ -75,7 +116,7 @@ export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) 
     try {
       // Fastify has already validated request.body using BulkGlobalSettingsSchema
       const { settings } = request.body;
-      
+
       const results = [];
       const errors = [];
 
@@ -88,7 +129,7 @@ export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) 
           } else if (settingData.type === 'number' && typeof settingData.value === 'string') {
             processedValue = Number(settingData.value);
           }
-          
+
           const setting = await GlobalSettingsService.setTyped(
             settingData.key,
             processedValue,
@@ -102,7 +143,7 @@ export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) 
           );
           results.push(setting);
         } catch (error) {
-          fastify.log.error({ error }, `Error processing setting ${settingData.key}:`);
+          server.log.error({ error }, `Error processing setting ${settingData.key}:`);
           errors.push({
             key: settingData.key,
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -131,26 +172,16 @@ export default async function bulkGlobalSettingsRoute(fastify: FastifyInstance) 
           key: String(error.key),
           error: String(error.error)
         })) : undefined,
-        message: hasErrors 
+        message: hasErrors
           ? `Processed ${results.length} settings successfully, ${errors.length} failed`
           : `Successfully processed ${results.length} settings`
       };
-      
+
       // Manual JSON serialization
       const jsonString = JSON.stringify(cleanResponse);
       return reply.status(status).type('application/json').send(jsonString);
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errorResponse = {
-          success: false,
-          error: 'Validation error',
-          details: error.issues  // Fixed: error.errors → error.issues for Zod v4
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
-      
-      fastify.log.error(error, 'Error in bulk settings operation');
+      server.log.error(error, 'Error in bulk settings operation');
       const errorResponse = {
         success: false,
         error: 'Failed to process bulk settings operation'

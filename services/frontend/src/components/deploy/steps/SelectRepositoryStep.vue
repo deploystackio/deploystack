@@ -177,7 +177,7 @@ function handleRepoChange(repoId: any) {
 function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
   const match = url.match(/github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/)?$/)
   if (!match) return null
-  return { owner: match[1], repo: match[2] }
+  return { owner: match[1]!, repo: match[2]! }
 }
 
 function handlePublicUrlInput() {

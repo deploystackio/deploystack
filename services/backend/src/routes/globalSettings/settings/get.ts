@@ -1,27 +1,44 @@
 import type { FastifyInstance  } from 'fastify';
-import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
-import { GlobalSettingSchema } from '../schemas';
-import { z } from 'zod';
 
-// Response schema for single global setting
-const globalSettingResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful'),
-  data: GlobalSettingSchema.optional().describe('Global setting data'),
-  message: z.string().optional().describe('Success message')
-});
+const GLOBAL_SETTING_OBJECT = {
+  type: 'object',
+  properties: {
+    key: { type: 'string' },
+    name: { type: ['string', 'null'] },
+    value: { type: 'string' },
+    type: { type: ['string', 'null'] },
+    description: { type: ['string', 'null'] },
+    is_encrypted: { type: 'boolean' },
+    group_id: { type: ['string', 'null'] },
+    created_at: { type: ['string', 'null'] },
+    updated_at: { type: ['string', 'null'] }
+  }
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message'),
-  details: z.any().optional().describe('Additional error details (validation errors)')
-});
+const GLOBAL_SETTING_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    data: GLOBAL_SETTING_OBJECT,
+    message: { type: 'string' }
+  },
+  required: ['success']
+} as const;
 
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' }
+  },
+  required: ['success', 'error']
+} as const;
 
-export default async function getGlobalSettingRoute(fastify: FastifyInstance) {
+export default async function getGlobalSettingRoute(server: FastifyInstance) {
   // GET /settings/:key - Get specific global setting (admin only)
-  fastify.get<{ Params: { key: string } }>('/settings/:key', {
+  server.get<{ Params: { key: string } }>('/settings/:key', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Get global setting by key',
@@ -35,11 +52,26 @@ export default async function getGlobalSettingRoute(fastify: FastifyInstance) {
         required: ['key']
       },
       response: {
-        200: createSchema(globalSettingResponseSchema.describe('Global setting retrieved successfully')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Setting not found')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...GLOBAL_SETTING_RESPONSE_SCHEMA,
+          description: 'Global setting retrieved successfully'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Setting not found'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
     preValidation: requireGlobalAdmin()
@@ -47,7 +79,7 @@ export default async function getGlobalSettingRoute(fastify: FastifyInstance) {
     try {
       const { key } = request.params;
       const setting = await GlobalSettingsService.get(key);
-      
+
       if (!setting) {
         const notFoundResponse = {
           success: false,
@@ -72,13 +104,13 @@ export default async function getGlobalSettingRoute(fastify: FastifyInstance) {
           updated_at: setting.updated_at ? String(setting.updated_at) : null
         }
       };
-      
+
       // Manual JSON serialization
       const jsonString = JSON.stringify(cleanResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      fastify.log.error(error, 'Error fetching global setting');
-      
+      server.log.error(error, 'Error fetching global setting');
+
       const errorResponse = {
         success: false,
         error: 'Failed to fetch global setting'

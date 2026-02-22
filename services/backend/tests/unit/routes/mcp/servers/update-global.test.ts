@@ -317,6 +317,7 @@ describe('MCP Servers - Update Global', () => {
           featured: false,
           auto_install_new_default_team: false,
           requires_oauth: false,
+          skip_oauth_flow: false,
           transport_type: null,
           source: 'manual',
           // Official Registry Sync Tracking
@@ -654,6 +655,7 @@ describe('MCP Servers - Update Global', () => {
           featured: true,
           auto_install_new_default_team: false,
           requires_oauth: false,
+          skip_oauth_flow: false,
           transport_type: null,
           source: 'manual',
           // Official Registry Sync Tracking

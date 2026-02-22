@@ -1,41 +1,55 @@
 import type { FastifyInstance } from 'fastify';
-import { createSchema } from 'zod-openapi';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
 import { GitHubService } from '../../../services/githubService';
 import { GlobalSettings } from '../../../global-settings';
-import { z } from 'zod';
 
-// Response schema for GitHub App test
-const githubAppTestResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful'),
-  message: z.string().describe('Success message'),
-  details: z.object({
-    repository: z.object({
-      name: z.string().describe('Repository name'),
-      description: z.string().describe('Repository description'),
-      language: z.string().describe('Primary programming language'),
-      homepage: z.string().describe('Repository homepage URL'),
-      license: z.string().describe('Repository license'),
-      defaultBranch: z.string().describe('Default branch name'),
-      stars: z.number().describe('Number of stars'),
-      forks: z.number().describe('Number of forks'),
-      topics: z.array(z.string()).describe('Repository topics/tags')
-    }).describe('Repository information from GitHub'),
-    test_url: z.string().describe('URL of the test repository')
-  }).describe('GitHub App connection test details')
-});
+const GITHUB_APP_TEST_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    message: { type: 'string' },
+    details: {
+      type: 'object',
+      properties: {
+        repository: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            description: { type: 'string' },
+            language: { type: 'string' },
+            homepage: { type: 'string' },
+            license: { type: 'string' },
+            defaultBranch: { type: 'string' },
+            stars: { type: 'number' },
+            forks: { type: 'number' },
+            topics: { type: 'array', items: { type: 'string' } }
+          }
+        },
+        test_url: { type: 'string' }
+      }
+    }
+  },
+  required: ['success', 'message', 'details']
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message'),
-  details: z.object({
-    message: z.string().describe('Detailed error message')
-  }).optional().describe('Additional error details')
-});
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' },
+    details: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' }
+      }
+    }
+  },
+  required: ['success', 'error']
+} as const;
 
-export default async function githubTestConnectionRoute(fastify: FastifyInstance) {
+export default async function githubTestConnectionRoute(server: FastifyInstance) {
   // POST /settings/github-app/test-connection - Test GitHub App connection (global admin only)
-  fastify.post('/settings/github-app/test-connection', {
+  server.post('/settings/github-app/test-connection', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Test GitHub App connection (Global Admin only)',
@@ -47,16 +61,31 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
         additionalProperties: true
       },
       response: {
-        200: createSchema(githubAppTestResponseSchema.describe('GitHub App connection test successful')),
-        400: createSchema(errorResponseSchema.describe('Bad Request - Connection test failed')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions or GitHub App disabled')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...GITHUB_APP_TEST_RESPONSE_SCHEMA,
+          description: 'GitHub App connection test successful'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Connection test failed'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions or GitHub App disabled'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
     preValidation: requireGlobalAdmin()
   }, async (request, reply) => {
-    fastify.log.info({
+    server.log.info({
       operation: 'github_app_test_connection',
       endpoint: '/settings/github-app/test-connection',
       method: 'POST',
@@ -65,7 +94,7 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
       requestId: (request as any).id
     }, '🚀 GitHub App connection test endpoint reached');
 
-    fastify.log.debug({
+    server.log.debug({
       operation: 'github_app_test_connection',
       endpoint: '/settings/github-app/test-connection',
       method: 'POST'
@@ -73,21 +102,21 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
 
     try {
       // Check if GitHub App is enabled
-      fastify.log.debug({
+      server.log.debug({
         operation: 'github_app_test_connection',
         step: 'check_enabled'
       }, '🔍 Checking if GitHub App integration is enabled');
 
       const enabled = await GlobalSettings.getBoolean('github.app.enabled', false);
-      
-      fastify.log.debug({
+
+      server.log.debug({
         operation: 'github_app_test_connection',
         step: 'check_enabled',
         enabled
       }, `📋 GitHub App integration enabled: ${enabled}`);
 
       if (!enabled) {
-        fastify.log.warn({
+        server.log.warn({
           operation: 'github_app_test_connection',
           step: 'check_enabled',
           enabled: false
@@ -100,7 +129,7 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
       }
 
       // Check all required GitHub App settings
-      fastify.log.debug({
+      server.log.debug({
         operation: 'github_app_test_connection',
         step: 'check_settings'
       }, '🔍 Checking GitHub App configuration settings');
@@ -110,21 +139,21 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
       let installationId: string;
 
       try {
-        fastify.log.debug({
+        server.log.debug({
           operation: 'github_app_test_connection',
           step: 'get_app_id'
         }, '📋 Retrieving GitHub App ID');
-        
+
         appId = await GlobalSettings.getRequired('github.app.app_id');
-        
-        fastify.log.debug({
+
+        server.log.debug({
           operation: 'github_app_test_connection',
           step: 'get_app_id',
           appId: appId ? `${appId.substring(0, 4)}...` : 'null',
           hasValue: !!appId
         }, `📋 GitHub App ID retrieved: ${appId ? 'present' : 'missing'}`);
       } catch (error) {
-        fastify.log.error({
+        server.log.error({
           operation: 'github_app_test_connection',
           step: 'get_app_id',
           error
@@ -133,21 +162,21 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
       }
 
       try {
-        fastify.log.debug({
+        server.log.debug({
           operation: 'github_app_test_connection',
           step: 'get_private_key'
         }, '📋 Retrieving GitHub App private key');
-        
+
         privateKeyBase64 = await GlobalSettings.getRequired('github.app.private_key_base64');
-        
-        fastify.log.debug({
+
+        server.log.debug({
           operation: 'github_app_test_connection',
           step: 'get_private_key',
           hasValue: !!privateKeyBase64,
           keyLength: privateKeyBase64 ? privateKeyBase64.length : 0
         }, `📋 GitHub App private key retrieved: ${privateKeyBase64 ? 'present' : 'missing'} (${privateKeyBase64 ? privateKeyBase64.length : 0} chars)`);
       } catch (error) {
-        fastify.log.error({
+        server.log.error({
           operation: 'github_app_test_connection',
           step: 'get_private_key',
           error
@@ -156,21 +185,21 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
       }
 
       try {
-        fastify.log.debug({
+        server.log.debug({
           operation: 'github_app_test_connection',
           step: 'get_installation_id'
         }, '📋 Retrieving GitHub App installation ID');
-        
+
         installationId = await GlobalSettings.getRequired('github.app.installation_id');
-        
-        fastify.log.debug({
+
+        server.log.debug({
           operation: 'github_app_test_connection',
           step: 'get_installation_id',
           installationId: installationId ? `${installationId.substring(0, 4)}...` : 'null',
           hasValue: !!installationId
         }, `📋 GitHub App installation ID retrieved: ${installationId ? 'present' : 'missing'}`);
       } catch (error) {
-        fastify.log.error({
+        server.log.error({
           operation: 'github_app_test_connection',
           step: 'get_installation_id',
           error
@@ -178,7 +207,7 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
         throw new Error(`GitHub App installation ID is required but not configured: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
 
-      fastify.log.info({
+      server.log.info({
         operation: 'github_app_test_connection',
         step: 'settings_validated',
         hasAppId: !!appId,
@@ -187,23 +216,23 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
       }, '✅ All GitHub App settings are configured');
 
       // Clear any cached authentication to ensure we test with current settings
-      fastify.log.debug({
+      server.log.debug({
         operation: 'github_app_test_connection',
         step: 'clear_auth_cache'
       }, '🧹 Clearing GitHub authentication cache to ensure fresh credentials are used');
-      
+
       GitHubService.clearAuthCache();
 
       // Test connection with Microsoft VS Code repository
       const testRepoUrl = 'https://github.com/microsoft/vscode';
-      
-      fastify.log.info({
+
+      server.log.info({
         operation: 'github_app_test_connection',
         test_url: testRepoUrl,
         step: 'start_test'
       }, '🚀 Testing GitHub App connection');
 
-      fastify.log.debug({
+      server.log.debug({
         operation: 'github_app_test_connection',
         step: 'call_github_service',
         test_url: testRepoUrl
@@ -212,8 +241,8 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
       const startTime = Date.now();
       const repoInfo = await GitHubService.getRepositoryInfo(testRepoUrl, request.log);
       const duration = Date.now() - startTime;
-      
-      fastify.log.info({
+
+      server.log.info({
         operation: 'github_app_test_connection',
         success: true,
         repository_name: repoInfo.name,
@@ -231,7 +260,7 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
         }
       });
     } catch (error) {
-      fastify.log.error({
+      server.log.error({
         operation: 'github_app_test_connection',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
@@ -243,7 +272,7 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
 
       // Handle specific error types with more detailed logging
       if (error instanceof Error) {
-        fastify.log.debug({
+        server.log.debug({
           operation: 'github_app_test_connection',
           step: 'error_analysis',
           errorMessage: error.message,
@@ -251,26 +280,26 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
         }, '🔍 Analyzing error type');
 
         if (error.message.includes('GitHub App integration is not enabled')) {
-          fastify.log.warn({
+          server.log.warn({
             operation: 'github_app_test_connection',
             step: 'error_handling',
             errorType: 'integration_disabled'
           }, '⚠️ Returning 403: GitHub App integration disabled');
-          
+
           return reply.status(403).send({
             success: false,
             error: 'GitHub App integration is not enabled'
           });
         }
-        
+
         if (error.message.includes('Setting not found') || error.message.includes('required') || error.message.includes('not configured')) {
-          fastify.log.warn({
+          server.log.warn({
             operation: 'github_app_test_connection',
             step: 'error_handling',
             errorType: 'configuration_incomplete',
             errorMessage: error.message
           }, '⚠️ Returning 400: GitHub App configuration incomplete');
-          
+
           return reply.status(400).send({
             success: false,
             error: 'GitHub App configuration is incomplete. Please configure all required settings (App ID, Private Key, Installation ID).',
@@ -279,15 +308,15 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
             }
           });
         }
-        
+
         if (error.message.includes('authentication') || error.message.includes('credentials') || error.message.includes('401') || error.message.includes('403')) {
-          fastify.log.warn({
+          server.log.warn({
             operation: 'github_app_test_connection',
             step: 'error_handling',
             errorType: 'authentication_failed',
             errorMessage: error.message
           }, '⚠️ Returning 400: GitHub App authentication failed');
-          
+
           return reply.status(400).send({
             success: false,
             error: 'GitHub App authentication failed. Please check your credentials.',
@@ -298,13 +327,13 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
         }
 
         if (error.message.includes('Invalid GitHub URL')) {
-          fastify.log.warn({
+          server.log.warn({
             operation: 'github_app_test_connection',
             step: 'error_handling',
             errorType: 'invalid_url',
             errorMessage: error.message
           }, '⚠️ Returning 400: Invalid test repository URL');
-          
+
           return reply.status(400).send({
             success: false,
             error: 'Invalid test repository URL',
@@ -315,7 +344,7 @@ export default async function githubTestConnectionRoute(fastify: FastifyInstance
         }
       }
 
-      fastify.log.warn({
+      server.log.warn({
         operation: 'github_app_test_connection',
         step: 'error_handling',
         errorType: 'generic_failure',

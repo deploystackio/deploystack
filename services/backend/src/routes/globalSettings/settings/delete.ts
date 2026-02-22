@@ -1,25 +1,28 @@
 import type { FastifyInstance  } from 'fastify';
-import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
-import { z } from 'zod';
 
-// Response schemas
-const successMessageResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful'),
-  message: z.string().describe('Success message')
-});
+const SUCCESS_MESSAGE_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    message: { type: 'string' }
+  },
+  required: ['success', 'message']
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message'),
-  details: z.any().optional().describe('Additional error details (validation errors)')
-});
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' }
+  },
+  required: ['success', 'error']
+} as const;
 
-
-export default async function deleteGlobalSettingRoute(fastify: FastifyInstance) {
+export default async function deleteGlobalSettingRoute(server: FastifyInstance) {
   // DELETE /settings/:key - Delete global setting (admin only)
-  fastify.delete<{ Params: { key: string } }>('/settings/:key', {
+  server.delete<{ Params: { key: string } }>('/settings/:key', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Delete global setting',
@@ -33,20 +36,35 @@ export default async function deleteGlobalSettingRoute(fastify: FastifyInstance)
         required: ['key']
       },
       response: {
-        200: createSchema(successMessageResponseSchema.describe('Global setting deleted successfully')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        404: createSchema(errorResponseSchema.describe('Not Found - Setting not found')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...SUCCESS_MESSAGE_RESPONSE_SCHEMA,
+          description: 'Global setting deleted successfully'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        404: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Not Found - Setting not found'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
     preValidation: requireGlobalAdmin()
   }, async (request, reply) => {
     try {
       const { key } = request.params;
-      
+
       const success = await GlobalSettingsService.delete(key);
-      
+
       if (!success) {
         const notFoundResponse = {
           success: false,
@@ -61,13 +79,13 @@ export default async function deleteGlobalSettingRoute(fastify: FastifyInstance)
         success: true,
         message: 'Global setting deleted successfully'
       };
-      
+
       // Manual JSON serialization
       const jsonString = JSON.stringify(cleanResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      fastify.log.error(error, 'Error deleting global setting');
-      
+      server.log.error(error, 'Error deleting global setting');
+
       const errorResponse = {
         success: false,
         error: 'Failed to delete global setting'

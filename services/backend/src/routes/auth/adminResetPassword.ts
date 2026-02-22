@@ -1,20 +1,25 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { AdminResetPasswordSchema, type AdminResetPasswordInput } from './schemas';
+import { type AdminResetPasswordInput } from './schemas';
 import { PasswordResetService } from '../../services/passwordResetService';
 import { requireGlobalAdmin } from '../../middleware/roleMiddleware';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 
-// Response schemas
-const adminResetPasswordSuccessResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the request was processed successfully'),
-  message: z.string().describe('Success message')
-});
+const SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    message: { type: 'string' }
+  },
+  required: ['success', 'message']
+} as const;
 
-const adminResetPasswordErrorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message describing what went wrong')
-});
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' }
+  },
+  required: ['success', 'error']
+} as const;
 
 // Route schema for OpenAPI documentation
 const adminResetPasswordRouteSchema = {
@@ -22,21 +27,46 @@ const adminResetPasswordRouteSchema = {
   summary: 'Admin-initiated password reset',
   description: 'Allows global administrators to initiate password reset for users with email authentication. The admin cannot reset their own password. Requires global_send_mail setting to be enabled. The user will receive an email with a reset link that works the same as self-initiated password resets.',
   security: [{ cookieAuth: [] }],
-  body: createSchema(AdminResetPasswordSchema),
+  body: {
+    type: 'object',
+    properties: {
+      email: { type: 'string', format: 'email' }
+    },
+    required: ['email'],
+    additionalProperties: false
+  },
   response: {
-    200: createSchema(adminResetPasswordSuccessResponseSchema.describe('Password reset email sent successfully')),
-    400: createSchema(adminResetPasswordErrorResponseSchema.describe('Bad Request - Invalid email, user not found, or user not eligible')),
-    401: createSchema(adminResetPasswordErrorResponseSchema.describe('Unauthorized - Authentication required')),
-    403: createSchema(adminResetPasswordErrorResponseSchema.describe('Forbidden - Insufficient permissions or self-reset attempt')),
-    503: createSchema(adminResetPasswordErrorResponseSchema.describe('Service Unavailable - Email functionality disabled')),
-    500: createSchema(adminResetPasswordErrorResponseSchema.describe('Internal Server Error - Password reset failed'))
+    200: {
+      ...SUCCESS_RESPONSE_SCHEMA,
+      description: 'Password reset email sent successfully'
+    },
+    400: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Bad Request - Invalid email, user not found, or user not eligible'
+    },
+    401: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Unauthorized - Authentication required'
+    },
+    403: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Forbidden - Insufficient permissions or self-reset attempt'
+    },
+    503: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Service Unavailable - Email functionality disabled'
+    },
+    500: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Internal Server Error - Password reset failed'
+    }
   }
 };
 
-export default async function adminResetPasswordRoute(fastify: FastifyInstance) {
-  fastify.post<{ Body: AdminResetPasswordInput }>(
+export default async function adminResetPasswordRoute(server: FastifyInstance) {
+  server.post<{ Body: AdminResetPasswordInput }>(
     '/admin/reset-password',
-    { 
+    {
       schema: adminResetPasswordRouteSchema,
       preValidation: requireGlobalAdmin()
     },
@@ -45,9 +75,9 @@ export default async function adminResetPasswordRoute(fastify: FastifyInstance) 
         // Check if password reset is available (email sending enabled)
         const isResetAvailable = await PasswordResetService.isPasswordResetAvailable();
         if (!isResetAvailable) {
-          return reply.status(503).send({ 
-            success: false, 
-            error: 'Password reset is currently disabled. Email functionality is not enabled.' 
+          return reply.status(503).send({
+            success: false,
+            error: 'Password reset is currently disabled. Email functionality is not enabled.'
           });
         }
 
@@ -62,39 +92,39 @@ export default async function adminResetPasswordRoute(fastify: FastifyInstance) 
           });
         }
 
-        fastify.log.info(`Admin-initiated password reset requested by admin ${adminUserId} for email: ${email}`);
+        server.log.info(`Admin-initiated password reset requested by admin ${adminUserId} for email: ${email}`);
 
         // Queue admin-initiated reset email as background job
         try {
-          const result = await PasswordResetService.prepareAdminResetEmail(email, adminUserId, fastify.log);
+          const result = await PasswordResetService.prepareAdminResetEmail(email, adminUserId, server.log);
 
           if (!result.success) {
-            fastify.log.error(`Admin password reset preparation failed for ${email} by admin ${adminUserId}: ${result.error}`);
-            
+            server.log.error(`Admin password reset preparation failed for ${email} by admin ${adminUserId}: ${result.error}`);
+
             // Determine appropriate status code based on error
             if (result.error && result.error.includes('not found') || result.error && result.error.includes('not eligible')) {
-              return reply.status(400).send({ 
-                success: false, 
-                error: result.error 
+              return reply.status(400).send({
+                success: false,
+                error: result.error
               });
             }
-            
+
             if (result.error && result.error.includes('cannot reset their own password')) {
-              return reply.status(403).send({ 
-                success: false, 
-                error: result.error 
+              return reply.status(403).send({
+                success: false,
+                error: result.error
               });
             }
-            
+
             if (result.error && result.error.includes('disabled')) {
-              return reply.status(503).send({ 
-                success: false, 
-                error: result.error 
+              return reply.status(503).send({
+                success: false,
+                error: result.error
               });
             }
-            
-            return reply.status(500).send({ 
-              success: false, 
+
+            return reply.status(500).send({
+              success: false,
               error: result.error || 'An error occurred during password reset request.'
             });
           }
@@ -102,18 +132,18 @@ export default async function adminResetPasswordRoute(fastify: FastifyInstance) 
           // Queue email as background job if token and emailData were prepared
           if (result.emailData) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const jobQueueService = (fastify as any).jobQueueService;
+            const jobQueueService = (server as any).jobQueueService;
             if (jobQueueService) {
               await jobQueueService.createJob('send_email', result.emailData);
-              fastify.log.info(`Admin password reset email queued for ${email} by admin ${adminUserId}`);
+              server.log.info(`Admin password reset email queued for ${email} by admin ${adminUserId}`);
             } else {
-              fastify.log.warn('Job queue service not available, admin password reset email not sent');
+              server.log.warn('Job queue service not available, admin password reset email not sent');
             }
           }
         } catch (error) {
-          fastify.log.error(error, `Error queueing admin password reset email for ${email}:`);
-          return reply.status(500).send({ 
-            success: false, 
+          server.log.error(error, `Error queueing admin password reset email for ${email}:`);
+          return reply.status(500).send({
+            success: false,
             error: 'An unexpected error occurred during password reset request.'
           });
         }
@@ -124,10 +154,10 @@ export default async function adminResetPasswordRoute(fastify: FastifyInstance) 
         });
 
       } catch (error) {
-        fastify.log.error(error, 'Error during admin-initiated password reset request:');
-        return reply.status(500).send({ 
-          success: false, 
-          error: 'An unexpected error occurred during password reset request.' 
+        server.log.error(error, 'Error during admin-initiated password reset request:');
+        return reply.status(500).send({
+          success: false,
+          error: 'An unexpected error occurred during password reset request.'
         });
       }
     }

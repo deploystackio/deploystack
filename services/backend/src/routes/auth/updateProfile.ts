@@ -1,30 +1,41 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { getDb, getSchema } from '../../db';
 import { eq, and, ne } from 'drizzle-orm';
-import { UpdateProfileSchema, type UpdateProfileInput } from './schemas';
+import { type UpdateProfileInput } from './schemas';
 import { requireAuthHook } from '../../hooks/authHook';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 
-// Response schemas
-const updateProfileSuccessResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the profile update was successful'),
-  message: z.string().describe('Success message'),
-  user: z.object({
-    id: z.string().describe('User ID'),
-    username: z.string().describe('Updated username'),
-    email: z.string().describe('User email'),
-    first_name: z.string().nullable().describe('Updated first name'),
-    last_name: z.string().nullable().describe('Updated last name'),
-    auth_type: z.string().describe('Authentication type'),
-    role_id: z.string().nullable().describe('User role ID')
-  }).describe('Updated user information')
-});
+const USER_OBJECT = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    username: { type: 'string' },
+    email: { type: 'string' },
+    first_name: { type: ['string', 'null'] },
+    last_name: { type: ['string', 'null'] },
+    auth_type: { type: 'string' },
+    role_id: { type: ['string', 'null'] }
+  },
+  required: ['id', 'username', 'email', 'auth_type']
+} as const;
 
-const updateProfileErrorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message describing what went wrong')
-});
+const UPDATE_PROFILE_SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    message: { type: 'string' },
+    user: USER_OBJECT
+  },
+  required: ['success', 'message', 'user']
+} as const;
+
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' }
+  },
+  required: ['success', 'error']
+} as const;
 
 // Route schema for OpenAPI documentation
 const updateProfileRouteSchema = {
@@ -34,45 +45,52 @@ const updateProfileRouteSchema = {
   body: {
     type: 'object',
     properties: {
-      username: { 
-        type: 'string', 
-        minLength: 3, 
+      username: {
+        type: 'string',
+        minLength: 3,
         maxLength: 30,
         pattern: '^[a-zA-Z0-9_]+$'
       },
-      first_name: { 
-        type: 'string', 
-        maxLength: 50 
+      first_name: {
+        type: 'string',
+        maxLength: 50
       },
-      last_name: { 
-        type: 'string', 
-        maxLength: 50 
+      last_name: {
+        type: 'string',
+        maxLength: 50
       }
     },
     additionalProperties: false
   },
-  requestBody: {
-    required: true,
-    content: {
-      'application/json': {
-        schema: createSchema(UpdateProfileSchema)
-      }
-    }
-  },
   security: [{ cookieAuth: [] }],
   response: {
-    200: createSchema(updateProfileSuccessResponseSchema.describe('Profile updated successfully')),
-    400: createSchema(updateProfileErrorResponseSchema.describe('Bad Request - Invalid input, no fields provided, username already taken, or missing Content-Type header')),
-    401: createSchema(updateProfileErrorResponseSchema.describe('Unauthorized - Authentication required')),
-    403: createSchema(updateProfileErrorResponseSchema.describe('Forbidden - Cannot change username for non-email users')),
-    500: createSchema(updateProfileErrorResponseSchema.describe('Internal Server Error - Profile update failed'))
+    200: {
+      ...UPDATE_PROFILE_SUCCESS_RESPONSE_SCHEMA,
+      description: 'Profile updated successfully'
+    },
+    400: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Bad Request - Invalid input, no fields provided, username already taken, or missing Content-Type header'
+    },
+    401: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Unauthorized - Authentication required'
+    },
+    403: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Forbidden - Cannot change username for non-email users'
+    },
+    500: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Internal Server Error - Profile update failed'
+    }
   }
 };
 
-export default async function updateProfileRoute(fastify: FastifyInstance) {
-  fastify.put<{ Body: UpdateProfileInput }>(
+export default async function updateProfileRoute(server: FastifyInstance) {
+  server.put<{ Body: UpdateProfileInput }>(
     '/profile/update',
-    { 
+    {
       schema: updateProfileRouteSchema,
       preValidation: requireAuthHook // Require authentication
     },
@@ -107,7 +125,7 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
         const authUserTable = schema.authUser;
 
         if (!authUserTable) {
-          fastify.log.error('AuthUser table not found in schema');
+          server.log.error('AuthUser table not found in schema');
           const errorResponse = {
             success: false,
             error: 'Internal server error: User table configuration missing.'
@@ -200,7 +218,7 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
 
         const updatedUser = updatedUsers[0];
 
-        fastify.log.info(`Profile updated successfully for user: ${userId}`);
+        server.log.info(`Profile updated successfully for user: ${userId}`);
 
         // Send success response with updated user data
         const successResponse = {
@@ -220,7 +238,7 @@ export default async function updateProfileRoute(fastify: FastifyInstance) {
         return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {
-        fastify.log.error(error, 'Error during profile update:');
+        server.log.error(error, 'Error during profile update:');
         const errorResponse = {
           success: false,
           error: 'An unexpected error occurred during profile update.'

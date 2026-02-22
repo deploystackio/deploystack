@@ -2,23 +2,28 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { verify, hash } from '@node-rs/argon2';
 import { getDb, getSchema } from '../../db';
 import { eq } from 'drizzle-orm';
-import { ChangePasswordSchema, type ChangePasswordInput } from './schemas';
+import { type ChangePasswordInput } from './schemas';
 import { requireAuthHook } from '../../hooks/authHook';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { EmailService } from '../../email';
 import { GlobalSettingsService } from '../../services/globalSettingsService';
 
-// Response schemas
-const changePasswordSuccessResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the password change was successful'),
-  message: z.string().describe('Success message')
-});
+const SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    message: { type: 'string' }
+  },
+  required: ['success', 'message']
+} as const;
 
-const changePasswordErrorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message describing what went wrong')
-});
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' }
+  },
+  required: ['success', 'error']
+} as const;
 
 // Route schema for OpenAPI documentation
 const changePasswordRouteSchema = {
@@ -34,28 +39,35 @@ const changePasswordRouteSchema = {
     required: ['current_password', 'new_password'],
     additionalProperties: false
   },
-  requestBody: {
-    required: true,
-    content: {
-      'application/json': {
-        schema: createSchema(ChangePasswordSchema)
-      }
-    }
-  },
   security: [{ cookieAuth: [] }],
   response: {
-    200: createSchema(changePasswordSuccessResponseSchema.describe('Password changed successfully')),
-    400: createSchema(changePasswordErrorResponseSchema.describe('Bad Request - Invalid input, incorrect current password, or missing Content-Type header')),
-    401: createSchema(changePasswordErrorResponseSchema.describe('Unauthorized - Authentication required')),
-    403: createSchema(changePasswordErrorResponseSchema.describe('Forbidden - Cannot change password for non-email users')),
-    500: createSchema(changePasswordErrorResponseSchema.describe('Internal Server Error - Password change failed'))
+    200: {
+      ...SUCCESS_RESPONSE_SCHEMA,
+      description: 'Password changed successfully'
+    },
+    400: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Bad Request - Invalid input, incorrect current password, or missing Content-Type header'
+    },
+    401: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Unauthorized - Authentication required'
+    },
+    403: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Forbidden - Cannot change password for non-email users'
+    },
+    500: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Internal Server Error - Password change failed'
+    }
   }
 };
 
-export default async function changePasswordRoute(fastify: FastifyInstance) {
-  fastify.put<{ Body: ChangePasswordInput }>(
+export default async function changePasswordRoute(server: FastifyInstance) {
+  server.put<{ Body: ChangePasswordInput }>(
     '/change-password',
-    { 
+    {
       schema: changePasswordRouteSchema,
       preValidation: requireAuthHook // Require authentication
     },
@@ -80,7 +92,7 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
         const authUserTable = schema.authUser;
 
         if (!authUserTable) {
-          fastify.log.error('AuthUser table not found in schema');
+          server.log.error('AuthUser table not found in schema');
           const errorResponse = {
             success: false,
             error: 'Internal server error: User table configuration missing.'
@@ -164,13 +176,13 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (db as any)
           .update(authUserTable)
-          .set({ 
+          .set({
             hashed_password: hashedNewPassword,
             updated_at: new Date()
           })
           .where(eq(authUserTable.id, userId));
 
-        fastify.log.info(`Password changed successfully for user: ${userId}`);
+        server.log.info(`Password changed successfully for user: ${userId}`);
 
         // Send password change notification email if email sending is enabled
         try {
@@ -210,22 +222,20 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
             }, request.log);
 
             if (emailResult.success) {
-              fastify.log.info(`Password change notification email sent to: ${user.email}`);
+              server.log.info(`Password change notification email sent to: ${user.email}`);
             } else {
-              fastify.log.warn(`Failed to send password change notification email: ${emailResult.error}`);
+              server.log.warn(`Failed to send password change notification email: ${emailResult.error}`);
             }
           } else {
-            fastify.log.debug('Email sending is disabled, skipping password change notification');
+            server.log.debug('Email sending is disabled, skipping password change notification');
           }
         } catch (emailError) {
           // Don't fail the password change if email fails
-          fastify.log.warn({ error: emailError }, 'Failed to send password change notification email:');
+          server.log.warn({ error: emailError }, 'Failed to send password change notification email:');
         }
 
         // Optional: Invalidate all other sessions for security
-        // This would require additional implementation to track and invalidate sessions
-        // For now, we'll just log this as a security consideration
-        fastify.log.info(`Consider invalidating other sessions for user: ${userId} after password change`);
+        server.log.info(`Consider invalidating other sessions for user: ${userId} after password change`);
 
         // Send success response
         const successResponse = {
@@ -236,7 +246,7 @@ export default async function changePasswordRoute(fastify: FastifyInstance) {
         return reply.status(200).type('application/json').send(jsonString);
 
       } catch (error) {
-        fastify.log.error(error, 'Error during password change:');
+        server.log.error(error, 'Error during password change:');
         const errorResponse = {
           success: false,
           error: 'An unexpected error occurred during password change.'

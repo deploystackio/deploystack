@@ -1,6 +1,4 @@
 import { type FastifyInstance } from 'fastify'
-import { z } from 'zod'
-import { createSchema } from 'zod-openapi'
 import { getVersionString } from '../config/version'
 import { GlobalSettings } from '../global-settings/helpers'
 // Import the individual database setup routes
@@ -29,13 +27,16 @@ import satellitesRoutes from './satellites'
 // Import deployment callback routes
 import deployGitHubCallbackRoute from './deploy/github-callback'
 
-// Response schema for the root health check endpoint
-const healthCheckResponseSchema = z.object({
-  message: z.string().describe('Service status message'),
-  status: z.string().describe('Database connection status'),
-  timestamp: z.string().describe('Current server timestamp'),
-  version: z.string().optional().describe('API version (configurable via global.show_version setting)')
-});
+const HEALTH_CHECK_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    message: { type: 'string' },
+    status: { type: 'string' },
+    timestamp: { type: 'string' },
+    version: { type: 'string' }
+  },
+  required: ['message', 'status', 'timestamp']
+} as const;
 
 export const registerRoutes = (server: FastifyInstance): void => {
   // Register OAuth2 discovery routes at ROOT level (RFC 8414 requirement)
@@ -92,13 +93,16 @@ export const registerRoutes = (server: FastifyInstance): void => {
       summary: 'API health check',
       description: 'Returns the health status of the DeployStack Backend API, including database connection status and basic service information. This endpoint can be used for monitoring and health checks.',
       response: {
-        200: createSchema(healthCheckResponseSchema.describe('API health check information'))
+        200: {
+          ...HEALTH_CHECK_RESPONSE_SCHEMA,
+          description: 'API health check information'
+        }
       }
     }
   }, async (request) => {
     // Check if version should be shown based on global setting
     const showVersion = await GlobalSettings.getBoolean('global.show_version', true);
-    
+
     request.log.debug({
       operation: 'root_endpoint_version_check',
       showVersion,

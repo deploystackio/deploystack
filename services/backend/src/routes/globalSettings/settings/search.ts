@@ -1,29 +1,47 @@
 import type { FastifyInstance  } from 'fastify';
-import { ZodError } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
-import {
-  GlobalSettingSchema,
-  type SearchGlobalSettingsInput
-} from '../schemas';
-import { z } from 'zod';
+import { type SearchGlobalSettingsInput } from '../schemas';
 
-// Response schema for search results
-const globalSettingsListResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful'),
-  data: z.array(GlobalSettingSchema).describe('Array of global settings')
-});
+const GLOBAL_SETTING_OBJECT = {
+  type: 'object',
+  properties: {
+    key: { type: 'string' },
+    name: { type: ['string', 'null'] },
+    value: { type: 'string' },
+    type: { type: ['string', 'null'] },
+    description: { type: ['string', 'null'] },
+    is_encrypted: { type: 'boolean' },
+    group_id: { type: ['string', 'null'] },
+    created_at: { type: ['string', 'null'] },
+    updated_at: { type: ['string', 'null'] }
+  }
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message'),
-  details: z.any().optional().describe('Additional error details (validation errors)')
-});
+const GLOBAL_SETTINGS_LIST_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    data: {
+      type: 'array',
+      items: GLOBAL_SETTING_OBJECT
+    }
+  },
+  required: ['success', 'data']
+} as const;
 
-export default async function searchGlobalSettingsRoute(fastify: FastifyInstance) {
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' }
+  },
+  required: ['success', 'error']
+} as const;
+
+export default async function searchGlobalSettingsRoute(server: FastifyInstance) {
   // POST /settings/search - Search settings by key pattern (admin only)
-  fastify.post<{ Body: SearchGlobalSettingsInput }>('/settings/search', {
+  server.post<{ Body: SearchGlobalSettingsInput }>('/settings/search', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Search settings',
@@ -38,11 +56,26 @@ export default async function searchGlobalSettingsRoute(fastify: FastifyInstance
         additionalProperties: false
       },
       response: {
-        200: createSchema(globalSettingsListResponseSchema.describe('Search results retrieved successfully')),
-        400: createSchema(errorResponseSchema.describe('Bad Request - Validation error')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...GLOBAL_SETTINGS_LIST_RESPONSE_SCHEMA,
+          description: 'Search results retrieved successfully'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Validation error'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
     preValidation: requireGlobalAdmin()
@@ -50,9 +83,9 @@ export default async function searchGlobalSettingsRoute(fastify: FastifyInstance
     try {
       // Fastify has already validated request.body using SearchGlobalSettingsSchema
       const { pattern } = request.body;
-      
+
       const settings = await GlobalSettingsService.search(pattern);
-      
+
       // Create clean response with primitive types only
       const cleanResponse = {
         success: true,
@@ -68,22 +101,12 @@ export default async function searchGlobalSettingsRoute(fastify: FastifyInstance
           updated_at: setting.updated_at ? String(setting.updated_at) : null
         }))
       };
-      
+
       // Manual JSON serialization
       const jsonString = JSON.stringify(cleanResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errorResponse = {
-          success: false,
-          error: 'Validation error',
-          details: error.issues  // Fixed: error.errors → error.issues for Zod v4
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
-      
-      fastify.log.error(error, 'Error searching global settings');
+      server.log.error(error, 'Error searching global settings');
       const errorResponse = {
         success: false,
         error: 'Failed to search global settings'

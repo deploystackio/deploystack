@@ -1,30 +1,45 @@
 import type { FastifyInstance  } from 'fastify';
-import { ZodError } from 'zod';
-import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
-import {
-  GlobalSettingSchema,
-  type CreateGlobalSettingInput
-} from '../schemas';
-import { z } from 'zod';
+import { type CreateGlobalSettingInput } from '../schemas';
 
-// Response schema for creating global setting
-const globalSettingResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful'),
-  data: GlobalSettingSchema.optional().describe('Global setting data'),
-  message: z.string().optional().describe('Success message')
-});
+const GLOBAL_SETTING_OBJECT = {
+  type: 'object',
+  properties: {
+    key: { type: 'string' },
+    name: { type: ['string', 'null'] },
+    value: { type: 'string' },
+    type: { type: ['string', 'null'] },
+    description: { type: ['string', 'null'] },
+    is_encrypted: { type: 'boolean' },
+    group_id: { type: ['string', 'null'] },
+    created_at: { type: ['string', 'null'] },
+    updated_at: { type: ['string', 'null'] }
+  }
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message'),
-  details: z.any().optional().describe('Additional error details (validation errors)')
-});
+const GLOBAL_SETTING_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    data: GLOBAL_SETTING_OBJECT,
+    message: { type: 'string' }
+  },
+  required: ['success']
+} as const;
 
-export default async function createGlobalSettingRoute(fastify: FastifyInstance) {
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' }
+  },
+  required: ['success', 'error']
+} as const;
+
+export default async function createGlobalSettingRoute(server: FastifyInstance) {
   // POST /settings - Create new global setting (admin only)
-  fastify.post<{ Body: CreateGlobalSettingInput }>('/settings', {
+  server.post<{ Body: CreateGlobalSettingInput }>('/settings', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Create new global setting',
@@ -45,12 +60,30 @@ export default async function createGlobalSettingRoute(fastify: FastifyInstance)
         additionalProperties: false
       },
       response: {
-        201: createSchema(globalSettingResponseSchema.describe('Global setting created successfully')),
-        400: createSchema(errorResponseSchema.describe('Bad Request - Validation error')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        409: createSchema(errorResponseSchema.describe('Conflict - Setting with this key already exists')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        201: {
+          ...GLOBAL_SETTING_RESPONSE_SCHEMA,
+          description: 'Global setting created successfully'
+        },
+        400: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Bad Request - Validation error'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        409: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Conflict - Setting with this key already exists'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
     onRequest: requireGlobalAdmin()
@@ -58,7 +91,7 @@ export default async function createGlobalSettingRoute(fastify: FastifyInstance)
     try {
       // Fastify has already validated request.body using CreateGlobalSettingSchema
       const validatedData = request.body;
-      
+
       // Check if setting already exists
       const existing = await GlobalSettingsService.exists(validatedData.key);
       if (existing) {
@@ -98,22 +131,12 @@ export default async function createGlobalSettingRoute(fastify: FastifyInstance)
         },
         message: 'Global setting created successfully'
       };
-      
+
       // Manual JSON serialization
       const jsonString = JSON.stringify(cleanResponse);
       return reply.status(201).type('application/json').send(jsonString);
     } catch (error) {
-      if (error instanceof ZodError) {
-        const errorResponse = {
-          success: false,
-          error: 'Validation error',
-          details: error.issues  // Fixed: error.errors → error.issues for Zod v4
-        };
-        const jsonString = JSON.stringify(errorResponse);
-        return reply.status(400).type('application/json').send(jsonString);
-      }
-      
-      fastify.log.error(error, 'Error creating global setting');
+      server.log.error(error, 'Error creating global setting');
       const errorResponse = {
         success: false,
         error: 'Failed to create global setting'

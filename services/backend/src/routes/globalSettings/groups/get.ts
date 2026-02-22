@@ -1,26 +1,46 @@
 import type { FastifyInstance } from 'fastify';
-import { createSchema } from 'zod-openapi';
 import { GlobalSettingsService } from '../../../services/globalSettingsService';
 import { requireGlobalAdmin } from '../../../middleware/roleMiddleware';
-import { GlobalSettingSchema } from '../schemas';
-import { z } from 'zod';
 
-// Response schema for getting settings by group
-const globalSettingsListResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful'),
-  data: z.array(GlobalSettingSchema).describe('Array of global settings')
-});
+const GLOBAL_SETTING_OBJECT = {
+  type: 'object',
+  properties: {
+    key: { type: 'string' },
+    name: { type: ['string', 'null'] },
+    value: { type: 'string' },
+    type: { type: ['string', 'null'] },
+    description: { type: ['string', 'null'] },
+    is_encrypted: { type: 'boolean' },
+    group_id: { type: ['string', 'null'] },
+    created_at: { type: ['string', 'null'] },
+    updated_at: { type: ['string', 'null'] }
+  }
+} as const;
 
-const errorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message'),
-  details: z.any().optional().describe('Additional error details')
-});
+const GLOBAL_SETTINGS_LIST_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    data: {
+      type: 'array',
+      items: GLOBAL_SETTING_OBJECT
+    }
+  },
+  required: ['success', 'data']
+} as const;
 
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' }
+  },
+  required: ['success', 'error']
+} as const;
 
-export default async function getGroupSettingsRoute(fastify: FastifyInstance) {
+export default async function getGroupSettingsRoute(server: FastifyInstance) {
   // GET /settings/group/:groupId - Get settings by group (admin only)
-  fastify.get<{ Params: { groupId: string } }>('/settings/group/:groupId', {
+  server.get<{ Params: { groupId: string } }>('/settings/group/:groupId', {
     schema: {
       tags: ['Global Settings'],
       summary: 'Get settings by group',
@@ -34,10 +54,22 @@ export default async function getGroupSettingsRoute(fastify: FastifyInstance) {
         required: ['groupId']
       },
       response: {
-        200: createSchema(globalSettingsListResponseSchema.describe('Settings retrieved successfully')),
-        401: createSchema(errorResponseSchema.describe('Unauthorized - Authentication required')),
-        403: createSchema(errorResponseSchema.describe('Forbidden - Insufficient permissions')),
-        500: createSchema(errorResponseSchema.describe('Internal Server Error'))
+        200: {
+          ...GLOBAL_SETTINGS_LIST_RESPONSE_SCHEMA,
+          description: 'Settings retrieved successfully'
+        },
+        401: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Unauthorized - Authentication required'
+        },
+        403: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Forbidden - Insufficient permissions'
+        },
+        500: {
+          ...ERROR_RESPONSE_SCHEMA,
+          description: 'Internal Server Error'
+        }
       }
     },
     preValidation: requireGlobalAdmin()
@@ -45,7 +77,7 @@ export default async function getGroupSettingsRoute(fastify: FastifyInstance) {
     try {
       const { groupId } = request.params;
       const settings = await GlobalSettingsService.getByGroup(groupId);
-      
+
       // Create clean response with primitive types only
       const cleanResponse = {
         success: true,
@@ -61,13 +93,13 @@ export default async function getGroupSettingsRoute(fastify: FastifyInstance) {
           updated_at: setting.updated_at ? String(setting.updated_at) : null
         }))
       };
-      
+
       // Manual JSON serialization
       const jsonString = JSON.stringify(cleanResponse);
       return reply.status(200).type('application/json').send(jsonString);
     } catch (error) {
-      fastify.log.error(error, 'Error fetching settings by group');
-      
+      server.log.error(error, 'Error fetching settings by group');
+
       const errorResponse = {
         success: false,
         error: 'Failed to fetch settings by group'

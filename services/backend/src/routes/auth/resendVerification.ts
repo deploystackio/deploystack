@@ -1,38 +1,62 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
-import { ResendVerificationSchema, type ResendVerificationInput } from './schemas';
+import { type ResendVerificationInput } from './schemas';
 import { EmailVerificationService } from '../../services/emailVerificationService';
 import { getDb, getSchema } from '../../db';
 import { eq } from 'drizzle-orm';
-import { z } from 'zod';
-import { createSchema } from 'zod-openapi';
 
-// Response schemas
-const resendSuccessResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the resend was successful'),
-  message: z.string().describe('Success message')
-});
+const SUCCESS_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean' },
+    message: { type: 'string' }
+  },
+  required: ['success', 'message']
+} as const;
 
-const resendErrorResponseSchema = z.object({
-  success: z.boolean().describe('Indicates if the operation was successful (false for errors)').default(false),
-  error: z.string().describe('Error message describing what went wrong')
-});
+const ERROR_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    success: { type: 'boolean', default: false },
+    error: { type: 'string' }
+  },
+  required: ['success', 'error']
+} as const;
 
 // Route schema for OpenAPI documentation
 const resendVerificationRouteSchema = {
   tags: ['Authentication'],
   summary: 'Resend email verification',
   description: 'Resends a verification email to the specified email address. This endpoint is public and does not require authentication. Only works if the email address exists and is not already verified.',
-  body: createSchema(ResendVerificationSchema),
+  body: {
+    type: 'object',
+    properties: {
+      email: { type: 'string', format: 'email' }
+    },
+    required: ['email'],
+    additionalProperties: false
+  },
   response: {
-    200: createSchema(resendSuccessResponseSchema.describe('Verification email sent successfully')),
-    400: createSchema(resendErrorResponseSchema.describe('Bad Request - Email not found or already verified')),
-    403: createSchema(resendErrorResponseSchema.describe('Forbidden - Email sending is disabled')),
-    500: createSchema(resendErrorResponseSchema.describe('Internal Server Error - Failed to send email'))
+    200: {
+      ...SUCCESS_RESPONSE_SCHEMA,
+      description: 'Verification email sent successfully'
+    },
+    400: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Bad Request - Email not found or already verified'
+    },
+    403: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Forbidden - Email sending is disabled'
+    },
+    500: {
+      ...ERROR_RESPONSE_SCHEMA,
+      description: 'Internal Server Error - Failed to send email'
+    }
   }
 };
 
-export default async function resendVerificationRoute(fastify: FastifyInstance) {
-  fastify.post<{ Body: ResendVerificationInput }>(
+export default async function resendVerificationRoute(server: FastifyInstance) {
+  server.post<{ Body: ResendVerificationInput }>(
     '/resend-verification',
     { schema: resendVerificationRouteSchema },
     async (request, reply: FastifyReply) => {
@@ -119,7 +143,7 @@ export default async function resendVerificationRoute(fastify: FastifyInstance) 
         });
 
       } catch (error) {
-        fastify.log.error(error, 'Error during resend verification:');
+        server.log.error(error, 'Error during resend verification:');
         return reply.status(500).send({
           success: false,
           error: 'An unexpected error occurred while sending verification email'
