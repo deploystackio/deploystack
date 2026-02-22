@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useForm } from 'vee-validate'
-import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -30,14 +29,12 @@ const isLoading = ref(false)
 const { t } = useI18n()
 
 // Define validation schema using Zod
-const formSchema = toTypedSchema(
-  z.object({
-    email: z
-      .string()
-      .min(1, { message: t('validation.required') })
-      .email({ message: t('validation.email') }),
-  })
-)
+const formSchema = z.object({
+  email: z
+    .string()
+    .min(1, { message: t('validation.required') })
+    .email({ message: t('validation.email') }),
+})
 
 const form = useForm({
   validationSchema: formSchema,

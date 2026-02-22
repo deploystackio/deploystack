@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useForm } from 'vee-validate'
-import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -32,19 +31,17 @@ const token = ref('')
 const { t } = useI18n()
 
 // Define validation schema using Zod
-const formSchema = toTypedSchema(
-  z.object({
-    password: z
-      .string()
-      .min(8, { message: t('validation.minLength', { length: 8 }) }),
-    confirmPassword: z
-      .string()
-      .min(1, { message: t('validation.required') }),
-  }).refine((data) => data.password === data.confirmPassword, {
-    message: t('validation.passwordMatch'),
-    path: ['confirmPassword'],
-  })
-)
+const formSchema = z.object({
+  password: z
+    .string()
+    .min(8, { message: t('validation.minLength', { length: 8 }) }),
+  confirmPassword: z
+    .string()
+    .min(1, { message: t('validation.required') }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: t('validation.passwordMatch'),
+  path: ['confirmPassword'],
+})
 
 const form = useForm({
   validationSchema: formSchema,

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useForm } from 'vee-validate'
-import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
@@ -36,49 +35,47 @@ const { t } = useI18n()
 const apiUrl = getEnv('VITE_DEPLOYSTACK_BACKEND_URL')
 
 // Define validation schema using Zod
-const formSchema = toTypedSchema(
-  z
-    .object({
-      name: z
-        .string()
-        .min(3, {
-          message: t('validation.minLength', { field: t('register.form.name.label'), length: 3 }),
-        })
-        .max(30, {
-          message: t('validation.maxLength', { field: t('register.form.name.label'), length: 30 }),
-        })
-        .regex(/^[a-zA-Z0-9_.-]+$/, {
-          message: 'Username can only contain letters, numbers, underscores, dots, and hyphens (no spaces)',
+const formSchema = z
+  .object({
+    name: z
+      .string()
+      .min(3, {
+        message: t('validation.minLength', { field: t('register.form.name.label'), length: 3 }),
+      })
+      .max(30, {
+        message: t('validation.maxLength', { field: t('register.form.name.label'), length: 30 }),
+      })
+      .regex(/^[a-zA-Z0-9_.-]+$/, {
+        message: 'Username can only contain letters, numbers, underscores, dots, and hyphens (no spaces)',
+      }),
+    email: z
+      .string()
+      .min(1, { message: t('validation.required', { field: t('register.form.email.label') }) })
+      .email({ message: t('validation.email') }),
+    password: z
+      .string()
+      .min(8, {
+        message: t('validation.minLength', {
+          field: t('register.form.password.label'),
+          length: 8,
         }),
-      email: z
-        .string()
-        .min(1, { message: t('validation.required', { field: t('register.form.email.label') }) })
-        .email({ message: t('validation.email') }),
-      password: z
-        .string()
-        .min(8, {
-          message: t('validation.minLength', {
-            field: t('register.form.password.label'),
-            length: 8,
-          }),
-        })
-        .max(100, {
-          message: t('validation.maxLength', {
-            field: t('register.form.password.label'),
-            length: 100,
-          }),
+      })
+      .max(100, {
+        message: t('validation.maxLength', {
+          field: t('register.form.password.label'),
+          length: 100,
         }),
-      confirmPassword: z
-        .string()
-        .min(1, {
-          message: t('validation.required', { field: t('register.form.confirmPassword.label') }),
-        }),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-      message: t('validation.passwordMatch'),
-      path: ['confirmPassword'],
-    })
-)
+      }),
+    confirmPassword: z
+      .string()
+      .min(1, {
+        message: t('validation.required', { field: t('register.form.confirmPassword.label') }),
+      }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: t('validation.passwordMatch'),
+    path: ['confirmPassword'],
+  })
 
 const form = useForm({
   validationSchema: formSchema,

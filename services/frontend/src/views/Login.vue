@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useForm } from 'vee-validate'
-import { toTypedSchema } from '@vee-validate/zod'
 import * as z from 'zod'
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
@@ -58,19 +57,17 @@ const isValidReturnTo = (url: string): boolean => {
 }
 
 // Define validation schema using Zod
-const formSchema = toTypedSchema(
-  z.object({
-    login: z
-      .string()
-      .min(1, { message: t('validation.required', { field: t('login.form.email.label') }) })
-      .email({ message: t('validation.email') }),
-    password: z
-      .string()
-      .min(6, {
-        message: t('validation.minLength', { field: t('login.form.password.label'), length: 6 }),
-      }),
-  })
-)
+const formSchema = z.object({
+  login: z
+    .string()
+    .min(1, { message: t('validation.required', { field: t('login.form.email.label') }) })
+    .email({ message: t('validation.email') }),
+  password: z
+    .string()
+    .min(6, {
+      message: t('validation.minLength', { field: t('login.form.password.label'), length: 6 }),
+    }),
+})
 
 const form = useForm({
   validationSchema: formSchema,
