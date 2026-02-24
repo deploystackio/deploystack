@@ -1,7 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { getDb } from '../db';
 import { mcpOauthTokens, mcpServerInstallations, mcpServers } from '../db/schema';
-import { and, eq, lt, gt, isNotNull } from 'drizzle-orm';
+import { and, eq, lt, gt, or, isNotNull } from 'drizzle-orm';
 import { OAuthTokenService } from '../services/OAuthTokenService';
 import { OAuthDiscoveryService } from '../services/OAuthDiscoveryService';
 import { decrypt } from '../utils/encryption';
@@ -12,8 +12,8 @@ import { decrypt } from '../utils/encryption';
  * This background job runs every 5 minutes and refreshes tokens that:
  * - Have a refresh_token (NOT NULL)
  * - Have an expires_at timestamp (NOT NULL)
- * - Expire within the next 10 minutes
- * - Are not already expired
+ * - Expire within the next 10 minutes, OR
+ * - Already expired up to 24 hours ago (retry with hourly backoff)
  *
  * For each expiring token:
  * 1. Discovers OAuth endpoints from MCP server
@@ -21,6 +21,8 @@ import { decrypt } from '../utils/encryption';
  * 3. Calls OAuth token endpoint to refresh
  * 4. Encrypts and stores new access token
  * 5. Handles refresh token rotation if provider sends new refresh_token
+ * 6. On successful recovery of expired token, clears requires_reauth status
+ * 7. On failure, updates token's updated_at to enable hourly retry backoff
  */
 export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 	try {
@@ -29,6 +31,10 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 		// Tokens expiring within next 10 minutes
 		const expiryThreshold = new Date(Date.now() + 10 * 60 * 1000);
 		const now = new Date();
+		// Allow retrying tokens that expired up to 24 hours ago
+		const expiredFloor = new Date(Date.now() - 24 * 60 * 60 * 1000);
+		// For already-expired tokens, only retry if not attempted in the last hour
+		const retryFloor = new Date(Date.now() - 60 * 60 * 1000);
 
 		logger.trace(
 			{
@@ -54,14 +60,21 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 			.innerJoin(mcpServers, eq(mcpServerInstallations.server_id, mcpServers.id))
 			.where(
 				and(
-					// Must have refresh token
 					isNotNull(mcpOauthTokens.refresh_token),
-					// Must have expiry timestamp
 					isNotNull(mcpOauthTokens.expires_at),
-					// Expires within threshold
-					lt(mcpOauthTokens.expires_at, expiryThreshold),
-					// Not already expired
-					gt(mcpOauthTokens.expires_at, now)
+					or(
+						// Case 1: Token expiring soon (within 10 min) — always refresh
+						and(
+							lt(mcpOauthTokens.expires_at, expiryThreshold),
+							gt(mcpOauthTokens.expires_at, now)
+						),
+						// Case 2: Token already expired (up to 24h ago) — retry with hourly backoff
+						and(
+							lt(mcpOauthTokens.expires_at, now),
+							gt(mcpOauthTokens.expires_at, expiredFloor),
+							lt(mcpOauthTokens.updated_at, retryFloor)
+						)
+					)
 				)
 			);
 
@@ -182,6 +195,35 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 				// Update encrypted tokens in database
 				await tokenService.updateRefreshedTokens(token.id, newTokens, db);
 
+				// If token was already expired and we successfully refreshed,
+				// clear requires_reauth status so the user can reconnect
+				if (token.expires_at && token.expires_at < now) {
+					const { getSchema } = await import('../db');
+					const { mcpServerInstances } = getSchema();
+					await db
+						.update(mcpServerInstances)
+						.set({
+							status: 'offline',
+							status_message: 'OAuth token refreshed successfully. Reconnection needed.',
+							status_updated_at: new Date(),
+						})
+						.where(
+							and(
+								eq(mcpServerInstances.installation_id, installation.id),
+								eq(mcpServerInstances.status, 'requires_reauth')
+							)
+						);
+
+					logger.info(
+						{
+							operation: 'refresh_expiring_oauth_tokens',
+							installationId: installation.id,
+							tokenId: token.id,
+						},
+						'Cleared requires_reauth status after successful token recovery'
+					);
+				}
+
 				logger.info(
 					{
 						tokenId: token.id,
@@ -192,6 +234,7 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 						oldExpiresAt: token.expires_at,
 						newExpiresIn: newTokens.expires_in,
 						clientId,
+						wasExpired: token.expires_at ? token.expires_at < now : false,
 						operation: 'refresh_expiring_oauth_tokens',
 					},
 					'Token refreshed successfully'
@@ -210,6 +253,23 @@ export async function refreshExpiringOAuthTokens(logger: FastifyBaseLogger) {
 					},
 					'Failed to refresh token'
 				);
+
+				// Update token's updated_at to track last refresh attempt (enables hourly retry backoff)
+				try {
+					await db
+						.update(mcpOauthTokens)
+						.set({ updated_at: new Date() })
+						.where(eq(mcpOauthTokens.id, token.id));
+				} catch (updateError) {
+					logger.error(
+						{
+							error: updateError instanceof Error ? updateError.message : 'Unknown error',
+							tokenId: token.id,
+							operation: 'refresh_expiring_oauth_tokens',
+						},
+						'Failed to update token updated_at after refresh failure'
+					);
+				}
 
 				// Update ALL user instances status to requires_reauth
 				try {
