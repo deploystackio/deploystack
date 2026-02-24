@@ -86,6 +86,15 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/oauth/callback-complete',
+    name: 'OAuthCallbackComplete',
+    component: () => import('../views/oauth/OAuthCallbackComplete.vue'),
+    meta: {
+      requiresSetup: false,
+      title: 'Authorization Complete'
+    },
+  },
+  {
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('../views/dashboard/index.vue'),

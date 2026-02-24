@@ -304,6 +304,9 @@ const handleValidationChange = (isValid: boolean, missingFields: string[]) => {
 // OAuth popup reference
 const oauthPopup = ref<Window | null>(null)
 
+// BroadcastChannel for cross-tab OAuth communication (fallback when window.opener is null)
+let oauthBroadcastChannel: BroadcastChannel | null = null
+
 // Handle OAuth authorization
 const handleOAuthAuthorization = async () => {
   try {
@@ -366,17 +369,9 @@ const handleOAuthAuthorization = async () => {
   }
 }
 
-// Handle OAuth popup messages
-const handleOAuthMessage = (event: MessageEvent) => {
-  const backendUrl = new URL(import.meta.env.VITE_DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000')
-  const allowedOrigins = [window.location.origin, backendUrl.origin]
-
-  if (!allowedOrigins.includes(event.origin)) {
-    console.warn('Rejected postMessage from unauthorized origin:', event.origin)
-    return
-  }
-
-  if (event.data.type === 'oauth_success') {
+// Process OAuth result data (shared between postMessage and BroadcastChannel)
+const processOAuthResult = (data: any) => {
+  if (data.type === 'oauth_success') {
     if (oauthPopup.value && !oauthPopup.value.closed) {
       oauthPopup.value.close()
     }
@@ -387,21 +382,42 @@ const handleOAuthMessage = (event: MessageEvent) => {
     })
 
     eventBus.emit('mcp-installations-updated')
-    router.push('/mcp-server')
+
+    const installationId = data.installation_id
+    if (installationId) {
+      router.push(`/mcp-server/installation/${installationId}/general`)
+    } else {
+      router.push('/mcp-server')
+    }
   }
 
-  else if (event.data.type === 'oauth_error') {
-    const { error } = event.data
-
+  else if (data.type === 'oauth_error') {
     if (oauthPopup.value && !oauthPopup.value.closed) {
       oauthPopup.value.close()
     }
     oauthPopup.value = null
 
     toast.error('Authentication failed', {
-      description: error || 'OAuth authorization failed. Please try again.'
+      description: data.error || 'OAuth authorization failed. Please try again.'
     })
   }
+}
+
+// Handle OAuth popup messages via postMessage
+const handleOAuthMessage = (event: MessageEvent) => {
+  if (!event.data?.type || !['oauth_success', 'oauth_error', 'oauth_reauth_success'].includes(event.data.type)) {
+    return
+  }
+
+  const backendUrl = new URL(import.meta.env.VITE_DEPLOYSTACK_BACKEND_URL || 'http://localhost:3000')
+  const allowedOrigins = [window.location.origin, backendUrl.origin]
+
+  if (!allowedOrigins.includes(event.origin)) {
+    console.warn('Rejected postMessage from unauthorized origin:', event.origin)
+    return
+  }
+
+  processOAuthResult(event.data)
 }
 
 // Watch for serverData changes and reinitialize form
@@ -423,10 +439,28 @@ onMounted(async () => {
   }
 
   window.addEventListener('message', handleOAuthMessage)
+
+  // BroadcastChannel fallback for when window.opener is null (cross-origin redirect chain)
+  try {
+    oauthBroadcastChannel = new BroadcastChannel('deploystack_oauth')
+    oauthBroadcastChannel.onmessage = (event: MessageEvent) => {
+      if (!event.data?.type || !['oauth_success', 'oauth_error', 'oauth_reauth_success'].includes(event.data.type)) {
+        return
+      }
+      processOAuthResult(event.data)
+    }
+  } catch {
+    // BroadcastChannel not supported - postMessage is the only fallback
+  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('message', handleOAuthMessage)
+
+  if (oauthBroadcastChannel) {
+    oauthBroadcastChannel.close()
+    oauthBroadcastChannel = null
+  }
 
   if (oauthPopup.value && !oauthPopup.value.closed) {
     oauthPopup.value.close()

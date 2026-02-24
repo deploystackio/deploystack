@@ -179,7 +179,7 @@ function onArgTypeChange(arg: ArgItem) {
         <!-- Type selector -->
         <Select
           :model-value="env.type"
-          @update:model-value="(val: ConfigType) => { env.type = val; onEnvTypeChange(env) }"
+          @update:model-value="(val) => { env.type = val as ConfigType; onEnvTypeChange(env) }"
         >
           <SelectTrigger class="w-[120px]">
             <SelectValue />
@@ -255,7 +255,7 @@ function onArgTypeChange(arg: ArgItem) {
         <!-- Type selector -->
         <Select
           :model-value="arg.type"
-          @update:model-value="(val: ConfigType) => { arg.type = val; onArgTypeChange(arg) }"
+          @update:model-value="(val) => { arg.type = val as ConfigType; onArgTypeChange(arg) }"
         >
           <SelectTrigger class="w-[120px]">
             <SelectValue />

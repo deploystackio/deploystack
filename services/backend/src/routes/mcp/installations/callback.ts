@@ -75,18 +75,15 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 							${query.error_description ? `<p>${sanitizeText(query.error_description)}</p>` : ''}
 							<p>Closing window...</p>
 							<script>
-								// Post error message to parent window
 								if (window.opener) {
 									window.opener.postMessage({
 										type: 'oauth_error',
 										error: '${sanitizeText(errorMsg)}'
 									}, '${frontendUrl}');
+									setTimeout(function() { window.close(); }, 500);
+								} else {
+									window.location.href = '${frontendUrl}/oauth/callback-complete?type=oauth_error&error=${encodeURIComponent(sanitizeText(errorMsg))}';
 								}
-
-								// Close the popup window
-								setTimeout(() => {
-									window.close();
-								}, 500);
 							</script>
 						</body>
 					</html>
@@ -293,10 +290,10 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 												type: 'oauth_error',
 												error: 'Token record not found'
 											}, '${frontendUrl}');
+											setTimeout(function() { window.close(); }, 2000);
+										} else {
+											window.location.href = '${frontendUrl}/oauth/callback-complete?type=oauth_error&error=Token+record+not+found';
 										}
-										setTimeout(() => {
-											window.close();
-										}, 2000);
 									</script>
 								</body>
 							</html>
@@ -438,10 +435,10 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 											type: 'oauth_reauth_success',
 											installation_id: '${flow.installation_id}'
 										}, '${frontendUrl}');
+										setTimeout(function() { window.close(); }, 500);
+									} else {
+										window.location.href = '${frontendUrl}/oauth/callback-complete?type=oauth_reauth_success&installation_id=${flow.installation_id}';
 									}
-									setTimeout(() => {
-										window.close();
-									}, 500);
 								</script>
 							</body>
 						</html>
@@ -629,18 +626,15 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 							<h1>Authorization Successful</h1>
 							<p>Closing window...</p>
 							<script>
-								// Post success message to parent window
 								if (window.opener) {
 									window.opener.postMessage({
 										type: 'oauth_success',
 										installation_id: '${installationId}'
 									}, '${frontendUrl}');
+									setTimeout(function() { window.close(); }, 500);
+								} else {
+									window.location.href = '${frontendUrl}/oauth/callback-complete?type=oauth_success&installation_id=${installationId}';
 								}
-
-								// Close the popup window
-								setTimeout(() => {
-									window.close();
-								}, 500);
 							</script>
 						</body>
 					</html>
@@ -672,18 +666,15 @@ export default async function oauthCallbackRoute(server: FastifyInstance) {
 							<p>An error occurred while processing the authorization.</p>
 							<p>Closing window...</p>
 							<script>
-								// Post error message to parent window
 								if (window.opener) {
 									window.opener.postMessage({
 										type: 'oauth_error',
 										error: '${sanitizeText(errorMessage)}'
 									}, '${frontendUrl}');
+									setTimeout(function() { window.close(); }, 500);
+								} else {
+									window.location.href = '${frontendUrl}/oauth/callback-complete?type=oauth_error&error=${encodeURIComponent(sanitizeText(errorMessage))}';
 								}
-
-								// Close the popup window
-								setTimeout(() => {
-									window.close();
-								}, 500);
 							</script>
 						</body>
 					</html>
