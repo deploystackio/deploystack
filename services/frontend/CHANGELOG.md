@@ -1,5 +1,33 @@
 # Changelog
 
+# [0.57.0](https://github.com/deploystackio/deploystack/compare/backend-v0.60.0...frontend-v0.56.0) (2026-02-24)
+
+
+### chore
+
+* **all:** update dependencies ([](https://github.com/deploystackio/deploystack/commit/9a4e8cc37fc265a67e822ec05aa5ef89c7bb44b0))
+
+
+### feat
+
+* **all:** add OAuth requirement field, hierarchical router improvements, and tool filtering ([](https://github.com/deploystackio/deploystack/commit/231b175e01b4e3d04bb6e20c5442d2f91e34b737))
+* **all:** add public GitHub repository deployment without GitHub App ([](https://github.com/deploystackio/deploystack/commit/f9045615b715109f4b5fbfe8408344b540bc9da5))
+* **all:** add reconnect button for offline HTTP/SSE MCP servers ([](https://github.com/deploystackio/deploystack/commit/92ff5093ab02c1c61a8c87062380a003254d8e05))
+* **all:** add skip_oauth_flow flag for MCP catalog servers ([](https://github.com/deploystackio/deploystack/commit/154a8c0dc88a567ebe02b333c65fa52ea7126546))
+* **all:** auto-detect GitHub installations for user accounts ([](https://github.com/deploystackio/deploystack/commit/a41d5d00e42e61ea96796d43aad9886a23a00986))
+* **all:** enhance MCP config management and deploy wizard ([](https://github.com/deploystackio/deploystack/commit/46a897a82d81074086022d38b637a962e3b907a1))
+
+
+### fix
+
+* **all:** resolve OAuth popup not communicating back to parent window ([](https://github.com/deploystackio/deploystack/commit/5df38edd60f34a60d372a1a8841f4e3103adbf26))
+* **all:** use WAF-friendly User-Agent headers for HTTP MCP server requests ([](https://github.com/deploystackio/deploystack/commit/2c9cae011f4fe648d6f0893e1a3150c7093bd9b4))
+
+
+### refactor
+
+* **frontend:** simplify validation schema definitions using Zod ([](https://github.com/deploystackio/deploystack/commit/74a8df521b0f87af3c1811f15b7aa33f315c983c))
+
 # [0.57.0](https://github.com/deploystackio/deploystack/compare/frontend-v0.56.0...frontend-v0.57.0) (2026-02-24)
 
 
