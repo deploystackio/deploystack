@@ -1,5 +1,32 @@
 # Changelog
 
+# [0.22.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.21.0...satellite-v0.21.0) (2026-02-24)
+
+
+### chore
+
+* **all:** update dependencies ([](https://github.com/deploystackio/deploystack/commit/9a4e8cc37fc265a67e822ec05aa5ef89c7bb44b0))
+
+
+### feat
+
+* **all:** add public GitHub repository deployment without GitHub App ([](https://github.com/deploystackio/deploystack/commit/f9045615b715109f4b5fbfe8408344b540bc9da5))
+* **all:** add skip_oauth_flow flag for MCP catalog servers ([](https://github.com/deploystackio/deploystack/commit/154a8c0dc88a567ebe02b333c65fa52ea7126546))
+* **all:** auto-detect GitHub installations for user accounts ([](https://github.com/deploystackio/deploystack/commit/a41d5d00e42e61ea96796d43aad9886a23a00986))
+* **all:** enhance MCP config management and deploy wizard ([](https://github.com/deploystackio/deploystack/commit/46a897a82d81074086022d38b637a962e3b907a1))
+* **satellite:** add cgroup v2 auto-detection and fix stderr log delivery ([](https://github.com/deploystackio/deploystack/commit/14d7efc735cc2593960fdf5a68129a62cb4fcd80))
+* **satellite:** add MCP resource proxying and preserve _meta for MCP Apps support ([](https://github.com/deploystackio/deploystack/commit/9e33919b34509a0d721697fd8975e476eb406fd5))
+
+
+### fix
+
+* **all:** resolve OAuth popup not communicating back to parent window ([](https://github.com/deploystackio/deploystack/commit/5df38edd60f34a60d372a1a8841f4e3103adbf26))
+
+
+### refactor
+
+* **satellite:** update caching logic for tools and resources ([](https://github.com/deploystackio/deploystack/commit/04da74e082cdb20c987e018e02fe46585b1bf5e2))
+
 # [0.22.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.21.0...satellite-v0.22.0) (2026-02-24)
 
 
