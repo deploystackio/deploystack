@@ -698,42 +698,83 @@ export class McpInstallationService {
       updateData.installation_name = data.installation_name;
     }
 
-    if (data.team_env !== undefined) {
-      // Validate against server schema
-      if (existing.server?.team_env_schema) {
-        this.validateEnvironmentVariables(
-          data.team_env,
-          existing.server.team_env_schema
-        );
-      }
+    // Fetch raw encrypted values from DB for merging partial updates
+    const rawInstallation = await this.db
+      .select({
+        team_env: this.mcpServerInstallations.team_env,
+        team_headers: this.mcpServerInstallations.team_headers,
+        team_url_query_params: this.mcpServerInstallations.team_url_query_params,
+      })
+      .from(this.mcpServerInstallations)
+      .where(eq(this.mcpServerInstallations.id, installationId))
+      .limit(1);
 
-      updateData.team_env = data.team_env
-        ? await this.encryptEnvironmentVariables(
-            data.team_env, 
+    const rawRecord = rawInstallation[0];
+
+    if (data.team_env !== undefined) {
+      if (data.team_env) {
+        // Merge: decrypt existing values, apply incoming changes, re-encrypt
+        let mergedEnv = data.team_env;
+        if (rawRecord?.team_env) {
+          const existingDecrypted = await this.decryptEnvironmentVariables(
+            rawRecord.team_env,
             existing.server?.team_env_schema || []
-          )
-        : null;
+          );
+          mergedEnv = { ...existingDecrypted, ...data.team_env };
+        }
+
+        // Validate merged result against server schema
+        if (existing.server?.team_env_schema) {
+          this.validateEnvironmentVariables(
+            mergedEnv,
+            existing.server.team_env_schema
+          );
+        }
+
+        updateData.team_env = await this.encryptEnvironmentVariables(
+          mergedEnv,
+          existing.server?.team_env_schema || []
+        );
+      } else {
+        updateData.team_env = null;
+      }
     }
 
     if (data.team_args !== undefined) {
       updateData.team_args = data.team_args
         ? await this.encryptArguments(
-            data.team_args, 
+            data.team_args,
             existing.server?.team_args_schema || []
           )
         : null;
     }
 
     if (data.team_headers !== undefined) {
-      updateData.team_headers = data.team_headers
-        ? JSON.stringify(data.team_headers)
-        : null;
+      if (data.team_headers) {
+        // Merge with existing headers
+        let mergedHeaders = data.team_headers;
+        if (rawRecord?.team_headers) {
+          const existingHeaders = this.parseJsonField(rawRecord.team_headers, {});
+          mergedHeaders = { ...existingHeaders, ...data.team_headers };
+        }
+        updateData.team_headers = JSON.stringify(mergedHeaders);
+      } else {
+        updateData.team_headers = null;
+      }
     }
 
     if (data.team_url_query_params !== undefined) {
-      updateData.team_url_query_params = data.team_url_query_params
-        ? JSON.stringify(data.team_url_query_params)
-        : null;
+      if (data.team_url_query_params) {
+        // Merge with existing query params
+        let mergedParams = data.team_url_query_params;
+        if (rawRecord?.team_url_query_params) {
+          const existingParams = this.parseJsonField(rawRecord.team_url_query_params, {});
+          mergedParams = { ...existingParams, ...data.team_url_query_params };
+        }
+        updateData.team_url_query_params = JSON.stringify(mergedParams);
+      } else {
+        updateData.team_url_query_params = null;
+      }
     }
 
     await this.db

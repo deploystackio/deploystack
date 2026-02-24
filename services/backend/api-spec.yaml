@@ -8794,7 +8794,7 @@ paths:
         - MCP Installations
       description: Retrieves logs for a specific MCP installation with pagination and
         optional level filtering. Requires mcp.installations.logs.view
-        permission. Logs are returned newest first.
+        permission. Logs are returned oldest first.
       parameters:
         - schema:
             type: integer
@@ -10732,15 +10732,47 @@ paths:
                   type: string
                   description: Satellite ID to deploy on (optional, uses team default if omitted)
                 team_env:
-                  type: object
-                  description: Team-level environment variables
-                  additionalProperties:
-                    type: string
+                  type: array
+                  description: Team-level environment variables with type information
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        minLength: 1
+                      value:
+                        type: string
+                      type:
+                        type: string
+                        enum:
+                          - string
+                          - secret
+                          - boolean
+                    required:
+                      - name
+                      - value
+                      - type
+                    additionalProperties: false
                 template_args:
                   type: array
+                  description: Additional command-line arguments for the MCP server with type
+                    information
                   items:
-                    type: string
-                  description: Additional command-line arguments for the MCP server
+                    type: object
+                    properties:
+                      value:
+                        type: string
+                        minLength: 1
+                      type:
+                        type: string
+                        enum:
+                          - string
+                          - secret
+                          - boolean
+                    required:
+                      - value
+                      - type
+                    additionalProperties: false
               required:
                 - source
                 - repository_url
@@ -21569,6 +21601,191 @@ paths:
       responses:
         "200":
           description: Default Response
+  /api/teams/{teamId}/mcp/installations/{installationId}/config-schema:
+    patch:
+      summary: Add or remove config schema items for GitHub-deployed MCP servers
+      tags:
+        - MCP Installations
+      description: Allows team admins to add or remove team-level args and env vars on
+        GitHub-deployed MCP server installations. Only works for servers with
+        source=github.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum:
+                    - add
+                    - remove
+                  description: Whether to add or remove a config schema item
+                config_type:
+                  type: string
+                  enum:
+                    - env
+                    - args
+                  description: Type of configuration to modify
+                item:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      minLength: 1
+                      maxLength: 256
+                    type:
+                      type: string
+                      enum:
+                        - string
+                        - secret
+                        - boolean
+                    description:
+                      type: string
+                      maxLength: 1024
+                    required:
+                      type: boolean
+                    value:
+                      type: string
+                      maxLength: 32768
+                  required:
+                    - name
+                    - type
+                  description: Schema item to add (required for add action)
+                item_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 256
+                  description: Name of the item to remove (required for remove action)
+              required:
+                - action
+                - config_type
+              additionalProperties: false
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: teamId
+          required: true
+          description: Team ID that owns the installation
+        - schema:
+            type: string
+            minLength: 1
+          in: path
+          name: installationId
+          required: true
+          description: Installation ID
+      security:
+        - cookieAuth: []
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Config schema updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    additionalProperties: true
+                  message:
+                    type: string
+                description: Config schema updated successfully
+        "400":
+          description: Bad Request - Invalid input or validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Bad Request - Invalid input or validation error
+        "401":
+          description: Unauthorized - Authentication required or invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Unauthorized - Authentication required or invalid token
+        "403":
+          description: Forbidden - Insufficient permissions or scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Forbidden - Insufficient permissions or scope
+        "404":
+          description: Not Found - Resource not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Not Found - Resource not found
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    default: false
+                    description: Indicates the operation failed
+                  error:
+                    type: string
+                    description: Error message describing what went wrong
+                required:
+                  - success
+                  - error
+                description: Internal Server Error
   /api/teams/{teamId}/mcp/installations/{installationId}/user-configs:
     post:
       summary: Create user configuration for MCP installation

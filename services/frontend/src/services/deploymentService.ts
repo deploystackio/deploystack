@@ -18,8 +18,8 @@ export interface DeploymentParams {
   branch: string
   satellite_id: string
   deployment_source?: 'github_app' | 'github_public'
-  team_env?: Record<string, string>
-  template_args?: string[]
+  team_env?: Array<{ name: string; value: string; type: 'string' | 'secret' | 'boolean' }>
+  template_args?: Array<{ value: string; type: 'string' | 'secret' | 'boolean' }>
 }
 
 export interface Branch {
@@ -222,7 +222,7 @@ export class DeploymentService {
           branch: params.branch,
           satellite_id: params.satellite_id,
           deployment_source: params.deployment_source || 'github_app',
-          team_env: params.team_env || {},
+          team_env: params.team_env || [],
           template_args: params.template_args || []
         })
       }

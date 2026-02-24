@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch, nextTick } from 'vue'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import type { McpLog } from '@/types/mcp-logs'
@@ -9,12 +10,24 @@ interface Props {
   isLoading?: boolean
   emptyMessage?: string
   showHeader?: boolean
+  maxHeight?: string
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   isLoading: false,
-  showHeader: true
+  showHeader: true,
+  maxHeight: '400px'
 })
+
+const scrollContainer = ref<HTMLElement | null>(null)
+
+watch(() => props.logs, () => {
+  nextTick(() => {
+    if (scrollContainer.value) {
+      scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight
+    }
+  })
+}, { deep: true })
 
 const { t } = useI18n()
 
@@ -112,7 +125,7 @@ function getLevelTextClass(level: McpLog['level']): string {
   </div>
 
   <!-- Logs Table -->
-  <div v-else>
+  <div v-else ref="scrollContainer" class="overflow-y-auto" :style="{ maxHeight: maxHeight }">
     <Table>
       <TableHeader v-if="showHeader">
         <TableRow>

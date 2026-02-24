@@ -70,8 +70,8 @@ export function useLogsStream(
   const handleLog = (event: MessageEvent) => {
     try {
       const newLog = JSON.parse(event.data) as McpLog
-      // Prepend new log and limit to maxLogs
-      logs.value = [newLog, ...logs.value].slice(0, maxLogs)
+      // Append new log and limit to maxLogs
+      logs.value = [...logs.value, newLog].slice(-maxLogs)
     } catch (err) {
       console.error('useLogsStream: Failed to parse log data:', err)
     }

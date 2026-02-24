@@ -659,6 +659,58 @@ export default {
     }
   },
 
+  configSchema: {
+    addButton: 'Add Configuration',
+    addModal: {
+      title: 'Add Configuration Item',
+      description: 'Add a new environment variable or argument to this GitHub-deployed server.',
+      tabs: {
+        env: 'Environment Variable',
+        args: 'Argument'
+      },
+      form: {
+        name: 'Name',
+        namePlaceholder: 'e.g., API_KEY',
+        nameArgsPlaceholder: 'e.g., --port',
+        type: 'Type',
+        description: 'Description',
+        descriptionPlaceholder: 'What this config item is used for',
+        required: 'Required',
+        value: 'Value',
+        valuePlaceholder: 'Enter value',
+      },
+      buttons: {
+        cancel: 'Cancel',
+        add: 'Add',
+        adding: 'Adding...'
+      },
+      validation: {
+        nameRequired: 'Name is required'
+      },
+      success: {
+        added: 'Configuration item added',
+        addedDescription: '{name} has been added and the server is restarting'
+      },
+      error: {
+        addFailed: 'Failed to add configuration item'
+      }
+    },
+    remove: {
+      button: 'Remove',
+      confirmTitle: 'Remove Configuration Item',
+      confirmDescription: 'Are you sure you want to remove "{name}"? This will delete the schema entry and its value. The server will restart.',
+      confirmButton: 'Remove',
+      cancelButton: 'Cancel',
+      success: {
+        removed: 'Configuration item removed',
+        removedDescription: '{name} has been removed and the server is restarting'
+      },
+      error: {
+        removeFailed: 'Failed to remove configuration item'
+      }
+    }
+  },
+
   details: {
     config: {
       noConfig: {

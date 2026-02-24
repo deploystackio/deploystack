@@ -14,6 +14,7 @@ import authorizeRoute from './authorize';
 import reauthRoute from './reauth';
 import resetTokenRoute from './resetToken';
 import callbackRoute from './callback';
+import updateConfigSchemaRoute from './update-config-schema';
 
 export default async function installationsRoutes(fastify: FastifyInstance) {
   await fastify.register(createInstallationRoute);
@@ -31,4 +32,5 @@ export default async function installationsRoutes(fastify: FastifyInstance) {
   await fastify.register(reauthRoute);
   await fastify.register(resetTokenRoute);
   await fastify.register(callbackRoute);
+  await fastify.register(updateConfigSchemaRoute);
 }

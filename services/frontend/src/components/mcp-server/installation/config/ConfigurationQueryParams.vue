@@ -207,11 +207,10 @@ const saveTeamChanges = async () => {
   formErrors.value = {}
 
   try {
-    const updatedQueryParams = { ...currentTeamQueryParams.value, ...pendingTeamChanges.value }
     const updatedInstallation = await McpInstallationService.updateTeamQueryParams(
       props.teamId,
       props.installation.id,
-      updatedQueryParams
+      pendingTeamChanges.value
     )
 
     pendingTeamChanges.value = {}
@@ -247,12 +246,11 @@ const saveUserChanges = async () => {
       )
       emit('configuration-updated', newConfig)
     } else {
-      const updatedQueryParams = { ...(props.currentUserConfig.user_url_query_params as Record<string, any> || {}), ...pendingUserChanges.value }
       const updatedConfig = await McpInstallationService.updateUserQueryParams(
         props.teamId,
         props.installation.id,
         props.currentUserConfig.id,
-        updatedQueryParams
+        pendingUserChanges.value
       )
       emit('configuration-updated', updatedConfig)
     }

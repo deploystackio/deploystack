@@ -2,8 +2,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Eye, EyeOff } from 'lucide-vue-next'
+import { Eye, EyeOff, Trash2 } from 'lucide-vue-next'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { DsCard } from '@/components/ui/ds-card'
 import { Button } from '@/components/ui/button'
@@ -36,16 +37,21 @@ interface Props {
   teamId: string
   canEdit?: boolean
   isTeamAdmin: boolean
+  isGithubDeployment?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  canEdit: true
+  canEdit: true,
+  isGithubDeployment: false
 })
 
 const emit = defineEmits<{
   'installation-updated': [installation: McpInstallation]
   'configuration-updated': [config: UserConfiguration]
+  'config-removed': []
 }>()
+
+const { t } = useI18n()
 
 const isEditModalOpen = ref(false)
 const editingItem = ref<any>(null)
@@ -54,6 +60,11 @@ const editingScope = ref<'team' | 'user'>('user')
 const showPassword = ref(false)
 const isSubmitting = ref(false)
 const formErrors = ref<Record<string, string>>({})
+
+// Remove confirmation state
+const isRemoveDialogOpen = ref(false)
+const removingItemName = ref('')
+const isRemoving = ref(false)
 
 // Batch update state: track pending changes not yet saved to backend
 const pendingTeamChanges = ref<Record<string, string>>({})
@@ -207,11 +218,10 @@ const saveTeamChanges = async () => {
   formErrors.value = {}
 
   try {
-    const updatedEnv = { ...currentTeamEnv.value, ...pendingTeamChanges.value }
     const updatedInstallation = await McpInstallationService.updateTeamEnv(
       props.teamId,
       props.installation.id,
-      updatedEnv
+      pendingTeamChanges.value
     )
 
     pendingTeamChanges.value = {}
@@ -247,12 +257,11 @@ const saveUserChanges = async () => {
       )
       emit('configuration-updated', newConfig)
     } else {
-      const updatedEnv = { ...(props.currentUserConfig.user_env as Record<string, any> || {}), ...pendingUserChanges.value }
       const updatedConfig = await McpInstallationService.updateUserConfiguration(
         props.teamId,
         props.installation.id,
         props.currentUserConfig.id,
-        { user_env: updatedEnv }
+        { user_env: pendingUserChanges.value }
       )
       emit('configuration-updated', updatedConfig)
     }
@@ -267,6 +276,37 @@ const saveUserChanges = async () => {
     })
   } finally {
     isSavingUser.value = false
+  }
+}
+
+const openRemoveDialog = (name: string) => {
+  removingItemName.value = name
+  isRemoveDialogOpen.value = true
+}
+
+const confirmRemove = async () => {
+  isRemoving.value = true
+  try {
+    await McpInstallationService.updateConfigSchema(
+      props.teamId,
+      props.installation.id,
+      {
+        action: 'remove',
+        config_type: 'env',
+        item_name: removingItemName.value
+      }
+    )
+    toast.success(t('mcpInstallations.configSchema.remove.success.removed'), {
+      description: t('mcpInstallations.configSchema.remove.success.removedDescription', { name: removingItemName.value })
+    })
+    isRemoveDialogOpen.value = false
+    emit('config-removed')
+  } catch (error) {
+    toast.error(t('mcpInstallations.configSchema.remove.error.removeFailed'), {
+      description: error instanceof Error ? error.message : 'An error occurred'
+    })
+  } finally {
+    isRemoving.value = false
   }
 }
 
@@ -337,6 +377,15 @@ const modalTitle = computed(() => {
               class="cursor-not-allowed opacity-50"
             >
               Edit Value
+            </Button>
+            <Button
+              v-if="isGithubDeployment && canEdit"
+              size="sm"
+              variant="ghost"
+              class="text-destructive hover:text-destructive"
+              @click="openRemoveDialog(envVar.name)"
+            >
+              <Trash2 class="h-4 w-4" />
             </Button>
           </div>
         </li>
@@ -522,6 +571,27 @@ const modalTitle = computed(() => {
             </Button>
           </AlertDialogFooter>
         </form>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <!-- Remove Confirmation Dialog -->
+    <AlertDialog :open="isRemoveDialogOpen" @update:open="(value) => isRemoveDialogOpen = value">
+      <AlertDialogContent class="sm:max-w-[425px]">
+        <AlertDialogHeader>
+          <AlertDialogTitle>{{ t('mcpInstallations.configSchema.remove.confirmTitle') }}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {{ t('mcpInstallations.configSchema.remove.confirmDescription', { name: removingItemName }) }}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <Button variant="outline" @click="isRemoveDialogOpen = false">
+            {{ t('mcpInstallations.configSchema.remove.cancelButton') }}
+          </Button>
+          <Button variant="destructive" :disabled="isRemoving" @click="confirmRemove">
+            <Spinner v-if="isRemoving" class="mr-2" />
+            {{ t('mcpInstallations.configSchema.remove.confirmButton') }}
+          </Button>
+        </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
 </template>

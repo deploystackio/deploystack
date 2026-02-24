@@ -46,14 +46,31 @@ const DEPLOY_REQUEST_SCHEMA = {
       description: 'Satellite ID to deploy on (optional, uses team default if omitted)'
     },
     team_env: {
-      type: 'object',
-      description: 'Team-level environment variables',
-      additionalProperties: { type: 'string' }
+      type: 'array',
+      description: 'Team-level environment variables with type information',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', minLength: 1 },
+          value: { type: 'string' },
+          type: { type: 'string', enum: ['string', 'secret', 'boolean'] }
+        },
+        required: ['name', 'value', 'type'],
+        additionalProperties: false
+      }
     },
     template_args: {
       type: 'array',
-      items: { type: 'string' },
-      description: 'Additional command-line arguments for the MCP server'
+      description: 'Additional command-line arguments for the MCP server with type information',
+      items: {
+        type: 'object',
+        properties: {
+          value: { type: 'string', minLength: 1 },
+          type: { type: 'string', enum: ['string', 'secret', 'boolean'] }
+        },
+        required: ['value', 'type'],
+        additionalProperties: false
+      }
     }
   },
   required: ['source', 'repository_url', 'branch'],
@@ -97,14 +114,25 @@ const ERROR_RESPONSE_SCHEMA = {
 } as const;
 
 // TypeScript interfaces
+interface TypedEnvItem {
+  name: string;
+  value: string;
+  type: 'string' | 'secret' | 'boolean';
+}
+
+interface TypedArgItem {
+  value: string;
+  type: 'string' | 'secret' | 'boolean';
+}
+
 interface DeployRequest {
   source: 'github';
   repository_url: string;
   branch: string;
   deployment_source?: 'github_app' | 'github_public';
   satellite_id?: string;
-  team_env?: Record<string, string>;
-  template_args?: string[];
+  team_env?: TypedEnvItem[];
+  template_args?: TypedArgItem[];
 }
 
 interface DeploySuccessResponse {
@@ -336,10 +364,19 @@ export default async function deployRoutes(server: FastifyInstance) {
       return reply.status(400).type('application/json').send(jsonString);
     }
 
+    // Convert typed arrays to flat formats for security validation and storage
+    const flatTemplateArgs = template_args ? template_args.map(a => a.value) : [];
+    const flatTeamEnv: Record<string, string> = {};
+    if (team_env) {
+      for (const item of team_env) {
+        flatTeamEnv[item.name] = item.value;
+      }
+    }
+
     // Security validation: Validate user-provided configuration
     // Validate template_args if provided
-    if (template_args && template_args.length > 0) {
-      const argsValidation = validateArgs(template_args);
+    if (flatTemplateArgs.length > 0) {
+      const argsValidation = validateArgs(flatTemplateArgs);
       if (!argsValidation.valid) {
         request.log.warn({
           operation: 'github_deployment_security_validation',
@@ -362,8 +399,8 @@ export default async function deployRoutes(server: FastifyInstance) {
     }
 
     // Validate team_env if provided
-    if (team_env && Object.keys(team_env).length > 0) {
-      const envValidation = validateEnvVars(team_env);
+    if (Object.keys(flatTeamEnv).length > 0) {
+      const envValidation = validateEnvVars(flatTeamEnv);
       if (!envValidation.valid) {
         request.log.warn({
           operation: 'github_deployment_security_validation',
@@ -616,20 +653,20 @@ export default async function deployRoutes(server: FastifyInstance) {
         // Team tier schema - user-provided args/env during deployment wizard
         team_args_schema: template_args && template_args.length > 0
           ? JSON.stringify(template_args.map((arg, index) => ({
-              name: arg,
-              type: 'string',
-              description: `Team-configurable argument: ${arg}`,
+              name: arg.value,
+              type: arg.type,
+              description: `Team-configurable argument: ${arg.value}`,
               required: false,
               locked: false,
               default_team_locked: false,
               order: pkgManagerConfig.templateArgs.length + index // Start after template_args
             })))
           : JSON.stringify([]),
-        team_env_schema: team_env && Object.keys(team_env).length > 0
-          ? JSON.stringify(Object.keys(team_env).map((key) => ({
-              name: key,
-              type: 'secret',
-              description: `Team environment variable: ${key}`,
+        team_env_schema: team_env && team_env.length > 0
+          ? JSON.stringify(team_env.map((envItem) => ({
+              name: envItem.name,
+              type: envItem.type,
+              description: `Team environment variable: ${envItem.name}`,
               required: true,
               locked: false,
               default_team_locked: false,
@@ -754,8 +791,8 @@ export default async function deployRoutes(server: FastifyInstance) {
           installation_name: `GitHub: ${packageName}`,
           installation_type: 'team',
           satellite_id: satelliteId,
-          team_args: template_args,
-          team_env: team_env,
+          team_args: flatTemplateArgs.length > 0 ? flatTemplateArgs : undefined,
+          team_env: Object.keys(flatTeamEnv).length > 0 ? flatTeamEnv : undefined,
           team_headers: undefined,
           team_url_query_params: undefined
         }

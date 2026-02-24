@@ -1,7 +1,7 @@
 import { type FastifyInstance } from 'fastify';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { getDb, getSchema } from '../../../db';
-import { eq, and, desc, gt } from 'drizzle-orm';
+import { eq, and, asc, desc, gt } from 'drizzle-orm';
 
 // =============================================================================
 // PARAMETER SCHEMAS (shared with REST endpoint)
@@ -146,7 +146,7 @@ export default async function getInstallationLogsStreamRoute(server: FastifyInst
 				.select()
 				.from(mcpServerLogs)
 				.where(and(...conditions))
-				.orderBy(desc(mcpServerLogs.created_at))
+				.orderBy(asc(mcpServerLogs.created_at))
 				.limit(limit);
 
 			const formattedInitialLogs: LogEntry[] = initialLogs.map((log) => ({
@@ -179,7 +179,7 @@ export default async function getInstallationLogsStreamRoute(server: FastifyInst
 			reply.sse.keepAlive();
 
 			// Track last sent timestamp for polling
-			let lastSentTimestamp = initialLogs[0]?.created_at || new Date(0);
+			let lastSentTimestamp = initialLogs[initialLogs.length - 1]?.created_at || new Date(0);
 
 			// Step 5: Poll for new logs every 3 seconds
 			const pollInterval = setInterval(async () => {

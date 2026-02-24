@@ -207,11 +207,10 @@ const saveTeamChanges = async () => {
   formErrors.value = {}
 
   try {
-    const updatedHeaders = { ...currentTeamHeaders.value, ...pendingTeamChanges.value }
     const updatedInstallation = await McpInstallationService.updateTeamHeaders(
       props.teamId,
       props.installation.id,
-      updatedHeaders
+      pendingTeamChanges.value
     )
 
     pendingTeamChanges.value = {}
@@ -247,12 +246,11 @@ const saveUserChanges = async () => {
       )
       emit('configuration-updated', newConfig)
     } else {
-      const updatedHeaders = { ...(props.currentUserConfig.user_headers as Record<string, any> || {}), ...pendingUserChanges.value }
       const updatedConfig = await McpInstallationService.updateUserHeaders(
         props.teamId,
         props.installation.id,
         props.currentUserConfig.id,
-        updatedHeaders
+        pendingUserChanges.value
       )
       emit('configuration-updated', updatedConfig)
     }

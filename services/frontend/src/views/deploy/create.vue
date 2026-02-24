@@ -27,6 +27,12 @@ const loadingSteps = ref<number[]>([])
 const featureDisabled = ref(false)
 const isCheckingFeature = ref(true)
 
+// Public repository check flow state
+const selectRepoStepRef = ref<InstanceType<typeof SelectRepositoryStep> | null>(null)
+const publicRepoUrlValid = ref(false)
+const publicRepoBranchesLoaded = ref(false)
+const isCheckingPublicRepo = ref(false)
+
 interface ValidationMetadata {
   name?: string
   version?: string
@@ -61,8 +67,8 @@ const formData = ref({
     validated: false
   },
   config: {
-    teamEnv: {} as Record<string, string>,
-    templateArgs: [] as string[]
+    teamEnv: [] as Array<{ name: string; value: string; type: 'string' | 'secret' | 'boolean' }>,
+    templateArgs: [] as Array<{ value: string; type: 'string' | 'secret' | 'boolean' }>
   },
   deployment: {
     installation_id: '',
@@ -79,6 +85,7 @@ const validationError = ref<{ error: string; step: string } | null>(null)
 const isDeploying = ref(false)
 const deploymentError = ref<{ error: string; step: string } | null>(null)
 const isDeploymentOnline = ref(false)
+const isDeploymentSettled = ref(false)
 
 const progressSteps = computed<ProgressStep[]>(() => [
   {
@@ -116,6 +123,24 @@ function previousStep() {
   if (currentStep.value > 0) {
     currentStep.value--
   }
+}
+
+async function handleCheckPublicRepository() {
+  if (!selectRepoStepRef.value) return
+  isCheckingPublicRepo.value = true
+  try {
+    await selectRepoStepRef.value.checkPublicRepository()
+  } finally {
+    isCheckingPublicRepo.value = false
+  }
+}
+
+function handlePublicUrlValid(valid: boolean) {
+  publicRepoUrlValid.value = valid
+}
+
+function handlePublicBranchesLoaded(loaded: boolean) {
+  publicRepoBranchesLoaded.value = loaded
 }
 
 async function handleValidate() {
@@ -246,6 +271,20 @@ function handleRetryDeploy() {
 function handleDeploymentOnline() {
   // Deployment is online, show footer button
   isDeploymentOnline.value = true
+  isDeploymentSettled.value = true
+
+  // Mark step 4 as completed (stops the spinner in progress indicator)
+  if (!completedSteps.value.includes(4)) {
+    completedSteps.value.push(4)
+  }
+
+  // Remove loading state from step 4
+  loadingSteps.value = loadingSteps.value.filter(step => step !== 4)
+}
+
+function handleDeploymentFailed() {
+  // Deployment failed but user should still be able to view the installation
+  isDeploymentSettled.value = true
 
   // Mark step 4 as completed (stops the spinner in progress indicator)
   if (!completedSteps.value.includes(4)) {
@@ -369,14 +408,29 @@ watch(selectedTeam, (newTeam) => {
         <!-- Step 1: Select Repository -->
         <template #step-content-0>
           <SelectRepositoryStep
+            ref="selectRepoStepRef"
             v-model="formData.repository"
+            :readonly="completedSteps.includes(0)"
             @next="nextStep"
             @back="previousStep"
+            @public-url-valid="handlePublicUrlValid"
+            @public-branches-loaded="handlePublicBranchesLoaded"
           />
         </template>
 
         <template #step-footer-0>
+          <!-- Public tab: "Check Repository" when no branches loaded yet -->
           <DsProgressStepsFooter
+            v-if="formData.repository.deployment_source === 'github_public' && !publicRepoBranchesLoaded"
+            :next-button-text="$t('deployments.wizard.buttons.checkRepository')"
+            :is-next-disabled="!publicRepoUrlValid"
+            :is-next-loading="isCheckingPublicRepo"
+            :next-loading-text="$t('deployments.wizard.buttons.checkingRepository')"
+            @next="handleCheckPublicRepository"
+          />
+          <!-- Otherwise: standard "Next" button -->
+          <DsProgressStepsFooter
+            v-else
             :next-button-text="$t('deployments.wizard.buttons.next')"
             :is-next-disabled="currentStep !== 0 || !formData.repository.url"
             @next="nextStep"
@@ -468,15 +522,16 @@ watch(selectedTeam, (newTeam) => {
             :branch="formData.repository.branch"
             :commit-sha="formData.deployment.commit_sha"
             @deployment-online="handleDeploymentOnline"
+            @deployment-failed="handleDeploymentFailed"
           />
         </template>
 
         <template #step-footer-4>
           <DsProgressStepsFooter
             v-if="currentStep === 4"
-            :next-button-text="isDeploymentOnline ? $t('deployments.wizard.deployProgress.viewInstallation') : $t('deployments.wizard.deployProgress.deploying')"
-            :is-next-disabled="!isDeploymentOnline"
-            :is-next-loading="!isDeploymentOnline"
+            :next-button-text="isDeploymentSettled ? $t('deployments.wizard.deployProgress.viewInstallation') : $t('deployments.wizard.deployProgress.deploying')"
+            :is-next-disabled="!isDeploymentSettled"
+            :is-next-loading="!isDeploymentSettled"
             @next="handleViewInstallation"
           />
         </template>

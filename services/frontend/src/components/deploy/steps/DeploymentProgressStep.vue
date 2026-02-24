@@ -19,7 +19,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits(['deployment-online'])
+const emit = defineEmits(['deployment-online', 'deployment-failed'])
 
 const { t } = useI18n()
 const eventBus = useEventBus()
@@ -47,6 +47,12 @@ watch(statusData, (data) => {
     // Emit event when online
     if (data.status === 'online') {
       emit('deployment-online')
+    }
+
+    // Emit event when deployment reaches a failure state
+    const failureStatuses = ['error', 'permanently_failed', 'offline', 'requires_reauth']
+    if (failureStatuses.includes(data.status)) {
+      emit('deployment-failed')
     }
   }
 }, { immediate: true })

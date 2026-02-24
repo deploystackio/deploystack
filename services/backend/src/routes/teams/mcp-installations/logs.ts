@@ -1,7 +1,7 @@
 import { type FastifyInstance } from 'fastify';
 import { requireTeamPermission } from '../../../middleware/roleMiddleware';
 import { getDb, getSchema } from '../../../db';
-import { eq, and, desc, count } from 'drizzle-orm';
+import { eq, and, asc, count } from 'drizzle-orm';
 
 // =============================================================================
 // PARAMETER SCHEMAS
@@ -164,7 +164,7 @@ export default async function getInstallationLogsRoute(server: FastifyInstance) 
 			tags: ['MCP Installations'],
 			summary: 'Get installation logs',
 			description:
-				'Retrieves logs for a specific MCP installation with pagination and optional level filtering. Requires mcp.installations.logs.view permission. Logs are returned newest first.',
+				'Retrieves logs for a specific MCP installation with pagination and optional level filtering. Requires mcp.installations.logs.view permission. Logs are returned oldest first.',
 			security: [{ cookieAuth: [] }, { bearerAuth: [] }],
 
 			// Fastify validation schemas
@@ -255,7 +255,7 @@ export default async function getInstallationLogsRoute(server: FastifyInstance) 
 
 			const total = totalResult[0]?.count || 0;
 
-			// Step 4: Query logs with pagination (newest first)
+			// Step 4: Query logs with pagination (oldest first)
 			const logs = await db
 				.select({
 					id: mcpServerLogs.id,
@@ -266,7 +266,7 @@ export default async function getInstallationLogsRoute(server: FastifyInstance) 
 				})
 				.from(mcpServerLogs)
 				.where(and(...conditions))
-				.orderBy(desc(mcpServerLogs.created_at))
+				.orderBy(asc(mcpServerLogs.created_at))
 				.limit(limit)
 				.offset(offset);
 

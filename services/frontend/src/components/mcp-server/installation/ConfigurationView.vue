@@ -4,14 +4,16 @@ import { useI18n } from 'vue-i18n'
 import { McpCatalogService } from '@/services/mcpCatalogService'
 import { McpInstallationService } from '@/services/mcpInstallationService'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
-import { Settings } from 'lucide-vue-next'
+import { Settings, Plus } from 'lucide-vue-next'
 import {
   ConfigurationArgs,
   ConfigurationEnv,
   ConfigurationHeaders,
   ConfigurationQueryParams
 } from './config'
+import AddConfigModal from './config/AddConfigModal.vue'
 import type { McpInstallation, UserConfiguration } from '@/types/mcp-installations'
 
 interface Props {
@@ -41,6 +43,11 @@ const currentUserConfig = ref<UserConfiguration | null>(null)
 const isLoadingUserConfig = ref(true)
 
 const isTeamAdmin = computed(() => props.userRole === 'team_admin')
+const isGithubDeployment = computed(() => {
+  const source = props.installation.server?.source || serverData.value?.source
+  return source === 'github'
+})
+const showAddConfigModal = ref(false)
 
 const isStdio = computed(() => {
   const transport = props.installation.server?.transport_type || serverData.value?.transport_type
@@ -142,6 +149,16 @@ const handleConfigurationUpdated = async (config: UserConfiguration) => {
   await loadUserConfigurations()
   emit('configuration-updated', config)
 }
+
+const handleConfigAdded = async () => {
+  // Reload server data to get updated schema
+  if (props.installation.server_id) {
+    serverData.value = await McpCatalogService.getServerById(props.installation.server_id)
+  }
+  // Reload installation to get updated values
+  const updatedInstallation = await McpInstallationService.getInstallationById(props.teamId, props.installation.id)
+  emit('installation-updated', updatedInstallation)
+}
 </script>
 
 <template>
@@ -153,6 +170,14 @@ const handleConfigurationUpdated = async (config: UserConfiguration) => {
   </div>
 
   <div v-else class="space-y-0">
+    <!-- Add Configuration button for GitHub-deployed servers -->
+    <div v-if="isGithubDeployment && isTeamAdmin && canEdit" class="flex justify-end mb-4">
+      <Button variant="outline" size="sm" @click="showAddConfigModal = true">
+        <Plus class="h-4 w-4 mr-2" />
+        {{ t('mcpInstallations.configSchema.addButton') }}
+      </Button>
+    </div>
+
     <!-- Empty State: No Configuration -->
     <Empty v-if="!hasAnyConfiguration">
       <EmptyHeader>
@@ -167,7 +192,7 @@ const handleConfigurationUpdated = async (config: UserConfiguration) => {
     </Empty>
 
     <!-- Configuration sections (only shown when config exists) -->
-    <template v-else>
+    <template v-if="hasAnyConfiguration">
       <!-- STDIO TRANSPORT: Arguments + Environment Variables -->
       <ConfigurationArgs
         v-if="isStdio"
@@ -177,8 +202,10 @@ const handleConfigurationUpdated = async (config: UserConfiguration) => {
         :team-id="teamId"
         :can-edit="canEdit"
         :is-team-admin="isTeamAdmin"
+        :is-github-deployment="isGithubDeployment"
         @installation-updated="handleInstallationUpdated"
         @configuration-updated="handleConfigurationUpdated"
+        @config-removed="handleConfigAdded"
       />
 
       <ConfigurationEnv
@@ -189,8 +216,10 @@ const handleConfigurationUpdated = async (config: UserConfiguration) => {
         :team-id="teamId"
         :can-edit="canEdit"
         :is-team-admin="isTeamAdmin"
+        :is-github-deployment="isGithubDeployment"
         @installation-updated="handleInstallationUpdated"
         @configuration-updated="handleConfigurationUpdated"
+        @config-removed="handleConfigAdded"
       />
 
       <!-- HTTP/SSE TRANSPORT: Headers + URL Query Parameters -->
@@ -218,5 +247,15 @@ const handleConfigurationUpdated = async (config: UserConfiguration) => {
         @configuration-updated="handleConfigurationUpdated"
       />
     </template>
+
+    <!-- Add Config Modal -->
+    <AddConfigModal
+      v-if="isGithubDeployment && isTeamAdmin"
+      :open="showAddConfigModal"
+      :team-id="teamId"
+      :installation-id="installation.id"
+      @update:open="showAddConfigModal = $event"
+      @config-added="handleConfigAdded"
+    />
   </div>
 </template>

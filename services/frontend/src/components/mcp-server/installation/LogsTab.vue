@@ -131,6 +131,7 @@ onUnmounted(() => {
         <LogsTable
           :logs="filteredLogs"
           :is-loading="isLoading"
+          max-height="600px"
         />
       </Card>
     </div>

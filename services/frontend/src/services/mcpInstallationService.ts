@@ -537,6 +537,46 @@ export class McpInstallationService {
     }
   }
 
+  /**
+   * Add or remove a config schema item (env var or arg) for GitHub-deployed servers
+   */
+  static async updateConfigSchema(
+    teamId: string,
+    installationId: string,
+    payload: {
+      action: 'add' | 'remove'
+      config_type: 'env' | 'args'
+      item?: {
+        name: string
+        type: 'string' | 'secret' | 'boolean'
+        description?: string
+        required?: boolean
+        value?: string
+      }
+      item_name?: string
+    }
+  ): Promise<McpInstallation> {
+    const response = await fetch(
+      `${this.baseUrl}/api/teams/${teamId}/mcp/installations/${installationId}/config-schema`,
+      {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      }
+    )
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || errorData.message || `Failed to update config schema: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.data || data
+  }
+
   // ==============================
   // OAUTH AUTHORIZATION METHODS
   // ==============================

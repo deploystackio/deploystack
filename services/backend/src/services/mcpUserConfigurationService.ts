@@ -440,37 +440,94 @@ export class McpUserConfigurationService {
       updated_at: new Date()
     };
 
+    // Fetch raw encrypted values from DB for merging partial updates
+    const rawConfig = await this.db
+      .select({
+        user_env: this.mcpUserConfigurations.user_env,
+        user_headers: this.mcpUserConfigurations.user_headers,
+        user_url_query_params: this.mcpUserConfigurations.user_url_query_params,
+      })
+      .from(this.mcpUserConfigurations)
+      .where(eq(this.mcpUserConfigurations.id, configId))
+      .limit(1);
+
+    const rawRecord = rawConfig[0];
 
     if (data.user_args !== undefined) {
       updateData.user_args = data.user_args ? await McpArgsStorage.storeUserArgs(
-        data.user_args, 
-        existing.installation?.server?.user_args_schema || [], 
+        data.user_args,
+        existing.installation?.server?.user_args_schema || [],
         this.logger
       ) : null;
     }
 
     if (data.user_env !== undefined) {
-      updateData.user_env = data.user_env ? await McpEnvStorage.storeUserEnv(
-        data.user_env, 
-        existing.installation?.server?.user_env_schema || [], 
-        this.logger
-      ) : null;
+      if (data.user_env) {
+        // Merge: decrypt existing values, apply incoming changes, re-encrypt
+        let mergedEnv = data.user_env;
+        if (rawRecord?.user_env) {
+          const existingDecrypted = await McpEnvStorage.retrieveUserEnv(
+            rawRecord.user_env,
+            existing.installation?.server?.user_env_schema || [],
+            { maskSecrets: false, decryptSecrets: true },
+            this.logger
+          );
+          mergedEnv = { ...existingDecrypted, ...data.user_env };
+        }
+        updateData.user_env = await McpEnvStorage.storeUserEnv(
+          mergedEnv,
+          existing.installation?.server?.user_env_schema || [],
+          this.logger
+        );
+      } else {
+        updateData.user_env = null;
+      }
     }
 
     if (data.user_headers !== undefined) {
-      updateData.user_headers = data.user_headers ? await McpEnvStorage.storeUserEnv(
-        data.user_headers,
-        existing.installation?.server?.user_headers_schema || [],
-        this.logger
-      ) : null;
+      if (data.user_headers) {
+        // Merge with existing headers
+        let mergedHeaders = data.user_headers;
+        if (rawRecord?.user_headers) {
+          const existingDecrypted = await McpEnvStorage.retrieveUserEnv(
+            rawRecord.user_headers,
+            existing.installation?.server?.user_headers_schema || [],
+            { maskSecrets: false, decryptSecrets: true },
+            this.logger
+          );
+          mergedHeaders = { ...existingDecrypted, ...data.user_headers };
+        }
+        updateData.user_headers = await McpEnvStorage.storeUserEnv(
+          mergedHeaders,
+          existing.installation?.server?.user_headers_schema || [],
+          this.logger
+        );
+      } else {
+        updateData.user_headers = null;
+      }
     }
 
     if (data.user_url_query_params !== undefined) {
-      updateData.user_url_query_params = data.user_url_query_params ? await McpEnvStorage.storeUserEnv(
-        data.user_url_query_params,
-        existing.installation?.server?.user_url_query_params_schema || [],
-        this.logger
-      ) : null;
+      if (data.user_url_query_params) {
+        // Merge with existing query params
+        let mergedParams = data.user_url_query_params;
+        if (rawRecord?.user_url_query_params) {
+          const existingDecrypted = await McpEnvStorage.retrieveUserEnv(
+            rawRecord.user_url_query_params,
+            existing.installation?.server?.user_url_query_params_schema || [],
+            { maskSecrets: false, decryptSecrets: true },
+            this.logger
+          );
+          mergedParams = { ...existingDecrypted, ...data.user_url_query_params };
+        }
+        updateData.user_url_query_params = await McpEnvStorage.storeUserEnv(
+          mergedParams,
+          existing.installation?.server?.user_url_query_params_schema || [],
+          this.logger
+        );
+      } else {
+        updateData.user_url_query_params = null;
+      }
     }
 
     await this.db
