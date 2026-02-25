@@ -64,7 +64,8 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # NODE_ENV=development ensures no nsjail isolation is used
 RUN echo "NODE_ENV=development" > .env && \
     echo "PORT=3001" >> .env && \
-    echo "LOG_LEVEL=info" >> .env
+    echo "LOG_LEVEL=info" >> .env && \
+    echo "DEPLOYSTACK_SATELLITE_URL=http://localhost:3001" >> .env
 
 EXPOSE 3001
 
