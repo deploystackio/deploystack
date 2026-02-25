@@ -57,7 +57,7 @@ export const teamSettings: GlobalSettingsModule = {
     {
       key: 'team.allow_github_mcp',
       name: 'Allow GitHub MCP Servers',
-      defaultValue: false,
+      defaultValue: true,
       type: 'boolean',
       description: 'Allow teams to install MCP servers directly from GitHub repositories',
       encrypted: false,
@@ -66,7 +66,7 @@ export const teamSettings: GlobalSettingsModule = {
     {
       key: 'team.allow_private_github_repos',
       name: 'Allow Private GitHub Repositories',
-      defaultValue: false,
+      defaultValue: true,
       type: 'boolean',
       description: 'Allow teams to install MCP servers from private GitHub repositories',
       encrypted: false,

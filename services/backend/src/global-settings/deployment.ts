@@ -12,7 +12,7 @@ export const deploymentSettings: GlobalSettingsModule = {
     {
       key: 'deployment.enabled',
       name: 'Enable Deployment',
-      defaultValue: false,
+      defaultValue: true,
       type: 'boolean',
       description: 'Enable deployment of MCP servers from GitHub repositories',
       encrypted: false,
