@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.22.1](https://github.com/deploystackio/deploystack/compare/frontend-v0.57.1...satellite-v0.22.0) (2026-02-25)
+
+## [0.22.1](https://github.com/deploystackio/deploystack/compare/satellite-v0.22.0...satellite-v0.22.1) (2026-02-25)
+
 # [0.22.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.21.0...satellite-v0.21.0) (2026-02-24)
 
 
