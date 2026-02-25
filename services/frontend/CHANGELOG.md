@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.57.1](https://github.com/deploystackio/deploystack/compare/frontend-v0.57.0...frontend-v0.57.1) (2026-02-25)
+
 # [0.57.0](https://github.com/deploystackio/deploystack/compare/backend-v0.60.0...frontend-v0.56.0) (2026-02-24)
 
 
