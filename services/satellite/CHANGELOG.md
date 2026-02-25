@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.3](https://github.com/deploystackio/deploystack/compare/satellite-v0.22.1...satellite-v0.22.2) (2026-02-25)
+
+
+### feat
+
+* **satellite:** add DEPLOYSTACK_SATELLITE_URL to .env file ([](https://github.com/deploystackio/deploystack/commit/8cd4461074c125c20218d77e2aaf12f998e31bcf))
+
 ## [0.22.3](https://github.com/deploystackio/deploystack/compare/satellite-v0.22.2...satellite-v0.22.3) (2026-02-25)
 
 
