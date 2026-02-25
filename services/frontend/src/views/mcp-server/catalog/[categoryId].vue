@@ -131,12 +131,12 @@ onMounted(async () => {
                 ]"
                 @click="navigateToCategory(category.id)"
               >
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
                   <DynamicIcon
                     :name="category.icon"
                     class="h-5 w-5"
                   />
-                  <span>{{ category.name }}</span>
+                  <span class="text-left">{{ category.name }}</span>
                 </div>
                 <Badge variant="secondary" class="text-xs">
                   {{ category.server_count }}

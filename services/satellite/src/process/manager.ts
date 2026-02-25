@@ -438,7 +438,8 @@ export class ProcessManager extends EventEmitter {
       }, `MCP server exited: ${config.installation_name} (code: ${code}, signal: ${signal})`);
 
       // Send exit notification to user-facing logs on non-zero exit (crash)
-      if (code !== 0 && code !== null) {
+      // Skip error log for intentional shutdowns (dormant idle termination, uninstall)
+      if (code !== 0 && code !== null && !processInfo.isDormantShutdown && !processInfo.isUninstallShutdown) {
         const exitMessage = signal
           ? `Server process terminated by signal ${signal} (exit code: ${code})`
           : `Server process exited with error (exit code: ${code})`;

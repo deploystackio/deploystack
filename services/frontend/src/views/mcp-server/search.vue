@@ -209,14 +209,6 @@ onMounted(() => {
             variant="outline"
             size="sm"
             class="bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
-            @click="router.push('/mcp-server/featured')"
-          >
-            {{ t('mcpInstallations.wizard.server.browseFeatured') }}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            class="bg-black text-white border-black hover:bg-black/90 hover:border-black hover:text-white"
             @click="router.push('/mcp-server/catalog')"
           >
             {{ t('mcpInstallations.wizard.server.viewAllServers') }}

@@ -1,5 +1,47 @@
 # Changelog
 
+# [0.61.0](https://github.com/deploystackio/deploystack/compare/frontend-v0.57.0...backend-v0.60.0) (2026-02-25)
+
+
+### fix
+
+* **backend:** update error codes for invalid database type validation ([](https://github.com/deploystackio/deploystack/commit/2b6694addf82a923e92bb851e01ccea2c0a5b5d0))
+
+# [0.61.0](https://github.com/deploystackio/deploystack/compare/backend-v0.60.0...backend-v0.61.0) (2026-02-24)
+
+
+### chore
+
+* **all:** update dependencies ([](https://github.com/deploystackio/deploystack/commit/9a4e8cc37fc265a67e822ec05aa5ef89c7bb44b0))
+
+
+### feat
+
+* **all:** add OAuth requirement field, hierarchical router improvements, and tool filtering ([](https://github.com/deploystackio/deploystack/commit/231b175e01b4e3d04bb6e20c5442d2f91e34b737))
+* **all:** add public GitHub repository deployment without GitHub App ([](https://github.com/deploystackio/deploystack/commit/f9045615b715109f4b5fbfe8408344b540bc9da5))
+* **all:** add reconnect button for offline HTTP/SSE MCP servers ([](https://github.com/deploystackio/deploystack/commit/92ff5093ab02c1c61a8c87062380a003254d8e05))
+* **all:** add skip_oauth_flow flag for MCP catalog servers ([](https://github.com/deploystackio/deploystack/commit/154a8c0dc88a567ebe02b333c65fa52ea7126546))
+* **all:** auto-detect GitHub installations for user accounts ([](https://github.com/deploystackio/deploystack/commit/a41d5d00e42e61ea96796d43aad9886a23a00986))
+* **all:** enhance MCP config management and deploy wizard ([](https://github.com/deploystackio/deploystack/commit/46a897a82d81074086022d38b637a962e3b907a1))
+
+
+### fix
+
+* **all:** resolve OAuth popup not communicating back to parent window ([](https://github.com/deploystackio/deploystack/commit/5df38edd60f34a60d372a1a8841f4e3103adbf26))
+* **all:** use WAF-friendly User-Agent headers for HTTP MCP server requests ([](https://github.com/deploystackio/deploystack/commit/2c9cae011f4fe648d6f0893e1a3150c7093bd9b4))
+* **backend:** handle 403 Forbidden as valid OAuth challenge response ([](https://github.com/deploystackio/deploystack/commit/c461139810359a279321c9b4edf914aeabd093ae))
+* **backend:** improve OAuth token refresh resilience for transient failures ([](https://github.com/deploystackio/deploystack/commit/ff34160ff72535f7956687a57c0dce66505f1254))
+* **backend:** require request body for all API endpoints ([](https://github.com/deploystackio/deploystack/commit/d1aa2336dfb4760fde32c0a9d4da243dfe8011c0))
+* **backend:** sync OAuth client credentials on re-auth callback ([](https://github.com/deploystackio/deploystack/commit/540e637d09df3310aad921d8d0bcbdf146f231ad))
+* **backend:** update error codes for invalid database type validation ([](https://github.com/deploystackio/deploystack/commit/2b6694addf82a923e92bb851e01ccea2c0a5b5d0))
+* **backend:** update instance status during reconnection process ([](https://github.com/deploystackio/deploystack/commit/9fe1dee80273bc5911afe87b3fb8f083c85ec1d7))
+
+
+### refactor
+
+* **backend:** replace Zod schemas with JSON schema for settings routes ([](https://github.com/deploystackio/deploystack/commit/078887f368d65b71a3851e2745c720aa6786d620))
+* **backend:** simplify GitHub installation handling logic ([](https://github.com/deploystackio/deploystack/commit/54f88b82a6919af67dd5ed35ca968c1b05fea599))
+
 # [0.60.0](https://github.com/deploystackio/deploystack/compare/satellite-v0.20.0...backend-v0.59.0) (2026-02-08)
 
 # [0.60.0](https://github.com/deploystackio/deploystack/compare/backend-v0.59.0...backend-v0.60.0) (2026-02-08)
