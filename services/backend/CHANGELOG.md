@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.61.0](https://github.com/deploystackio/deploystack/compare/frontend-v0.57.0...backend-v0.60.0) (2026-02-25)
+
+
+### fix
+
+* **backend:** update error codes for invalid database type validation ([](https://github.com/deploystackio/deploystack/commit/2b6694addf82a923e92bb851e01ccea2c0a5b5d0))
+
 # [0.61.0](https://github.com/deploystackio/deploystack/compare/backend-v0.60.0...backend-v0.61.0) (2026-02-24)
 
 
