@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.61.1](https://github.com/deploystackio/deploystack/compare/backend-v0.61.0...backend-v0.61.1) (2026-02-25)
+
+
+### chore
+
+* **backend:** update version to 0.61.0 and changelog ([](https://github.com/deploystackio/deploystack/commit/26382978376163e297d360ba9f1fedfffb6202d4))
+
 # [0.61.0](https://github.com/deploystackio/deploystack/compare/frontend-v0.57.0...backend-v0.60.0) (2026-02-25)
 
 
