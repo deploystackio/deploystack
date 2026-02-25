@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.61.2](https://github.com/deploystackio/deploystack/compare/backend-v0.61.1...backend-v0.61.2) (2026-02-25)
+
+
+### feat
+
+* **backend:** enable deployment and GitHub MCP server installation ([](https://github.com/deploystackio/deploystack/commit/578083406e6c0bee1b12a1595b0c27f4e88de982))
+
 ## [0.61.1](https://github.com/deploystackio/deploystack/compare/backend-v0.61.0...backend-v0.61.0) (2026-02-25)
 
 
