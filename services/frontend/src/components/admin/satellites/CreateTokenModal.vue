@@ -317,7 +317,7 @@ const selectedTeamName = computed(() => {
             <Label>{{ t('satellites.pairing.tokenCreated.sections.token') }}</Label>
             <Textarea
               v-model="displayToken"
-              class="font-mono text-sm min-h-[80px] resize-none"
+              class="font-mono text-sm min-h-[80px] resize-none break-all"
               rows="3"
               readonly
             />
