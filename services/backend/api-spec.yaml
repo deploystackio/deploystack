@@ -10598,6 +10598,10 @@ paths:
                           type: string
                       commit_sha:
                         type: string
+                      warnings:
+                        type: array
+                        items:
+                          type: string
                     required:
                       - runtime
                       - mcp_sdk

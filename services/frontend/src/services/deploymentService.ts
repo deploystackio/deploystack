@@ -177,6 +177,7 @@ export class DeploymentService {
         [key: string]: string | undefined
       }
       commit_sha: string
+      warnings?: string[]
     }
     error?: string
     step?: string

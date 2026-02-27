@@ -63,7 +63,11 @@ const VALIDATE_SUCCESS_RESPONSE_SCHEMA = {
           type: 'object',
           additionalProperties: { type: 'string' }
         },
-        commit_sha: { type: 'string' }
+        commit_sha: { type: 'string' },
+        warnings: {
+          type: 'array',
+          items: { type: 'string' }
+        }
       },
       required: ['runtime', 'mcp_sdk', 'commit_sha']
     }

@@ -50,6 +50,7 @@ interface ValidationMetadata {
     [key: string]: string | undefined
   }
   commit_sha: string
+  warnings?: string[]
 }
 
 const formData = ref({

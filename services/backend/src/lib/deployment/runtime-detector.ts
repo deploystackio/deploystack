@@ -27,6 +27,7 @@ export interface RuntimeDetectionResult {
     description?: string;
     license?: string;
   };
+  warnings?: string[];
 }
 
 /**
@@ -89,6 +90,20 @@ export class RuntimeDetector {
       const mcpSdk = packageJson.dependencies?.['@modelcontextprotocol/sdk'] ||
                      packageJson.devDependencies?.['@modelcontextprotocol/sdk'];
 
+      // Detect HTTP framework dependencies that suggest non-stdio transport
+      const HTTP_FRAMEWORKS_NODE = ['express', 'fastify', 'hono', 'koa', '@hono/node-server'];
+      const deps = packageJson.dependencies || {};
+      const detectedFrameworks = HTTP_FRAMEWORKS_NODE.filter(fw => fw in deps);
+
+      const warnings: string[] = [];
+      if (detectedFrameworks.length > 0) {
+        warnings.push(
+          `Detected HTTP framework dependencies: ${detectedFrameworks.join(', ')}. ` +
+          `GitHub deployments only support stdio-based MCP servers. ` +
+          `If this server uses HTTP/SSE transport instead of stdio, deployment will fail.`
+        );
+      }
+
       return {
         runtime: 'node',
         mcp_sdk: {
@@ -98,7 +113,8 @@ export class RuntimeDetector {
           runtime: 'node'
         },
         scripts: packageJson.scripts || {},
-        packageJson
+        packageJson,
+        ...(warnings.length > 0 && { warnings })
       };
     } catch {
       return null;  // package.json not found
@@ -116,6 +132,8 @@ export class RuntimeDetector {
   ): Promise<RuntimeDetectionResult | null> {
     // Try requirements.txt first
     let mcpSdkInfo: McpSdkInfo | null = null;
+    const HTTP_FRAMEWORKS_PYTHON = ['flask', 'fastapi', 'uvicorn', 'starlette', 'django'];
+    const detectedPythonFrameworks: string[] = [];
 
     try {
       const { data: file } = await octokit.repos.getContent({
@@ -159,6 +177,17 @@ export class RuntimeDetector {
             package: 'fastmcp',
             runtime: 'python'
           };
+        }
+
+        // Detect HTTP framework dependencies
+        for (const fw of HTTP_FRAMEWORKS_PYTHON) {
+          const hasFramework = requirements.some(line => {
+            const trimmed = line.trim().toLowerCase();
+            return trimmed === fw || trimmed.startsWith(`${fw}==`) || trimmed.startsWith(`${fw}>=`) || trimmed.startsWith(`${fw}<=`) || trimmed.startsWith(`${fw}[`);
+          });
+          if (hasFramework) {
+            detectedPythonFrameworks.push(fw);
+          }
         }
       }
     } catch {
@@ -208,6 +237,15 @@ export class RuntimeDetector {
           }
         }
 
+        // Detect HTTP framework dependencies in pyproject.toml
+        if (detectedPythonFrameworks.length === 0) {
+          for (const fw of HTTP_FRAMEWORKS_PYTHON) {
+            if (new RegExp(`["']${fw}["']`).test(content) || new RegExp(`["']${fw}[><=\\[]`).test(content)) {
+              detectedPythonFrameworks.push(fw);
+            }
+          }
+        }
+
         // Extract project metadata from [project] section (always do this)
         const nameMatch = content.match(/^\s*name\s*=\s*["']([^"']+)["']/m);
         const versionProjMatch = content.match(/^\s*version\s*=\s*["']([^"']+)["']/m);
@@ -228,10 +266,19 @@ export class RuntimeDetector {
 
         // Return if we found MCP SDK (from either requirements.txt or pyproject.toml)
         if (mcpSdkInfo) {
+          const warnings: string[] = [];
+          if (detectedPythonFrameworks.length > 0) {
+            warnings.push(
+              `Detected HTTP framework dependencies: ${detectedPythonFrameworks.join(', ')}. ` +
+              `GitHub deployments only support stdio-based MCP servers. ` +
+              `If this server uses HTTP/SSE transport instead of stdio, deployment will fail.`
+            );
+          }
           return {
             runtime: 'python',
             mcp_sdk: mcpSdkInfo,
-            pyprojectToml
+            pyprojectToml,
+            ...(warnings.length > 0 && { warnings })
           };
         }
       }
@@ -241,9 +288,18 @@ export class RuntimeDetector {
 
     // If we found MCP SDK in requirements.txt but no pyproject.toml, return without metadata
     if (mcpSdkInfo) {
+      const warnings: string[] = [];
+      if (detectedPythonFrameworks.length > 0) {
+        warnings.push(
+          `Detected HTTP framework dependencies: ${detectedPythonFrameworks.join(', ')}. ` +
+          `GitHub deployments only support stdio-based MCP servers. ` +
+          `If this server uses HTTP/SSE transport instead of stdio, deployment will fail.`
+        );
+      }
       return {
         runtime: 'python',
-        mcp_sdk: mcpSdkInfo
+        mcp_sdk: mcpSdkInfo,
+        ...(warnings.length > 0 && { warnings })
       };
     }
 

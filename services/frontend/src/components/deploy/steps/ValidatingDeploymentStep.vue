@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Spinner } from '@/components/ui/spinner'
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
-import { AlertCircle } from 'lucide-vue-next'
+import { AlertCircle, AlertTriangle } from 'lucide-vue-next'
 
 interface Props {
   isLoading: boolean
@@ -24,6 +24,7 @@ interface Props {
       start?: string
       [key: string]: string | undefined
     }
+    warnings?: string[]
   } | null
 }
 
@@ -214,6 +215,23 @@ function getRuntimeLabel(runtime: string) {
             </div>
           </li>
         </ul>
+
+        <!-- Transport Warning -->
+        <div v-if="metadata.warnings?.length" class="mt-4 rounded-md bg-yellow-50 p-4 dark:bg-yellow-950/30">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <AlertTriangle class="h-5 w-5 text-yellow-400" />
+            </div>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                {{ t('deployments.wizard.validating.success.warningTitle') }}
+              </h3>
+              <div class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                <p v-for="warning in metadata.warnings" :key="warning">{{ warning }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     </div>

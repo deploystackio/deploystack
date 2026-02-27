@@ -28,6 +28,9 @@ export interface ValidationMetadata {
 
   // Git metadata
   commit_sha: string;
+
+  // Non-blocking warnings (e.g., HTTP framework detected)
+  warnings?: string[];
 }
 
 export interface ValidationResult {
@@ -320,7 +323,8 @@ export class DeploymentValidationService {
         runtime: runtimeResult.runtime,
         mcp_sdk: runtimeResult.mcp_sdk,
         scripts: runtimeResult.scripts,
-        commit_sha: commitSha
+        commit_sha: commitSha,
+        ...(runtimeResult.warnings?.length && { warnings: runtimeResult.warnings })
       }
     };
   }

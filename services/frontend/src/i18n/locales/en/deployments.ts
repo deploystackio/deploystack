@@ -126,6 +126,7 @@ export default {
           buildCommands: 'Build Commands',
           name: 'Name',
           noBuildScripts: 'No build or start scripts detected',
+          warningTitle: 'Warning',
         },
       },
 

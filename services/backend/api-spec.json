@@ -15298,6 +15298,12 @@
                         },
                         "commit_sha": {
                           "type": "string"
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         }
                       },
                       "required": [
