@@ -68,7 +68,8 @@ export class ProcessManager extends EventEmitter {
     this.logBuffer = new LogBuffer(eventBus, logger);
     this.spawner = new ProcessSpawner(logger);
     this.githubHandler = new GitHubDeploymentHandler(logger, this.logBuffer, backendClient);
-    this.restartHandler = new RestartHandler(logger, eventBus);
+    const maxRestartAttempts = parseInt(process.env.MCP_PROCESS_MAX_RESTART_ATTEMPTS || '3', 10);
+    this.restartHandler = new RestartHandler(logger, eventBus, undefined, maxRestartAttempts);
     this.dormantManager = new DormantManager(logger, runtimeState, eventBus);
     this.tmpfsManager = new TmpfsManager(logger);
     this.cacheManager = new CacheManager(logger);

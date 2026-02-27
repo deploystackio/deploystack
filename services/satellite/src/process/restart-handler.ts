@@ -22,7 +22,8 @@ export class RestartHandler {
   constructor(
     private logger: Logger,
     private eventBus?: EventBus,
-    private backendStatusCallback?: StatusCallback
+    private backendStatusCallback?: StatusCallback,
+    private maxRestartAttempts: number = 3
   ) {}
 
   /**
@@ -124,8 +125,8 @@ export class RestartHandler {
         operation: 'restart_limit_exceeded',
         installation_name: installationName,
         team_id: processInfo.config.team_id,
-        max_attempts: 3
-      }, `Max restart attempts (3) exceeded for ${installationName} - marking as permanently failed`);
+        max_attempts: this.maxRestartAttempts
+      }, `Max restart attempts (${this.maxRestartAttempts}) exceeded for ${installationName} - marking as permanently failed`);
 
       // Emit mcp.server.permanently_failed event
       try {
@@ -236,7 +237,7 @@ export class RestartHandler {
   }
 
   /**
-   * Check if restart should be attempted (max 3 attempts in 5 minutes)
+   * Check if restart should be attempted (max attempts in 5 minutes, configurable)
    */
   shouldAttemptRestart(installationName: string): boolean {
     const now = Date.now();
@@ -249,8 +250,7 @@ export class RestartHandler {
     recentAttempts.push(now);
     this.restartAttempts.set(installationName, recentAttempts);
 
-    // Max 3 attempts in 5 minutes
-    return recentAttempts.length <= 3;
+    return recentAttempts.length <= this.maxRestartAttempts;
   }
 
   /**
