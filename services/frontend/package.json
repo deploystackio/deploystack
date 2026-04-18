@@ -47,7 +47,7 @@
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/tsconfig": "^0.8.1",
-    "autoprefixer": "^10.4.24",
+    "autoprefixer": "^10.4.27",
     "eslint": "^10.0.0",
     "eslint-plugin-vue": "^10.8.0",
     "jiti": "^2.6.1",
