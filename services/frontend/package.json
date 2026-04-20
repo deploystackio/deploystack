@@ -52,7 +52,7 @@
     "eslint-plugin-vue": "^10.8.0",
     "jiti": "^2.6.1",
     "npm-run-all2": "^8.0.4",
-    "prettier": "^3.8.1",
+    "prettier": "^3.8.3",
     "release-it": "^19.2.4",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.2",
