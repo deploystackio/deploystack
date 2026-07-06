@@ -42,7 +42,7 @@
     "lucia": "^3.2.2",
     "nanoid": "^5.1.6",
     "node-cron": "^4.2.1",
-    "nodemailer": "^8.0.2",
+    "nodemailer": "^9.0.3",
     "pg": "^8.18.0",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
