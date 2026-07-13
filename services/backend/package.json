@@ -40,7 +40,7 @@
     "fastify": "^5.7.4",
     "fastify-favicon": "^5.0.0",
     "lucia": "^3.2.2",
-    "nanoid": "^5.1.6",
+    "nanoid": "^6.0.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.2",
     "pg": "^8.18.0",
